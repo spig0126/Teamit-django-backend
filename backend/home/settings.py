@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "interest",
     "activity",
     "user",
+    "team"
 ]
 
 MIDDLEWARE = [
