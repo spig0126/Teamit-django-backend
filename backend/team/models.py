@@ -11,6 +11,7 @@ class Team(models.Model):
      id = models.AutoField(primary_key=True)
      name = models.CharField(max_length=20)
      short_pr = models.CharField(max_length=50)
+     keywords = models.CharField(default='')
      activity = models.ForeignKey(Activity, 
                                    on_delete=models.CASCADE, 
                                    related_name='team',
@@ -41,6 +42,11 @@ class Team(models.Model):
           through="TeamMembers",
           related_name="teams"
      )
+     
+     @property
+     def member_cnt(self):
+          return self.members.count()
+     
 
 class TeamPositions(models.Model):
      team = models.ForeignKey(Team, on_delete=models.CASCADE)

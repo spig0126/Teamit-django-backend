@@ -108,3 +108,22 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                'positions',
                'members'
           ]
+
+class TeamSimpleDetailSerializer(serializers.ModelSerializer):
+     positions = serializers.StringRelatedField(many=True)
+     member_cnt = serializers.SerializerMethodField()
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'short_pr',
+               'keywords', 
+               'recruit_startdate',
+               'recruit_enddate',
+               'positions',
+               'member_cnt'
+          ]
+          
+     def get_member_cnt(self, obj):
+          return obj.member_cnt
