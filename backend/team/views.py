@@ -13,6 +13,14 @@ class TeamCreateAPIView(generics.CreateAPIView):
 class TeamDetailAPIView(generics.RetrieveAPIView):
      queryset = Team.objects.all()
      serializer_class = TeamDetailSerializer
+
+class TeamPositionDetailAPIView(generics.ListAPIView):
+     serializer_class = TeamPositionDetailSerializer
+     lookup_field = 'team'
+     
+     def get_queryset(self):
+          team = self.kwargs.get('team')
+          return TeamPositions.objects.filter(team=team)
      
 
 # list views

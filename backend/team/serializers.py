@@ -10,12 +10,13 @@ class TeamCreateSerializer(serializers.ModelSerializer):
      activity = serializers.CharField(write_only=True, required=False)
      cities = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
      positions = serializers.ListField(child=serializers.JSONField(), write_only=True, required=False)
-     user_name = serializers.CharField(write_only=True, required=False)
+     user_name = serializers.CharField(write_only=True)
+     user_avatar = serializers.CharField(write_only=True)
+     user_background = serializers.CharField(write_only=True)
      
      class Meta: 
           model = Team
           fields = [
-               'user_name',
                'name', 
                'short_pr', 
                'activity', 
@@ -26,7 +27,10 @@ class TeamCreateSerializer(serializers.ModelSerializer):
                'active_enddate', 
                'positions', 
                'recruit_startdate', 
-               'recruit_enddate'
+               'recruit_enddate',
+               'user_name',
+               'user_avatar',
+               'user_background',
           ]
           
      def create(self, validated_data):
@@ -34,6 +38,8 @@ class TeamCreateSerializer(serializers.ModelSerializer):
           cities = validated_data.pop('cities', None)
           positions = validated_data.pop('positions', None)
           user_name = validated_data.pop('user_name', None)
+          user_avatar = validated_data.pop('user_avatar', None)
+          user_background = validated_data.pop('user_background', None)
           
           validated_data['activity'] = Activity.objects.get(name=activity)
           
@@ -49,7 +55,7 @@ class TeamCreateSerializer(serializers.ModelSerializer):
                     position_instance = Position.objects.get(name=position['name'])
                     TeamPositions.objects.create(team=team_instance, position=position_instance, cnt=position['cnt'], pr=position['pr'])
                team_instance.cities.set(city_instances)
-               TeamMembers.objects.create(team=team_instance, user=user_instance)
+               TeamMembers.objects.create(team=team_instance, user=user_instance, avatar=user_avatar, background=user_background)
           except Province.DoesNotExist:
                team_instance.delete()
                raise serializers.ValidationError({"province": "province does not exist"})
