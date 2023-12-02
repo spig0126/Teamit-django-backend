@@ -4,6 +4,7 @@ from .models import *
 from position.models import *
 from activity.models import *
 from user.models import User
+
 # create serializers
 class TeamCreateSerializer(serializers.ModelSerializer):
      activity = serializers.CharField(write_only=True, required=False)
@@ -36,7 +37,6 @@ class TeamCreateSerializer(serializers.ModelSerializer):
           
           validated_data['activity'] = Activity.objects.get(name=activity)
           
-          print(validated_data)
           team_instance = Team.objects.create(**validated_data)
           user_instance = User.objects.get(name=user_name)
           city_instances = []
@@ -50,11 +50,10 @@ class TeamCreateSerializer(serializers.ModelSerializer):
                     TeamPositions.objects.create(team=team_instance, position=position_instance, cnt=position['cnt'], pr=position['pr'])
                team_instance.cities.set(city_instances)
                TeamMembers.objects.create(team=team_instance, user=user_instance)
-               # team_instance.activity = Activity.objects.get(name=activity)
           except Province.DoesNotExist:
                team_instance.delete()
                raise serializers.ValidationError({"province": "province does not exist"})
-          except City.DoesNotExist:
+          except (City.DoesNotExist, ValueError):
                team_instance.delete()
                raise serializers.ValidationError({"city": "city does not exist"}) 
           except Position.DoesNotExist:
@@ -62,3 +61,50 @@ class TeamCreateSerializer(serializers.ModelSerializer):
                raise serializers.ValidationError({"positions": "certain position does not exist"})
           
           return team_instance
+
+# detail serializers
+class TeamPositionDetailSerializer(serializers.ModelSerializer):
+     position = serializers.StringRelatedField(read_only=True)
+     
+     class Meta:
+          model = TeamPositions
+          fields = [
+               'position',
+               'pr',
+               'cnt', 
+          ]
+
+class TeamMemberDetailSerializer(serializers.ModelSerializer):
+     user = serializers.StringRelatedField(read_only=True)
+     position = serializers.StringRelatedField(read_only=True)
+     class Meta:
+          model = TeamMembers
+          fields = [
+               'user',
+               'position', 
+               'background',
+               'avatar'
+          ]
+          
+class TeamDetailSerializer(serializers.ModelSerializer):
+     positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
+     members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
+     cities = serializers.StringRelatedField(many=True)
+     activity = serializers.StringRelatedField()
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'short_pr', 
+               'meet_preference',
+               'long_pr',
+               'active_startdate',
+               'active_enddate',
+               'recruit_startdate',
+               'recruit_enddate',
+               'cities',
+               'activity',
+               'positions',
+               'members'
+          ]

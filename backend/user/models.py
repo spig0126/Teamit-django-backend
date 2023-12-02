@@ -40,6 +40,9 @@ class User(models.Model):
      )
      avatar = models.JSONField(default=dict)
      notifications = models.BooleanField(default=False)
+     
+     def __str__(self):
+          return self.name
 
 class UserProfile(models.Model):
      user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')
@@ -68,8 +71,7 @@ class UserProfile(models.Model):
      certificates = models.CharField(default='', blank=True)
      links = models.CharField(default='', blank=True)
 
-     @property
-     def user_name(self):
+     def __str__(self):
           return self.user.name
 
      @property

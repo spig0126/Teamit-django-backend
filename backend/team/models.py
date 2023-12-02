@@ -45,17 +45,19 @@ class Team(models.Model):
 class TeamPositions(models.Model):
      team = models.ForeignKey(Team, on_delete=models.CASCADE)
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
+     pr = models.CharField(default='', blank=True)
      cnt = models.PositiveSmallIntegerField(
           validators=[
                MinValueValidator(0), 
                MaxValueValidator(3000)
           ]
      )
-     pr = models.CharField(default='', blank=True)
+     
      
 class TeamMembers(models.Model):
      team = models.ForeignKey(Team, on_delete=models.CASCADE)
      user = models.ForeignKey(User, on_delete=models.CASCADE)
+     position = models.ForeignKey(Position, on_delete=models.CASCADE, default=1)
      background = models.CharField(default='')
      avatar = models.CharField(default='')
      
