@@ -88,11 +88,7 @@ class TeamMemberDetailSerializer(serializers.ModelSerializer):
      position = serializers.StringRelatedField(read_only=True)
      class Meta:
           model = TeamMembers
-          fields = [
-               'user',
-               'position', 
-               'background'
-          ]
+          fields = '__all__'
           
 class TeamDetailSerializer(serializers.ModelSerializer):
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
@@ -137,3 +133,11 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):
           
      def get_member_cnt(self, obj):
           return obj.member_cnt
+     
+class TeamApplicationDetailSerializer(serializers.ModelSerializer):
+     team = serializers.StringRelatedField()
+     applicant = serializers.StringRelatedField()
+     position = serializers.StringRelatedField()
+     class Meta:
+          model = TeamApplication
+          fields = '__all__'

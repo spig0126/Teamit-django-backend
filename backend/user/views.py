@@ -139,8 +139,7 @@ class AcceptFriendRequestAPIView(APIView):
                     
                     serializer = FriendRequestDetailSerializer(friend_request)
                     return Response(serializer.data, status=status.HTTP_200_OK)
-               else:
-                    return Response({"message": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
+               return Response({"message": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
           return Response({"message": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 

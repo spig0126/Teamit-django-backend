@@ -45,6 +45,9 @@ class Team(models.Model):
           related_name="teams"
      )
      
+     def __str__(self):
+          return self.name
+     
      @property
      def member_cnt(self):
           return self.members.count()
@@ -100,4 +103,17 @@ class TeamApplication(models.Model):
      applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications') 
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
      accepted = models.BooleanField(default=False)
+     
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          super().save(*args, **kwargs)
+          
+          if is_new:
+               from notification.models import TeamNotification
+               
+               TeamNotification.objects.create(
+                    type="team_application",
+                    to_team = self.team,
+                    related = self
+               )
      
