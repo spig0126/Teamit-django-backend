@@ -6,6 +6,7 @@ urlpatterns = [
      path("", UserWithProfileCreateAPIView.as_view()),
      path("send-friend-request/", SendFriendRequestAPIView.as_view()),
      path("accept-friend-request/", AcceptFriendRequestAPIView.as_view()),
+     path("friends/", UserFriendsListAPIView.as_view()),
      path("profiles/", UserWithProfileListAPIView.as_view()),
      path("<int:pk>/", UserDetailAPIView.as_view()),
      path("<str:name>/", UserDetailAPIView.as_view()),

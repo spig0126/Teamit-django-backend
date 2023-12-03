@@ -142,4 +142,19 @@ class AcceptFriendRequestAPIView(APIView):
                else:
                     return Response({"message": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
           return Response({"message": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-               
+
+
+class UserFriendsListAPIView(generics.ListAPIView):
+     serializer_class = UserDetailSerializer
+     
+     def get_queryset(self):
+          user = get_object_or_404(User, name=self.request.data["user"])
+          queryset = user.friends.all()
+          return queryset
+     
+     def post(self, request, *args, **kwargs):
+          queryset = self.get_queryset()
+          serializer = self.serializer_class(queryset, many=True)
+          return Response(serializer.data, status=status.HTTP_200_OK)
+     
+     
