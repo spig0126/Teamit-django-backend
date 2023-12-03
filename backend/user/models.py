@@ -38,8 +38,8 @@ class User(models.Model):
           Position,
           related_name="users",
      )
-     avatar = models.JSONField(default=dict)
-     notifications = models.BooleanField(default=False)
+     avatar = models.CharField(default='png', blank=True)
+     background = models.CharField(default='', blank=True)
      
      def __str__(self):
           return self.name
@@ -88,3 +88,10 @@ class UserProfile(models.Model):
           if c_name == "전체":
                return p_name + "권"
           return p_name + " " + c_name
+
+
+class FriendRequest(models.Model):
+     from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
+     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
+     accepted = models.BooleanField(default=False)
+     

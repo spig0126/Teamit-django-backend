@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from datetime import *
 
 from activity.models import *
 from region.models import *
@@ -9,6 +10,7 @@ from user.models import *
 # Create your models here.
 class Team(models.Model):
      id = models.AutoField(primary_key=True)
+     creator = models.ForeignKey(User, on_delete=models.CASCADE, default=54)
      name = models.CharField(max_length=20)
      short_pr = models.CharField(max_length=50)
      keywords = models.CharField(default='')
@@ -47,8 +49,35 @@ class Team(models.Model):
      def member_cnt(self):
           return self.members.count()
      
+     @property
+     def status(self):
+          today = date.today()
+          active_startdate = date(self.active_startdate)
+          active_enddate = date(self.active_enddate)
+     
+          if active_startdate - today > timedelta(0):
+               return "활동전"
+          elif active_enddate - today > timedelta(0):
+               return "활동종료"
+          else:
+               return "활동 전"
+          
+     @property
+     def d_date(self):
+          today = date.today()
+          recruit_startdate = date(self.recruit_startdate)
+          recruit_enddate = date(self.recruit_enddate)
+          
+          if recruit_startdate - today > timedelta(0):
+               return "모집예정"
+          elif recruit_enddate - today > timedelta(0):
+               return "모집완료"
+          else:
+               return "D-" + str()
+     
 
 class TeamPositions(models.Model):
+     id = models.AutoField(primary_key=True)
      team = models.ForeignKey(Team, on_delete=models.CASCADE)
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
      pr = models.CharField(default='', blank=True)
@@ -65,6 +94,9 @@ class TeamMembers(models.Model):
      user = models.ForeignKey(User, on_delete=models.CASCADE)
      position = models.ForeignKey(Position, on_delete=models.CASCADE, default=1)
      background = models.CharField(default='')
-     avatar = models.CharField(default='')
-     
+
+class TeamApplication(models.Model):
+     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='applications')
+     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications') 
+     position = models.ForeignKey(Position, on_delete=models.CASCADE)
      

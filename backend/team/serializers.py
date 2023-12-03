@@ -13,11 +13,12 @@ class TeamCreateSerializer(serializers.ModelSerializer):
      user_name = serializers.CharField(write_only=True)
      user_avatar = serializers.CharField(write_only=True)
      user_background = serializers.CharField(write_only=True)
-     
+     creator = serializers.CharField(write_only=True)
      class Meta: 
           model = Team
           fields = [
                'name', 
+               'creator',
                'short_pr', 
                'activity', 
                'cities', 
@@ -40,8 +41,10 @@ class TeamCreateSerializer(serializers.ModelSerializer):
           user_name = validated_data.pop('user_name', None)
           user_avatar = validated_data.pop('user_avatar', None)
           user_background = validated_data.pop('user_background', None)
+          creator = validated_data.pop('creator', None)
           
           validated_data['activity'] = Activity.objects.get(name=activity)
+          validated_data['creator'] = User.objects.get(name=creator)
           
           team_instance = Team.objects.create(**validated_data)
           user_instance = User.objects.get(name=user_name)
@@ -88,8 +91,7 @@ class TeamMemberDetailSerializer(serializers.ModelSerializer):
           fields = [
                'user',
                'position', 
-               'background',
-               'avatar'
+               'background'
           ]
           
 class TeamDetailSerializer(serializers.ModelSerializer):
@@ -97,11 +99,13 @@ class TeamDetailSerializer(serializers.ModelSerializer):
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
+     creator = serializers.StringRelatedField()
      class Meta:
           model = Team
           fields = [
                'id',
                'name',
+               'creator',
                'short_pr', 
                'meet_preference',
                'long_pr',

@@ -34,3 +34,5 @@ class TeamByActivityListAPIView(generics.ListAPIView):
           else:
                queryset = Team.objects.all()
           return queryset
+
+# etc

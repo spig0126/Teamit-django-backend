@@ -17,6 +17,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
           fields = [
                'id', 
                'name', 
+               'avatar',
+               'background'
           ]
           
 class UserProfileCreateSerializer(serializers.ModelSerializer):
@@ -102,6 +104,16 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
      
 
 # detail serializers
+class UserSimpleDetailSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = User
+          fields = [
+               'id',
+               'name',
+               'avatar',
+               
+          ]
+
 class UserDetailSerializer(serializers.ModelSerializer):
      interests = serializers.StringRelatedField(many=True)
      positions = serializers.StringRelatedField(many=True)
@@ -112,7 +124,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
 class UserProfileDetailSerializer(serializers.ModelSerializer):
      activities = serializers.StringRelatedField(many=True)
-     # province = serializers.StringRelatedField()
      cities = serializers.StringRelatedField(many=True)
      
      class Meta:
