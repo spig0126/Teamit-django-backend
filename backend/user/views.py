@@ -114,22 +114,23 @@ class SendFriendRequestAPIView(APIView):
 class AcceptFriendRequestAPIView(APIView):
      def post(self, request):
           friend_request = FriendRequest.objects.get(pk=request.data['friend_request_id'])
+          accepting_user = User.objects.get(name=request.data['user'])
           
-          user_profile = UserProfile.objects.get(pk=request.data['user_id'])
-          if friend_request.to_user == user_profile and not friend_request.accepted:
-               print('hello')
+          if friend_request.to_user == accepting_user and not friend_request.accepted:
                friend_request.accepted = True
-               user_profile.friends.add(friend_request.from_user)
+               friend_request.save()
+               accepting_user.friends.add(friend_request.from_user)
                
                # set last notification as read (just in case)
                friend_request_notification = Notification.objects.get(related_id=friend_request.pk)
                if not friend_request_notification.is_read:
                     friend_request_notification.is_read = True
+                    friend_request_notification.save()
                
                # create notifcation for friend_request_accepted
                Notification.objects.create(
                     type="friend_request_accepted", 
-                    to_user=friend_request.from_user.user, 
+                    to_user=friend_request.from_user, 
                     related_id= friend_request.pk
                )
                

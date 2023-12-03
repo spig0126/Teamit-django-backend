@@ -41,16 +41,15 @@ class User(models.Model):
      )
      avatar = models.CharField(default='png', blank=True)
      background = models.CharField(default='', blank=True)
-     
+     friends = models.ManyToManyField(
+          'self',
+          symmetrical=True
+     )
      def __str__(self):
           return self.name
 
 class UserProfile(models.Model):
      user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')
-     friends = models.ManyToManyField(
-          'self',
-          symmetrical=True
-     )
      visibility = models.CharField(
           max_length=2, choices=Visibility.choices, default=Visibility.PRIVATE
      )
@@ -96,8 +95,8 @@ class UserProfile(models.Model):
 
 
 class FriendRequest(models.Model):
-     from_user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='sent_requests')
-     to_user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='received_requests')
+     from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
+     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
      accepted = models.BooleanField(default=False)
      
      def save(self, *args, **kwargs):
