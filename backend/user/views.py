@@ -105,36 +105,41 @@ class SendFriendRequestAPIView(APIView):
           to_user = User.objects.get(name=data['to_user'])
           from_user = User.objects.get(name=data['from_user'])
           
-          if to_user != from_user and not FriendRequest.objects.filter(to_user=to_user, from_user=from_user).exists():
-               friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)
-               serializer = FriendRequestDetailSerializer(friend_request)
-               return Response(serializer.data, status=status.HTTP_200_OK)
-          return Response({"message": "Invalid friend request"}, status=status.HTTP_400_BAD_REQUEST)
+          if to_user != from_user:
+               if not FriendRequest.objects.filter(to_user=to_user, from_user=from_user).exists():
+                    friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)
+                    serializer = FriendRequestDetailSerializer(friend_request)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+               return Response({"message": "this friend request is already sent"}, status=status.HTTP_409_CONFLICT)    
+          return Response({"message": "sender and receiver is the same"}, status=status.HTTP_400_BAD_REQUEST)
      
 class AcceptFriendRequestAPIView(APIView):
      def post(self, request):
           friend_request = FriendRequest.objects.get(pk=request.data['friend_request_id'])
           accepting_user = User.objects.get(name=request.data['user'])
           
-          if friend_request.to_user == accepting_user and not friend_request.accepted:
-               friend_request.accepted = True
-               friend_request.save()
-               accepting_user.friends.add(friend_request.from_user)
-               
-               # set last notification as read (just in case)
-               friend_request_notification = Notification.objects.get(related_id=friend_request.pk)
-               if not friend_request_notification.is_read:
-                    friend_request_notification.is_read = True
-                    friend_request_notification.save()
-               
-               # create notifcation for friend_request_accepted
-               Notification.objects.create(
-                    type="friend_request_accepted", 
-                    to_user=friend_request.from_user, 
-                    related_id= friend_request.pk
-               )
-               
-               serializer = FriendRequestDetailSerializer(friend_request)
-               return Response(serializer.data, status=status.HTTP_200_OK)
-          return Response({"message": "Invalid"}, status=status.HTTP_400_BAD_REQUEST)
+          if friend_request.to_user == accepting_user:
+               if not friend_request.accepted:
+                    friend_request.accepted = True
+                    friend_request.save()
+                    accepting_user.friends.add(friend_request.from_user)
+                    
+                    # set last notification as read (just in case)
+                    friend_request_notification = Notification.objects.get(related_id=friend_request.pk)
+                    if not friend_request_notification.is_read:
+                         friend_request_notification.is_read = True
+                         friend_request_notification.save()
+                    
+                    # create notifcation for friend_request_accepted
+                    Notification.objects.create(
+                         type="friend_request_accepted", 
+                         to_user=friend_request.from_user, 
+                         related_id= friend_request.pk
+                    )
+                    
+                    serializer = FriendRequestDetailSerializer(friend_request)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+               else:
+                    return Response({"message": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
+          return Response({"message": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
                
