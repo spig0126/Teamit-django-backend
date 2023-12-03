@@ -8,9 +8,9 @@ from .models import *
 from .serializers import *
 from activity.models import Activity
 from region.models import Province, City
+from notification.models import Notification
 from .constants import UNAVAILABLE_NAMES
 
-# Create your views here.
 class UserWithProfileCreateAPIView(generics.CreateAPIView):
      queryset = UserProfile.objects.all()
      serializer_class = UserProfileCreateSerializer
@@ -97,3 +97,43 @@ class UserDestroyAPIView(generics.DestroyAPIView):
                return get_object_or_404(queryset, pk=pk)
           else:
                return super().get_object()
+
+# apis related to friends
+class SendFriendRequestAPIView(APIView):
+     def post(self, request):
+          data = request.data
+          to_user = User.objects.get(name=data['to_user'])
+          from_user = User.objects.get(name=data['from_user'])
+          
+          if to_user != from_user and not FriendRequest.objects.filter(to_user=to_user, from_user=from_user).exists():
+               friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)
+               serializer = FriendRequestDetailSerializer(friend_request)
+               return Response(serializer.data, status=status.HTTP_200_OK)
+          return Response({"message": "Invalid friend request"}, status=status.HTTP_400_BAD_REQUEST)
+     
+class AcceptFriendRequestAPIView(APIView):
+     def post(self, request):
+          friend_request = FriendRequest.objects.get(pk=request.data['friend_request_id'])
+          
+          user_profile = UserProfile.objects.get(pk=request.data['user_id'])
+          if friend_request.to_user == user_profile and not friend_request.accepted:
+               print('hello')
+               friend_request.accepted = True
+               user_profile.friends.add(friend_request.from_user)
+               
+               # set last notification as read (just in case)
+               friend_request_notification = Notification.objects.get(related_id=friend_request.pk)
+               if not friend_request_notification.is_read:
+                    friend_request_notification.is_read = True
+               
+               # create notifcation for friend_request_accepted
+               Notification.objects.create(
+                    type="friend_request_accepted", 
+                    to_user=friend_request.from_user.user, 
+                    related_id= friend_request.pk
+               )
+               
+               serializer = FriendRequestDetailSerializer(friend_request)
+               return Response(serializer.data, status=status.HTTP_200_OK)
+          return Response({"message": "Invalid"}, status=status.HTTP_400_BAD_REQUEST)
+               

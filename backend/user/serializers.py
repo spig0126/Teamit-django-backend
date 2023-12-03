@@ -111,7 +111,7 @@ class UserSimpleDetailSerializer(serializers.ModelSerializer):
                'id',
                'name',
                'avatar',
-               
+               'background'
           ]
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -119,7 +119,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
      class Meta:
           model = User
-          fields = ['id', 'name', 'avatar', 'notifications', 'positions', 'interests']
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests']
 
 
 class UserProfileDetailSerializer(serializers.ModelSerializer):
@@ -150,7 +150,15 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
 
      class Meta:
           model = User
-          fields = ['id', 'name', 'avatar', 'notifications', 'positions', 'interests', 'profile']
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'profile']
+
+class FriendRequestDetailSerializer(serializers.ModelSerializer):
+     to_user = serializers.StringRelatedField()
+     from_user = serializers.StringRelatedField()
+     
+     class Meta:
+          model = FriendRequest
+          fields = '__all__'
 
 # update serializers
 class UserProfileUpdateSerializer(serializers.ModelSerializer):

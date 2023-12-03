@@ -7,6 +7,7 @@ from position.models import Position
 from interest.models import Interest
 from activity.models import Activity
 
+
 # Choices
 class Visibility(models.TextChoices):
      PUBLIC = "PU", "전체 공개"  # db에 저장되는 값: "PU", client에게 전달되는 정보: "전체 공개"
@@ -46,6 +47,10 @@ class User(models.Model):
 
 class UserProfile(models.Model):
      user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')
+     friends = models.ManyToManyField(
+          'self',
+          symmetrical=True
+     )
      visibility = models.CharField(
           max_length=2, choices=Visibility.choices, default=Visibility.PRIVATE
      )
@@ -91,7 +96,20 @@ class UserProfile(models.Model):
 
 
 class FriendRequest(models.Model):
-     from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
-     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
+     from_user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='sent_requests')
+     to_user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='received_requests')
      accepted = models.BooleanField(default=False)
      
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          super().save(*args, **kwargs)
+          
+          if is_new:
+               from notification.models import Notification
+               
+               Notification.objects.create(
+                    type="friend_request",
+                    to_user = self.to_user,
+                    related_id = self.id,
+               )
+          
