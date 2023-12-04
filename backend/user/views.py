@@ -9,9 +9,6 @@ from .serializers import *
 from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
-from sys import path
-path.append('..')
-from constants import UNAVAILABLE_NAMES
 
 class UserWithProfileCreateAPIView(generics.CreateAPIView):
      queryset = UserProfile.objects.all()
@@ -46,9 +43,7 @@ class CheckUserNameAvailability(APIView):
                user = User.objects.get(name=name)
                return Response({"error": "name '{}' is unavailable".format(name)}, status=status.HTTP_400_BAD_REQUEST)
           except:
-               if name not in UNAVAILABLE_NAMES:
-                    return Response({"message": "name '{}' is available".format(name)}, status=status.HTTP_200_OK)
-               return Response({"error": "name '{}' is unavailable".format(name)}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({"message": "name '{}' is available".format(name)}, status=status.HTTP_200_OK)
                     
 
 class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):

@@ -8,6 +8,7 @@ urlpatterns = [
      path("accept/", AcceptTeamApplicationAPIView.as_view()),
      path("decline/", DeclineTeamApplicationAPIView.as_view()),
      path("enter/", EnterTeamAPIView.as_view()),
+     # path("leave/", LeaveTeamAPIVIew.as_view()),
      path("detail/<int:pk>/", TeamDetailAPIView.as_view()),
      path("list/", TeamByActivityListAPIView.as_view()),
      path("<int:team>/positions/", TeamPositionListAPIView.as_view()),

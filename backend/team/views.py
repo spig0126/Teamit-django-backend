@@ -6,23 +6,14 @@ from rest_framework.response import Response
 from .models import *
 from .serializers import *
 from notification.models import *
-from sys import path
-path.append('..')
-from constants import UNAVAILABLE_NAMES
+# from sys import path
+# path.append('..')
+# from backend.user.constants import UNAVAILABLE_NAMES
 
 # Create views
 class TeamCreateAPIView(generics.CreateAPIView):
      queryset = Team.objects.all()
      serializer_class = TeamCreateSerializer
-     
-     # def create(self, request, *args, **kwargs):
-     #      team_name = request.data['name']
-     #      if team_name not in UNAVAILABLE_NAMES:
-     #           serializer = self.get_serializer(data=request.data)
-     #           if serializer.is_valid(raise_exception=True):
-     #                serializer.save()
-     #                return Response({"message": "team succesfully created"}, status=status.HTTP_200_OK)
-     #      return Response({"error": "this team name is not available"}, status=status.HTTP_200_OK)
      
 # detail views
 class TeamDetailAPIView(generics.RetrieveAPIView):
