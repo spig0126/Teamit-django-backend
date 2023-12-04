@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from .models import *
@@ -6,7 +7,7 @@ from activity.models import *
 from user.models import User
 
 # create serializers
-class TeamCreateSerializer(serializers.ModelSerializer):
+class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      activity = serializers.CharField(write_only=True, required=False)
      cities = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
      positions = serializers.ListField(child=serializers.JSONField(), write_only=True, required=False)
@@ -70,6 +71,33 @@ class TeamCreateSerializer(serializers.ModelSerializer):
                raise serializers.ValidationError({"positions": "certain position does not exist"})
           
           return team_instance
+     
+     def update(self, instance, validated_data):
+          for attr, value in validated_data.items():
+               if attr == 'activity':
+                    new_activity = get_object_or_404(Activity, name=value)
+                    instance.activity = new_activity
+               elif attr == 'cities':
+                    city_instances = []
+                    for city in value:
+                         province_name, city_name = city.strip().split()
+                         province = Province.objects.get(name=province_name).id
+                         city_instances.append(get_object_or_404(City, name=city_name, province=province))
+                    instance.cities.set(city_instances)
+               elif attr == 'positions':
+                    for position_data in value:
+                         position = get_object_or_404(Position, name=position_data["name"])
+                         if TeamPositions.objects.filter(team=instance, position=position).exists():
+                              team_position = get_object_or_404(TeamPositions, team=instance, position=position)
+                              team_position.cnt = position_data["cnt"]
+                              team_position.save()
+                         else:
+                              TeamPositions.objects.create(team=instance, position=position, cnt=position_data['cnt'], pr=position_data['pr'])
+               else:
+                    setattr(instance, attr, value)
+          instance.save()
+          return instance
+                    
 
 # detail serializers
 class TeamPositionDetailSerializer(serializers.ModelSerializer):

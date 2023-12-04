@@ -13,13 +13,26 @@ from notification.models import *
 # Create views
 class TeamCreateAPIView(generics.CreateAPIView):
      queryset = Team.objects.all()
-     serializer_class = TeamCreateSerializer
+     serializer_class = TeamCreateUpdateSerializer
      
 # detail views
 class TeamDetailAPIView(generics.RetrieveAPIView):
      queryset = Team.objects.all()
      serializer_class = TeamDetailSerializer
 
+# update views
+class TeamUpdateAPIView(generics.UpdateAPIView):
+     queryset = Team.objects.all()
+     serializer_class = TeamCreateUpdateSerializer
+
+     def update(self, request, *args, **kwargs):
+          instance = self.get_object()
+          serializer = self.get_serializer(instance, data=request.data, partial=True)
+          if serializer.is_valid(raise_exception=True):
+               self.perform_update(serializer)
+               instance = self.get_object()
+               response_serializer = TeamDetailSerializer(instance)
+               return Response(response_serializer.data, status=status.HTTP_200_OK)
 # list views
 class TeamMemberListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
@@ -48,6 +61,17 @@ class TeamByActivityListAPIView(generics.ListAPIView):
           else:
                queryset = Team.objects.all()
           return queryset
+
+# delete views
+class TeamDestroyAPIView(APIView):
+     def post(self, request, *args, **kwargs):
+          user = get_object_or_404(User, name=request.data['user'])
+          team = get_object_or_404(Team, pk=request.data['team_pk'])
+
+          if user == team.creator:
+               team.delete()
+               return Response({"message": "Team has successfully been destroyed"}, status=status.HTTP_204_NO_CONTENT)
+
 
 # etc
 class SendTeamApplicationAPIView(APIView):
@@ -195,8 +219,24 @@ class LeaveTeamAPIVIew(APIView):
           user = get_object_or_404(User, name=data['user'])
           team_members = team.members.all()
           if user in team_members:
-               team_members.get(user=user).delete()
-               team_members.save()
-               return Response({'message': 'user successfully left the team'}, status=status.HTTP_200_OK)
+               TeamMembers.objects.get(user=user, team=team).delete()
+               return Response({'message': 'user successfully left the team'}, status=status.HTTP_204_NO_CONTENT)
           return Response({'error': 'user is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
-               
+
+class DropTeamMemberAPIVIew(APIView):
+     def post(self, request):
+          data = request.data
+          
+          team = get_object_or_404(Team, pk=data['team_pk'])
+          drop_member = get_object_or_404(User, name=data['drop_member'])
+          user = get_object_or_404(User, name=data['user'])
+          team_members = team.members.all()
+          if user == team.creator:
+               if team.creator != drop_member:
+                    if drop_member in team_members:
+                         TeamMembers.objects.get(user=drop_member, team=team).delete()
+                         return Response({'message': 'user successfully left the team'}, status=status.HTTP_204_NO_CONTENT)
+                    return Response({'error': 'drop_member is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
+               return Response({'error': 'you cannot drop the tem creator. if you want to do this, please delete the team itself.'}, status=status.HTTP_409_CONFLICT)
+          return Response({'error': "user is not the team creator"}, status=status.HTTP_403_FORBIDDEN)
+     
