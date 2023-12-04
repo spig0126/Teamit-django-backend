@@ -9,7 +9,9 @@ from .serializers import *
 from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
-from .constants import UNAVAILABLE_NAMES
+from sys import path
+path.append('..')
+from constants import UNAVAILABLE_NAMES
 
 class UserWithProfileCreateAPIView(generics.CreateAPIView):
      queryset = UserProfile.objects.all()
@@ -42,11 +44,11 @@ class CheckUserNameAvailability(APIView):
           
           try:
                user = User.objects.get(name=name)
-               return Response({"message": "name '{}' is unavailable".format(name)}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({"error": "name '{}' is unavailable".format(name)}, status=status.HTTP_400_BAD_REQUEST)
           except:
                if name not in UNAVAILABLE_NAMES:
                     return Response({"message": "name '{}' is available".format(name)}, status=status.HTTP_200_OK)
-               return Response({"message": "name '{}' is unavailable".format(name)}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({"error": "name '{}' is unavailable".format(name)}, status=status.HTTP_400_BAD_REQUEST)
                     
 
 class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
@@ -110,8 +112,8 @@ class SendFriendRequestAPIView(APIView):
                     friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)
                     serializer = FriendRequestDetailSerializer(friend_request)
                     return Response(serializer.data, status=status.HTTP_200_OK)
-               return Response({"message": "this friend request is already sent"}, status=status.HTTP_409_CONFLICT)    
-          return Response({"message": "sender and receiver is the same"}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({"error": "this friend request is already sent"}, status=status.HTTP_409_CONFLICT)    
+          return Response({"error": "sender and receiver is the same"}, status=status.HTTP_400_BAD_REQUEST)
      
 class AcceptFriendRequestAPIView(APIView):
      def post(self, request):
@@ -139,8 +141,8 @@ class AcceptFriendRequestAPIView(APIView):
                     
                     serializer = FriendRequestDetailSerializer(friend_request)
                     return Response(serializer.data, status=status.HTTP_200_OK)
-               return Response({"message": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
-          return Response({"message": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+               return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
+          return Response({"error": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
 class UserFriendsListAPIView(generics.ListAPIView):

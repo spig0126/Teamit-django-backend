@@ -6,11 +6,23 @@ from rest_framework.response import Response
 from .models import *
 from .serializers import *
 from notification.models import *
+from sys import path
+path.append('..')
+from constants import UNAVAILABLE_NAMES
 
 # Create views
 class TeamCreateAPIView(generics.CreateAPIView):
      queryset = Team.objects.all()
      serializer_class = TeamCreateSerializer
+     
+     # def create(self, request, *args, **kwargs):
+     #      team_name = request.data['name']
+     #      if team_name not in UNAVAILABLE_NAMES:
+     #           serializer = self.get_serializer(data=request.data)
+     #           if serializer.is_valid(raise_exception=True):
+     #                serializer.save()
+     #                return Response({"message": "team succesfully created"}, status=status.HTTP_200_OK)
+     #      return Response({"error": "this team name is not available"}, status=status.HTTP_200_OK)
      
 # detail views
 class TeamDetailAPIView(generics.RetrieveAPIView):
@@ -65,9 +77,9 @@ class SendTeamApplicationAPIView(APIView):
                          )
                          serializer = TeamApplicationDetailSerializer(team_application)
                          return Response(serializer.data, status=status.HTTP_200_OK)
-                    return Response({"message": "this team application already exists"}, status=status.HTTP_409_CONFLICT)   
-               return Response({"message": "user is already a member of team"}, status=status.HTTP_400_BAD_REQUEST) 
-          return Response({"message": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+                    return Response({"error": "this team application already exists"}, status=status.HTTP_409_CONFLICT)   
+               return Response({"error": "user is already a member of team"}, status=status.HTTP_400_BAD_REQUEST) 
+          return Response({"error": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
      
 class AcceptTeamApplicationAPIView(APIView):
      def post(self, request):
@@ -105,9 +117,9 @@ class AcceptTeamApplicationAPIView(APIView):
                               team_application_instance.delete()
                          if team_application_notification_instance is not None:
                               team_application_notification_instance.delete()
-                         Response({"message": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
-               return Response({"message": "this team application is already accepted"}, status=status.HTTP_409_CONFLICT)
-          return Response({"message": "user is not the team's creator"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                         Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({"error": "this team application is already accepted"}, status=status.HTTP_409_CONFLICT)
+          return Response({"error": "user is not the team's creator"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 class DeclineTeamApplicationAPIView(APIView):
      def post(self, request):
@@ -142,9 +154,9 @@ class DeclineTeamApplicationAPIView(APIView):
                               team_application_instance.delete()
                          if team_application_notification_instance is not None:
                               team_application_notification_instance.delete()
-                         Response({"message": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
-               return Response({"message": "this team application is already accepted"}, status=status.HTTP_409_CONFLICT)
-          return Response({"message": "user is not the team's creator"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                         Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({"error": "this team application is already accepted"}, status=status.HTTP_409_CONFLICT)
+          return Response({"error": "user is not the team's creator"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 class EnterTeamAPIView(APIView):
      def post(self, request):
@@ -181,5 +193,19 @@ class EnterTeamAPIView(APIView):
                     )
                     
                     return Response({"message": "user successfully entered team"}, status=status.HTTP_200_OK)
-               return Response({"message": "team application is not accepted"}, status=status.HTTP_409_CONFLICT) 
-          return Response({"message": "user is already team member"}, status=status.HTTP_409_CONFLICT)
+               return Response({"error": "team application is not accepted"}, status=status.HTTP_409_CONFLICT) 
+          return Response({"error": "user is already team member"}, status=status.HTTP_409_CONFLICT)
+
+class LeaveTeamAPIVIew(APIView):
+     def post(self, request):
+          data = request.data
+          
+          team = get_object_or_404(Team, pk=data['team_pk'])
+          user = get_object_or_404(User, name=data['user'])
+          team_members = team.members.all()
+          if user in team_members:
+               team_members.get(user=user).delete()
+               team_members.save()
+               return Response({'message': 'user successfully left the team'}, status=status.HTTP_200_OK)
+          return Response({'error': 'user is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
+               
