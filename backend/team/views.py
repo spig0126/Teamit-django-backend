@@ -84,7 +84,7 @@ class SendTeamApplicationAPIView(APIView):
           
           if team.positions.filter(name=position.name).exists():
                if applicant not in team.members.all():
-                    if not TeamApplication.objects.filter(applicant=applicant, team=team).exists():
+                    if not TeamApplication.objects.filter(applicant=applicant, team=team, accepted=None).exists():
                          team_application  = TeamApplication.objects.create(
                               team = team,
                               applicant = applicant,
@@ -100,30 +100,34 @@ class AcceptTeamApplicationAPIView(APIView):
      def post(self, request):
           data = request.data
           
-          team_application = get_object_or_404(TeamApplication, pk=data['team_application_id'])
+          team_application = get_object_or_404(TeamApplication, pk=data['team_application_id'], accepted=None)
           user = get_object_or_404(User, name=request.data['user'])
-          team_application_notification = get_object_or_404(TeamNotification, related=team_application)
+          team_application_notification = get_object_or_404(TeamNotification, related=team_application, type="team_application")
           team = team_application.team
           applicant = team_application.applicant
           
           team_application_instance = None
           team_application_notification_instance = None
           if user == team.creator:
-               if not team_application.accepted:
+               if team_application.accepted is None:
                     try:
                          team_application.accepted = True
                          team_application_instance = team_application.save()
                          
+                         # set application notification type to show it's processed
+                         team_application_notification.type = "team_application_accept"
+                         
                          # set application notification as read (just in case)
                          if not team_application_notification.is_read:
                               team_application_notification.is_read = True
-                              team_application_notification_instance = team_application_notification.save()
+                              
+                         team_application_notification_instance = team_application_notification.save()
                          
                          # create team_application_accepted notifcation for user
                          Notification.objects.create(
                               type="team_application_accepted",
                               to_user = applicant,
-                              related_id = team_application_notification.pk
+                              related_id = team_application.pk
                          )
                          serializer = TeamApplicationDetailSerializer(team_application)
                          return Response(serializer.data, status=status.HTTP_200_OK)
@@ -140,27 +144,33 @@ class DeclineTeamApplicationAPIView(APIView):
      def post(self, request):
           data = request.data
           
-          team_application = get_object_or_404(TeamApplication, pk=data['team_application_id'])
+          team_application = get_object_or_404(TeamApplication, pk=data['team_application_id'], accepted=None)
           user = get_object_or_404(User, name=request.data['user'])
-          team_application_notification = get_object_or_404(TeamNotification, related=team_application)
+          team_application_notification = get_object_or_404(TeamNotification, related=team_application, type="team_application")
           team = team_application.team
           applicant = team_application.applicant
           
           team_application_instance = None
           team_application_notification_instance = None
           if user == team.creator:
-               if not team_application.accepted:
+               if team_application.accepted is None:
                     try:
+                         team_application.accepted = False
+                         team_application_instance = team_application.save()
+                         
+                         # set application notification type to show it's processed
+                         team_application_notification.type = "team_application_decline"
+                         
                          # set application notification as read (just in case)
                          if not team_application_notification.is_read:
                               team_application_notification.is_read = True
-                              team_application_notification_instance = team_application_notification.save()
+                         team_application_notification_instance = team_application_notification.save()
                          
                          # create team_application_declined notifcation for user
                          Notification.objects.create(
                               type="team_application_declined",
                               to_user = applicant,
-                              related_id = team_application_notification.pk
+                              related_id = team_application.pk
                          )
                          serializer = TeamApplicationDetailSerializer(team_application)
                          return Response(serializer.data, status=status.HTTP_200_OK)
@@ -178,13 +188,13 @@ class EnterTeamAPIView(APIView):
           data = request.data
           
           team = get_object_or_404(Team, pk=data["team_id"])
+          team_application = get_object_or_404(TeamApplication, pk=data["team_application_pk"])
           user = get_object_or_404(User, name=data["user"])
           background = data["background"]
-          team_application = get_object_or_404(TeamApplication, team=team, applicant=user)
           position = team_application.position
           
           if user not in team.members.all():
-               if team_application.accepted:
+               if team_application.accepted == True:
                     # set last notification as read (just in case)
                     acceptance_notification = get_object_or_404(Notification, type="team_application_accepted", related_id=team_application.pk)
                     if not acceptance_notification.is_read:
@@ -208,7 +218,7 @@ class EnterTeamAPIView(APIView):
                     )
                     
                     return Response({"message": "user successfully entered team"}, status=status.HTTP_200_OK)
-               return Response({"error": "team application is not accepted"}, status=status.HTTP_409_CONFLICT) 
+               return Response({"error": "team application has not been accepted yet or has been declined"}, status=status.HTTP_409_CONFLICT)  
           return Response({"error": "user is already team member"}, status=status.HTTP_409_CONFLICT)
 
 class LeaveTeamAPIVIew(APIView):
@@ -220,6 +230,7 @@ class LeaveTeamAPIVIew(APIView):
           team_members = team.members.all()
           if user in team_members:
                TeamMembers.objects.get(user=user, team=team).delete()
+               TeamApplication.objects.get(user=user, team=team).delete()
                return Response({'message': 'user successfully left the team'}, status=status.HTTP_204_NO_CONTENT)
           return Response({'error': 'user is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
 

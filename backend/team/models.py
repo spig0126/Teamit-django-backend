@@ -102,7 +102,7 @@ class TeamApplication(models.Model):
      team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='applications')
      applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications') 
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
-     accepted = models.BooleanField(default=False)
+     accepted = models.BooleanField(null=True, default=None)
      
      def save(self, *args, **kwargs):
           is_new = self.pk is None
