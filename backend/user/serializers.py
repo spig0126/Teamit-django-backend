@@ -238,3 +238,11 @@ class UserWithProfileUpdateSerializer(serializers.ModelSerializer):
           profile_instance.save()
                
           return instance
+     
+# list serializers
+class UserLikesListSerializer(serializers.ListSerializer):
+     child = UserSimpleDetailSerializer()
+     
+     class Meta:
+          model = User
+          fields = '__all__'

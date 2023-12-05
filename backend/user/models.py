@@ -7,7 +7,6 @@ from position.models import Position
 from interest.models import Interest
 from activity.models import Activity
 
-
 # Choices
 class Visibility(models.TextChoices):
      PUBLIC = "PU", "전체 공개"  # db에 저장되는 값: "PU", client에게 전달되는 정보: "전체 공개"
@@ -18,14 +17,6 @@ class Sex(models.TextChoices):
      FEMALE = "F", "여자"    
      MALE = "M", "남자"
      UNSPECIFIED = "U", "선택하지 않을래요"
-
-# class Category(models.TextChoices):
-#      ALL = "ALL", "전체"
-#      PROJECT = "PRO", "프로젝트"
-#      COMPETITION = "CMP", "서포터즈/공모전"
-#      CLUB = "CLB", "동아리/학회"
-#      STARTUP = "STU", "창업"
-#      STUDY = "STY", "스터디"
 
 # Models
 class User(models.Model):
@@ -45,6 +36,7 @@ class User(models.Model):
           'self',
           symmetrical=True
      )
+     
      def __str__(self):
           return self.name
 
@@ -112,3 +104,6 @@ class FriendRequest(models.Model):
                     related_id = self.id,
                )
           
+class UserLikes(models.Model):
+     from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
+     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='liked_by')

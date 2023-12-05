@@ -211,3 +211,10 @@ class TeamApplicationDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = TeamApplication
           fields = '__all__'
+
+# list serializers
+class TeamLikesListSerializer(serializers.ListSerializer):
+     child = TeamSimpleDetailSerializer()
+     class Meta:
+          model = Team
+          fields = '__all__'

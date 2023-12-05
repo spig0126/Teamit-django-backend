@@ -170,6 +170,31 @@ class UserFriendsListAPIView(generics.ListAPIView):
           serializer = self.serializer_class(queryset, many=True)
           return Response(serializer.data, status=status.HTTP_200_OK)
      
-     
-     
-     
+# likes related apis
+class LikeUserAPIView(APIView):
+     def post(self, request):
+          from_user = get_object_or_404(User, name=request.data["from_user"])
+          to_user = get_object_or_404(User, name=request.data["to_user"])
+
+          if UserLikes.objects.filter(from_user=from_user, to_user=to_user).exists():
+               return Response({"error": "already liked"}, status=status.HTTP_409_CONFLICT)
+          UserLikes.objects.create(from_user=from_user, to_user=to_user)
+          return Response({"message": "successfully liked"}, status=status.HTTP_200_OK)
+          
+class UnlikeUserAPIView(APIView):
+     def post(self, request):
+          from_user = get_object_or_404(User, name=request.data["from_user"])
+          to_user = get_object_or_404(User, name=request.data["to_user"])
+
+          try:
+               UserLikes.objects.get(from_user=from_user, to_user=to_user).delete()
+               return Response({"message": "successfully unliked"}, status=status.HTTP_200_OK)
+          except:
+               return Response({"error": "liked_user not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class UserLikesListAPIView(APIView):
+     def post(self, request):
+          user = get_object_or_404(User, name=request.data["user"])
+          user_likes = [obj.to_user for obj in UserLikes.objects.filter(from_user=user)]
+          serializer = UserLikesListSerializer(user_likes)
+          return Response(serializer.data, status=status.HTTP_200_OK)

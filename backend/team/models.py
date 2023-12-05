@@ -108,4 +108,7 @@ class TeamApplication(models.Model):
                     to_team = self.team,
                     related = self
                )
-     
+
+class TeamLike(models.Model):
+     team = models.ForeignKey(Team, related_name="liked_by", on_delete=models.CASCADE)
+     user = models.ForeignKey(User, related_name="team_likes", on_delete=models.CASCADE)

@@ -31,7 +31,7 @@ class TeamUpdateAPIView(generics.UpdateAPIView):
      queryset = Team.objects.all()
      serializer_class = TeamCreateUpdateSerializer
 
-     def update(self, request, *args, **kwargs):
+     def update(self, request):
           instance = self.get_object()
           serializer = self.get_serializer(instance, data=request.data, partial=True)
           if serializer.is_valid(raise_exception=True):
@@ -70,7 +70,7 @@ class TeamByActivityListAPIView(generics.ListAPIView):
 
 # delete views
 class TeamDestroyAPIView(APIView):
-     def post(self, request, *args, **kwargs):
+     def post(self, request):
           user = get_object_or_404(User, name=request.data['user'])
           team = get_object_or_404(Team, pk=request.data['team_pk'])
 
@@ -271,4 +271,31 @@ class DropTeamMemberAPIVIew(APIView):
                     return Response({'error': 'drop_member is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
                return Response({'error': 'you cannot drop the tem creator. if you want to do this, please delete the team itself.'}, status=status.HTTP_409_CONFLICT)
           return Response({'error': "user is not the team creator"}, status=status.HTTP_403_FORBIDDEN)
-     
+
+# team likes related views
+class LikeTeamAPIView(APIView):
+     def post(self, request):
+          user = get_object_or_404(User, name=request.data["user"])
+          team = get_object_or_404(Team, pk=request.data["team_pk"])
+
+          if TeamLike.objects.filter(user=user, team=team).exists():
+               return Response({"error": "team already liked"}, status=status.HTTP_409_CONFLICT)
+          TeamLike.objects.create(user=user, team=team)
+          return Response({"message": "team successfully liked"}, status=status.HTTP_200_OK)
+class UnlikeTeamAPIView(APIView):
+     def post(self, request):
+          user = get_object_or_404(User, name=request.data["user"])
+          team = get_object_or_404(Team, pk=request.data["team_pk"])
+
+          try:
+               TeamLike.objects.get(user=user, team=team).delete()
+               return Response({"message": "team successfully unliked"}, status=status.HTTP_200_OK)
+          except:
+               return Response({"error": "liked_team not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class UserTeamLikesListAPIView(APIView):
+     def post(self, request):
+          user = get_object_or_404(User, name=request.data["user"])
+          team_likes = [obj.team for obj in TeamLike.objects.filter(user=user)]
+          serializer = TeamLikesListSerializer(team_likes)
+          return Response(serializer.data, status=status.HTTP_200_OK)
