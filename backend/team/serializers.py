@@ -139,7 +139,26 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                'members'
           ]  
 
-class TeamApplicantDetailSerializer(serializers.Serializer):
+class TeamSenderDetailSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'image'
+          ]
+     
+class TeamApplicationSimpleDetailSerializer(serializers.ModelSerializer):
+     position = serializers.StringRelatedField()
+     class Meta:
+          model = TeamApplication
+          fields = [
+               'id',
+               'position',
+               'accepted'
+          ]
+          
+class TeamNotificationSenderDetailSerializer(serializers.Serializer):
      id = serializers.IntegerField()
      name = serializers.CharField()
      avatar = serializers.CharField()

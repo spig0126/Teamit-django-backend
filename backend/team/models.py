@@ -44,6 +44,7 @@ class Team(models.Model):
           through="TeamMembers",
           related_name="teams"
      )
+     image = models.CharField(default='')
      
      def __str__(self):
           return self.name

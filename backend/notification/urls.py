@@ -4,4 +4,5 @@ from .views import *
 
 urlpatterns = [
      path("team/", TeamNotificationListAPIView.as_view()),
+     path("", NotificationListAPIView.as_view()),
 ]

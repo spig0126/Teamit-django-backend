@@ -78,6 +78,8 @@ class TeamDestroyAPIView(APIView):
                team.delete()
                return Response({"message": "Team has successfully been destroyed"}, status=status.HTTP_204_NO_CONTENT)
 
+# destroy views
+
 
 # team application related views
 class SendTeamApplicationAPIView(APIView):
