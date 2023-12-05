@@ -103,42 +103,59 @@ class SendFriendRequestAPIView(APIView):
           from_user = User.objects.get(name=data['from_user'])
           
           if to_user != from_user:
-               if not FriendRequest.objects.filter(to_user=to_user, from_user=from_user).exists():
-                    friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)
-                    serializer = FriendRequestDetailSerializer(friend_request)
-                    return Response(serializer.data, status=status.HTTP_200_OK)
-               return Response({"error": "this friend request is already sent"}, status=status.HTTP_409_CONFLICT)    
-          return Response({"error": "sender and receiver is the same"}, status=status.HTTP_400_BAD_REQUEST)
+               if to_user not in from_user.friends.all():
+                    if not FriendRequest.objects.filter(to_user=to_user, from_user=from_user).exists():
+                         friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)
+                         serializer = FriendRequestDetailSerializer(friend_request)
+                         return Response(serializer.data, status=status.HTTP_200_OK)
+                    return Response({"error": "this friend request is already sent"}, status=status.HTTP_208_ALREADY_REPORTED)    
+               return Response({"error": "they are already friends"}, status=status.HTTP_409_CONFLICT)    
+          return Response({"error": "sender and receiver is the same"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
      
 class AcceptFriendRequestAPIView(APIView):
      def post(self, request):
-          friend_request = FriendRequest.objects.get(pk=request.data['friend_request_id'])
-          accepting_user = User.objects.get(name=request.data['user'])
+          friend_request = get_object_or_404(FriendRequest, pk=request.data['friend_request_id'])
+          accepting_user = get_object_or_404(User, name=request.data['user'])
           
           if friend_request.to_user == accepting_user:
                if not friend_request.accepted:
-                    friend_request.accepted = True
-                    friend_request.save()
-                    accepting_user.friends.add(friend_request.from_user)
-                    
-                    # set last notification as read (just in case)
-                    friend_request_notification = Notification.objects.get(related_id=friend_request.pk)
-                    if not friend_request_notification.is_read:
-                         friend_request_notification.is_read = True
+                    try:
+                         friend_request.accepted = True
+                         
+                         # set notification type to "friend_request_accept"
+                         friend_request_notification = Notification.objects.get(type="friend_request",related_id=friend_request.pk)
+                         friend_request_notification.type = "friend_request_accept"
+                         if not friend_request_notification.is_read: # set last notification as read (just in case)
+                              friend_request_notification.is_read = True
+                         
+                         # create notifcation for friend_request_accepted
+                         Notification.objects.create(
+                              type="friend_request_accepted", 
+                              to_user=friend_request.from_user, 
+                              related_id= friend_request.pk
+                         )
+                         
+                         serializer = FriendRequestDetailSerializer(friend_request)
+                    except:
+                         return Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                         friend_request.save()
+                         accepting_user.friends.add(friend_request.from_user)
                          friend_request_notification.save()
-                    
-                    # create notifcation for friend_request_accepted
-                    Notification.objects.create(
-                         type="friend_request_accepted", 
-                         to_user=friend_request.from_user, 
-                         related_id= friend_request.pk
-                    )
-                    
-                    serializer = FriendRequestDetailSerializer(friend_request)
-                    return Response(serializer.data, status=status.HTTP_200_OK)
+                         return Response(serializer.data, status=status.HTTP_200_OK)
                return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
           return Response({"error": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
+class DeclineFriendRequestAPIView(APIView):
+     def post(self, request):
+          friend_request_id = request.data['friend_request_id']
+          friend_request = get_object_or_404(FriendRequest, pk=friend_request_id)
+          accepting_user = get_object_or_404(User, name=request.data['user'])
+          if friend_request.to_user == accepting_user:
+               Notification.objects.get(type="friend_request", related_id=friend_request_id).delete()
+               FriendRequest.objects.get(pk=friend_request_id).delete()
+               return Response({"message": "friend request successfully declined"}, status=status.HTTP_200_OK)
+          return Response({"error": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 class UserFriendsListAPIView(generics.ListAPIView):
      serializer_class = UserDetailSerializer
