@@ -30,15 +30,15 @@ class Team(models.Model):
           ]
      )
      long_pr = models.TextField(default='')
-     active_startdate = models.CharField(max_length=8, default='19000101')
-     active_enddate = models.CharField(max_length=8, default='19000102')
+     active_startdate = models.CharField(max_length=10, default='1900-01-01')
+     active_enddate = models.CharField(max_length=10, default='1900-01-02')
      positions = models.ManyToManyField(
           Position,
           through="TeamPositions",
           related_name="teams",
      )
-     recruit_startdate = models.CharField(max_length=8, default='19000101')
-     recruit_enddate = models.CharField(max_length=8, default='19000101')
+     recruit_startdate = models.CharField(max_length=10, default='1900-01-01')
+     recruit_enddate = models.CharField(max_length=10, default='1900-01-01')
      members = models.ManyToManyField(
           User,
           through="TeamMembers",
@@ -51,32 +51,23 @@ class Team(models.Model):
      @property
      def member_cnt(self):
           return self.members.count()
-     
+          
      @property
-     def status(self):
+     def date_status(self):
           today = date.today()
-          active_startdate = date(self.active_startdate)
-          active_enddate = date(self.active_enddate)
-     
-          if active_startdate - today > timedelta(0):
-               return "활동전"
-          elif active_enddate - today > timedelta(0):
+          recruit_startdate = date.fromisoformat(self.recruit_startdate)
+          recruit_enddate = date.fromisoformat(self.recruit_enddate)
+          active_enddate = date.fromisoformat(self.active_enddate)
+          
+          if (recruit_startdate - today).days >= 0:
+               return "모집예정"
+          elif (recruit_enddate - today).days < 0:
+               print((recruit_enddate - today).days)
+               return "모집완료"
+          elif (active_enddate - today).days <= 0:
                return "활동종료"
           else:
-               return "활동 전"
-          
-     @property
-     def d_date(self):
-          today = date.today()
-          recruit_startdate = date(self.recruit_startdate)
-          recruit_enddate = date(self.recruit_enddate)
-          
-          if recruit_startdate - today > timedelta(0):
-               return "모집예정"
-          elif recruit_enddate - today > timedelta(0):
-               return "모집완료"
-          else:
-               return "D-" + str()
+               return "D" + str((today - recruit_enddate).days)
      
 
 class TeamPositions(models.Model):

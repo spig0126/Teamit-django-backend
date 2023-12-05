@@ -11,6 +11,7 @@ urlpatterns = [
      path("leave/", LeaveTeamAPIVIew.as_view()),
      path("drop/", DropTeamMemberAPIVIew.as_view()),
      path("detail/<int:pk>/", TeamDetailAPIView.as_view()),
+     path("detail/simple/<int:pk>/", TeamSimpleDetailAPIView.as_view()),
      path("update/<int:pk>/", TeamUpdateAPIView.as_view()),
      path("list/", TeamByActivityListAPIView.as_view()),
      path("<int:team>/positions/", TeamPositionListAPIView.as_view()),

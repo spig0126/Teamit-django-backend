@@ -18,7 +18,13 @@ class TeamCreateAPIView(generics.CreateAPIView):
 # detail views
 class TeamDetailAPIView(generics.RetrieveAPIView):
      queryset = Team.objects.all()
-     serializer_class = TeamDetailSerializer
+     serializer_class = TeamDetailSerializer 
+
+class TeamSimpleDetailAPIView(generics.RetrieveAPIView):
+     queryset = Team.objects.all()
+     serializer_class = TeamSimpleDetailSerializer
+     
+
 
 # update views
 class TeamUpdateAPIView(generics.UpdateAPIView):
@@ -230,7 +236,6 @@ class LeaveTeamAPIVIew(APIView):
           team_members = team.members.all()
           if user in team_members:
                TeamMembers.objects.get(user=user, team=team).delete()
-               TeamApplication.objects.get(user=user, team=team).delete()
                return Response({'message': 'user successfully left the team'}, status=status.HTTP_204_NO_CONTENT)
           return Response({'error': 'user is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
 

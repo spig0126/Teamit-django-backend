@@ -11,15 +11,15 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      activity = serializers.CharField(write_only=True, required=False)
      cities = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
      positions = serializers.ListField(child=serializers.JSONField(), write_only=True, required=False)
-     user_name = serializers.CharField(write_only=True)
-     user_avatar = serializers.CharField(write_only=True)
-     user_background = serializers.CharField(write_only=True)
      creator = serializers.CharField(write_only=True)
+     creator_background = serializers.CharField(write_only=True)
+     
      class Meta: 
           model = Team
           fields = [
                'name', 
                'creator',
+               'creator_background',
                'short_pr', 
                'activity', 
                'cities', 
@@ -27,28 +27,24 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                'long_pr', 
                'active_startdate', 
                'active_enddate', 
+               'keywords',
                'positions', 
                'recruit_startdate', 
-               'recruit_enddate',
-               'user_name',
-               'user_avatar',
-               'user_background',
+               'recruit_enddate'
           ]
           
      def create(self, validated_data):
           activity = validated_data.pop('activity', None)
           cities = validated_data.pop('cities', None)
           positions = validated_data.pop('positions', None)
-          user_name = validated_data.pop('user_name', None)
-          user_avatar = validated_data.pop('user_avatar', None)
-          user_background = validated_data.pop('user_background', None)
           creator = validated_data.pop('creator', None)
+          creator_background = validated_data.pop('creator_background', None)
           
           validated_data['activity'] = Activity.objects.get(name=activity)
           validated_data['creator'] = User.objects.get(name=creator)
           
           team_instance = Team.objects.create(**validated_data)
-          user_instance = User.objects.get(name=user_name)
+          user_instance = User.objects.get(name=creator)
           city_instances = []
           try:
                for city in cities:
@@ -59,7 +55,7 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                     position_instance = Position.objects.get(name=position['name'])
                     TeamPositions.objects.create(team=team_instance, position=position_instance, cnt=position['cnt'], pr=position['pr'])
                team_instance.cities.set(city_instances)
-               TeamMembers.objects.create(team=team_instance, user=user_instance, avatar=user_avatar, background=user_background)
+               TeamMembers.objects.create(team=team_instance, user=user_instance, background=creator_background)
           except Province.DoesNotExist:
                team_instance.delete()
                raise serializers.ValidationError({"province": "province does not exist"})
@@ -142,25 +138,30 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                'positions',
                'members'
           ]
+          
+# class MyTeamDetailSerializer(serializers.ModelSerializer):
 
-class TeamSimpleDetailSerializer(serializers.ModelSerializer):
+class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add notification
      positions = serializers.StringRelatedField(many=True)
      member_cnt = serializers.SerializerMethodField()
+     activity = serializers.StringRelatedField()
+     date_status = serializers.SerializerMethodField()
      class Meta:
           model = Team
           fields = [
                'id',
                'name',
-               'short_pr',
+               'activity',
                'keywords', 
-               'recruit_startdate',
-               'recruit_enddate',
-               'positions',
-               'member_cnt'
+               'date_status',
+               'member_cnt',
+               'positions'
           ]
           
      def get_member_cnt(self, obj):
           return obj.member_cnt
+     def get_date_status(self, obj):
+          return obj.date_status
      
 class TeamApplicationDetailSerializer(serializers.ModelSerializer):
      team = serializers.StringRelatedField()
