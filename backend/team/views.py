@@ -77,8 +77,8 @@ class TeamDestroyAPIView(APIView):
           if user == team.creator:
                team.delete()
                return Response({"message": "Team has successfully been destroyed"}, status=status.HTTP_204_NO_CONTENT)
+          return Response({"error": "user is not the team's creator. only team creator can destroy team"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-# destroy views
 
 
 # team application related views

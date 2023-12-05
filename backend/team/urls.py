@@ -7,6 +7,7 @@ urlpatterns = [
      path("apply/", SendTeamApplicationAPIView.as_view()),
      path("accept/", AcceptTeamApplicationAPIView.as_view()),
      path("decline/", DeclineTeamApplicationAPIView.as_view()),
+     path("destroy/", TeamDestroyAPIView.as_view()),
      path("invitation/decline/", UserDeclineTeamInvitationAPIView.as_view()),
      path("invitation/accept/", UserAcceptTeamInvitationAPIView.as_view()),
      path("leave/", LeaveTeamAPIVIew.as_view()),
