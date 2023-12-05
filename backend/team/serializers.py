@@ -137,8 +137,30 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                'activity',
                'positions',
                'members'
-          ]
-          
+          ]  
+
+class TeamApplicantDetailSerializer(serializers.Serializer):
+     id = serializers.IntegerField()
+     name = serializers.CharField()
+     avatar = serializers.CharField()
+     background = serializers.CharField()
+     position = serializers.CharField()
+     accepted = serializers.BooleanField()
+     
+     def to_representation(self, instance):
+          data = {}
+          if 'user' in instance:
+               user = instance['user']
+               data['id'] = user.pk
+               data['name'] = user.name
+               data['avatar']= user.avatar
+               data['background'] = user.background
+          if 'team_application' in instance:
+               team_application = instance['team_application']
+               data['position'] = team_application.position.name
+               data['accepted'] = team_application.accepted
+          return data
+     
 # class MyTeamDetailSerializer(serializers.ModelSerializer):
 
 class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add notification

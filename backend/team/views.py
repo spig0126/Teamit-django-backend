@@ -79,7 +79,7 @@ class TeamDestroyAPIView(APIView):
                return Response({"message": "Team has successfully been destroyed"}, status=status.HTTP_204_NO_CONTENT)
 
 
-# etc
+# team application related views
 class SendTeamApplicationAPIView(APIView):
      def post(self, request):
           data = request.data
