@@ -102,10 +102,10 @@ class SendFriendRequestAPIView(APIView):
           to_user = User.objects.get(name=data['to_user'])
           from_user = User.objects.get(name=data['from_user'])
           
-          if to_user != from_user:
-               if to_user not in from_user.friends.all():
-                    if not FriendRequest.objects.filter(to_user=to_user, from_user=from_user).exists():
-                         friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)
+          if to_user != from_user: 
+               if to_user not in from_user.friends.all():   # if not friend
+                    if not FriendRequest.objects.filter(to_user=to_user, from_user=from_user).exists():  # if not sent
+                         friend_request = FriendRequest.objects.create(to_user=to_user, from_user=from_user)   # Notification 자동적으로 생성됨
                          serializer = FriendRequestDetailSerializer(friend_request)
                          return Response(serializer.data, status=status.HTTP_200_OK)
                     return Response({"error": "this friend request is already sent"}, status=status.HTTP_208_ALREADY_REPORTED)    
