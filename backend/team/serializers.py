@@ -122,12 +122,15 @@ class TeamDetailSerializer(serializers.ModelSerializer):
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
      creator = serializers.StringRelatedField()
+     likes = serializers.SerializerMethodField()
+     
      class Meta:
           model = Team
           fields = [
                'id',
                'name',
                'creator',
+               'likes',
                'short_pr', 
                'meet_preference',
                'long_pr',
@@ -140,6 +143,51 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                'positions',
                'members'
           ]  
+          
+     def get_likes(self, instance):
+          request = self.context.get('request')
+          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          team = instance
+          try:
+               TeamLike.objects.get(user=user, team=team)
+               return True
+          except:
+               return False
+          
+class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add notification
+     positions = serializers.StringRelatedField(many=True)
+     member_cnt = serializers.SerializerMethodField()
+     activity = serializers.StringRelatedField()
+     date_status = serializers.SerializerMethodField()
+     likes = serializers.SerializerMethodField()
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'activity',
+               'keywords', 
+               'date_status',
+               'member_cnt',
+               'likes',
+               'positions'
+          ]
+          
+     def get_member_cnt(self, obj):
+          return obj.member_cnt
+     def get_date_status(self, obj):
+          return obj.date_status
+     def get_likes(self, instance):
+          request = self.context.get('request')
+          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          team = instance
+          try:
+               TeamLike.objects.get(user=user, team=team)
+               return True
+          except:
+               return False
+
+# class MyTeamDetailSerializer(serializers.ModelSerializer):
 
 class TeamSenderDetailSerializer(serializers.ModelSerializer):
      class Meta:
@@ -182,30 +230,7 @@ class TeamNotificationSenderDetailSerializer(serializers.Serializer):
                data['accepted'] = team_application.accepted
           return data
      
-# class MyTeamDetailSerializer(serializers.ModelSerializer):
 
-class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add notification
-     positions = serializers.StringRelatedField(many=True)
-     member_cnt = serializers.SerializerMethodField()
-     activity = serializers.StringRelatedField()
-     date_status = serializers.SerializerMethodField()
-     class Meta:
-          model = Team
-          fields = [
-               'id',
-               'name',
-               'activity',
-               'keywords', 
-               'date_status',
-               'member_cnt',
-               'positions'
-          ]
-          
-     def get_member_cnt(self, obj):
-          return obj.member_cnt
-     def get_date_status(self, obj):
-          return obj.date_status
-     
 class TeamApplicationDetailSerializer(serializers.ModelSerializer):
      team = serializers.StringRelatedField()
      applicant = serializers.StringRelatedField()
