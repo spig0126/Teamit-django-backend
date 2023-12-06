@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     "activity",
     "user",
     "team",
-    "notification"
+    "notification",
+    "post"
 ]
 
 MIDDLEWARE = [

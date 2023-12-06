@@ -26,6 +26,7 @@ urlpatterns = [
     path("api/interest/", include("interest.urls")),
     path("api/activity/", include("activity.urls")),
     path("api/teams/", include("team.urls")),
+    path("api/teams/", include("post.urls")),
     path("api/notification/", include("notification.urls")),
     # path("api/", include("home.routers")),
 ]
