@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from datetime import datetime
@@ -121,7 +122,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
           model = User
           fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests']
 
-
 class UserProfileDetailSerializer(serializers.ModelSerializer):
      activities = serializers.StringRelatedField(many=True)
      cities = serializers.StringRelatedField(many=True)
@@ -147,7 +147,34 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
      profile = UserProfileDetailSerializer(read_only=True)
      interests = serializers.StringRelatedField(many=True)
      positions = serializers.StringRelatedField(many=True)
+     likes = serializers.SerializerMethodField()
+     friends = serializers.SerializerMethodField()
+     class Meta:
+          model = User
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'likes', 'friends', 'profile']
 
+     def get_likes(self, instance):
+          request = self.context.get('request')
+          viewer_user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          viewed_user = instance
+          try:
+               UserLikes.objects.get(from_user=viewer_user, to_user=viewed_user)
+               return True
+          except:
+               return False
+     
+     def get_friends(self, instance):
+          request = self.context.get('request')
+          viewer_user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          viewed_user = instance
+          if viewed_user in viewer_user.friends.all():
+               return True
+          return False
+
+class MyProfileDetailSerializer(serializers.ModelSerializer):
+     profile = UserProfileDetailSerializer(read_only=True)
+     interests = serializers.StringRelatedField(many=True)
+     positions = serializers.StringRelatedField(many=True)
      class Meta:
           model = User
           fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'profile']

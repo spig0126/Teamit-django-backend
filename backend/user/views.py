@@ -3,6 +3,8 @@ from rest_framework import generics, status, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
+from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin
+from rest_framework.exceptions import PermissionDenied
 
 from .models import *
 from .serializers import *
@@ -20,20 +22,44 @@ class UserWithProfileCreateAPIView(generics.CreateAPIView):
                serializer.save()
                return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
                
-class UserDetailAPIView(generics.RetrieveAPIView):
+class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+     queryset = User.objects.all()
+     
+     def get_serializer_class(self):
+          if self.request.method == 'GET':
+               return UserWithProfileDetailSerializer
+          elif self.request.method in ('PUT', 'PATCH'):
+               return UserWithProfileUpdateSerializer
+     
+     def perform_update(self, serializer):
+          return serializer.save()
+     
+     def update(self, request, *args, **kwargs):
+          user_pk = int(request.headers.get('UserID'))
+          if user_pk != self.kwargs.get('pk'):
+               raise PermissionDenied("user not allowed to update this profile")
+          else:
+               instance = self.get_object()
+               serializer = self.get_serializer(instance, data=request.data, partial=True)
+               if serializer.is_valid(raise_exception=True):
+                    updated_instance = self.perform_update(serializer)
+                    print(updated_instance)
+                    response_serializer = MyProfileDetailSerializer(updated_instance)
+                    return Response(response_serializer.data, status=status.HTTP_200_OK)
+          
+class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericAPIView):
      queryset = User.objects.all()
      serializer_class = UserDetailSerializer
-     lookup_field = 'name'
      
-     def get_object(self):
-          queryset = self.filter_queryset(self.get_queryset())
-          pk = self.kwargs.get('pk')
-
-          if pk is not None:
-               return get_object_or_404(queryset, pk=pk)
-          else:
-               return super().get_object()
-
+     def get(self, request, *args, **kwargs):
+          return self.retrieve(request, *args, **kwargs)
+     
+     def delete(self,request, *args, **kwargs):
+          user_pk = int(request.headers.get('UserID'))
+          print(type(user_pk), type(kwargs.get('pk')))
+          if user_pk != kwargs.get('pk'):
+               raise PermissionDenied("user is not allowed to delete this user")
+          return self.destroy(request, *args, **kwargs)
 
 class CheckUserNameAvailability(APIView):
      def get(self, request):
@@ -45,55 +71,9 @@ class CheckUserNameAvailability(APIView):
           except:
                return Response({"message": "name '{}' is available".format(name)}, status=status.HTTP_200_OK)
                     
-
-class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
-     queryset = User.objects.all()
-     lookup_field = 'name'
-     
-     def get_serializer_class(self):
-          if self.request.method == 'GET':
-               return UserWithProfileDetailSerializer
-          elif self.request.method in ('PUT', 'PATCH'):
-               return UserWithProfileUpdateSerializer
-     
-     def get_object(self):
-          queryset = self.filter_queryset(self.get_queryset())
-          pk = self.kwargs.get('pk')
-
-          if pk is not None:
-               return get_object_or_404(queryset, pk=pk)
-          else:
-               return super().get_object()
-     
-     def perform_update(self, serializer):
-          return serializer.save()
-     
-     def update(self, request, *args, **kwargs):
-          instance = self.get_object()
-          serializer = self.get_serializer(instance, data=request.data, partial=True)
-          if serializer.is_valid(raise_exception=True):
-               updated_instance = self.perform_update(serializer)
-               response_serializer = UserWithProfileDetailSerializer(updated_instance)
-               return Response(response_serializer.data, status=status.HTTP_200_OK)
-          
-
 class UserWithProfileListAPIView(generics.ListAPIView):
      queryset = User.objects.all()
      serializer_class = UserWithProfileDetailSerializer
-
-class UserDestroyAPIView(generics.DestroyAPIView):
-     queryset = User.objects.all()
-     serializer_class = UserDetailSerializer
-     lookup_field = 'name'
-     
-     def get_object(self):
-          queryset = self.filter_queryset(self.get_queryset())
-          pk = self.kwargs.get('pk')
-
-          if pk is not None:
-               return get_object_or_404(queryset, pk=pk)
-          else:
-               return super().get_object()
 
 # apis related to friends
 class SendFriendRequestAPIView(APIView):
@@ -171,30 +151,21 @@ class UserFriendsListAPIView(generics.ListAPIView):
           return Response(serializer.data, status=status.HTTP_200_OK)
      
 # likes related apis
-class LikeUserAPIView(APIView):
-     def post(self, request):
-          from_user = get_object_or_404(User, name=request.data["from_user"])
-          to_user = get_object_or_404(User, name=request.data["to_user"])
-
-          if UserLikes.objects.filter(from_user=from_user, to_user=to_user).exists():
-               return Response({"error": "already liked"}, status=status.HTTP_409_CONFLICT)
-          UserLikes.objects.create(from_user=from_user, to_user=to_user)
-          return Response({"message": "successfully liked"}, status=status.HTTP_200_OK)
-          
-class UnlikeUserAPIView(APIView):
-     def post(self, request):
-          from_user = get_object_or_404(User, name=request.data["from_user"])
-          to_user = get_object_or_404(User, name=request.data["to_user"])
-
-          try:
-               UserLikes.objects.get(from_user=from_user, to_user=to_user).delete()
-               return Response({"message": "successfully unliked"}, status=status.HTTP_200_OK)
-          except:
-               return Response({"error": "liked_user not found"}, status=status.HTTP_404_NOT_FOUND)
-
 class UserLikesListAPIView(APIView):
-     def post(self, request):
-          user = get_object_or_404(User, name=request.data["user"])
+     def get(self, request):
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
           user_likes = [obj.to_user for obj in UserLikes.objects.filter(from_user=user)]
           serializer = UserLikesListSerializer(user_likes)
           return Response(serializer.data, status=status.HTTP_200_OK)
+
+class LikeUnlikeAPIView(APIView):
+     def put(self, request, *args, **kwargs):
+          from_user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+          to_user = get_object_or_404(User, pk=self.kwargs.get('pk'))
+          try:
+               user_like = UserLikes.objects.get(from_user=from_user, to_user=to_user)
+               user_like.delete()
+               return Response({"message": "user unliked"}, status=status.HTTP_204_NO_CONTENT)
+          except:
+               UserLikes.objects.create(from_user=from_user, to_user=to_user)
+               return Response({"message": "user liked"}, status=status.HTTP_201_CREATED) 

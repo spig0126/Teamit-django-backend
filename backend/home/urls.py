@@ -21,7 +21,7 @@ from . import routers
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/region/", include("region.urls")),
-    path("api/user/", include("user.urls")),
+    path("api/users/", include("user.urls")),
     path("api/position/", include("position.urls")),
     path("api/interest/", include("interest.urls")),
     path("api/activity/", include("activity.urls")),
