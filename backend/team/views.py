@@ -314,26 +314,6 @@ class TeamApplicationDeclineAPIView(APIView):
 
 
 # team likes related views
-class LikeTeamAPIView(APIView):
-     def post(self, request):
-          user = get_object_or_404(User, name=request.data["user"])
-          team = get_object_or_404(Team, pk=request.data["team_pk"])
-
-          if TeamLike.objects.filter(user=user, team=team).exists():
-               return Response({"error": "team already liked"}, status=status.HTTP_409_CONFLICT)
-          TeamLike.objects.create(user=user, team=team)
-          return Response({"message": "team successfully liked"}, status=status.HTTP_200_OK)
-class UnlikeTeamAPIView(APIView):
-     def post(self, request):
-          user = get_object_or_404(User, name=request.data["user"])
-          team = get_object_or_404(Team, pk=request.data["team_pk"])
-
-          try:
-               TeamLike.objects.get(user=user, team=team).delete()
-               return Response({"message": "team successfully unliked"}, status=status.HTTP_200_OK)
-          except:
-               return Response({"error": "liked_team not found"}, status=status.HTTP_404_NOT_FOUND)
-
 class UserTeamLikesListAPIView(APIView):
      def get(self, request, *args, **kwargs):
           user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
