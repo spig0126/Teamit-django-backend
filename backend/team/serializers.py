@@ -93,7 +93,9 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                     setattr(instance, attr, value)
           instance.save()
           return instance
-                    
+     
+     def to_representation(self, instance):
+          return TeamDetailSerializer(instance).data
 
 # detail serializers
 class TeamPositionDetailSerializer(serializers.ModelSerializer):

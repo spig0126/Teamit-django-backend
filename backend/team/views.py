@@ -1,65 +1,27 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework import generics, status
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, CreateModelMixin
 
 from .models import *
 from .serializers import *
 from notification.models import *
-# from sys import path
-# path.append('..')
-# from backend.user.constants import UNAVAILABLE_NAMES
+from position.models import Position
+# CRUD views for Team
+class TeamListCreateAPIView(generics.ListCreateAPIView):     
+     def get_serializer_class(self):
+          if self.request.method == 'POST':
+               return TeamCreateUpdateSerializer
+          elif self.request.method == 'GET':
+               type = self.request.query_params.get('type')
+               if type is None or type == 'detailed':
+                    return TeamDetailSerializer
+               elif type == 'simple':
+                    return TeamSimpleDetailSerializer
 
-# Create views
-class TeamCreateAPIView(generics.CreateAPIView):
-     queryset = Team.objects.all()
-     serializer_class = TeamCreateUpdateSerializer
-     
-# detail views
-class TeamDetailAPIView(generics.RetrieveAPIView):
-     queryset = Team.objects.all()
-     serializer_class = TeamDetailSerializer 
-
-class TeamSimpleDetailAPIView(generics.RetrieveAPIView):
-     queryset = Team.objects.all()
-     serializer_class = TeamSimpleDetailSerializer
-     
-
-
-# update views
-class TeamUpdateAPIView(generics.UpdateAPIView):
-     queryset = Team.objects.all()
-     serializer_class = TeamCreateUpdateSerializer
-
-     def update(self, request):
-          instance = self.get_object()
-          serializer = self.get_serializer(instance, data=request.data, partial=True)
-          if serializer.is_valid(raise_exception=True):
-               self.perform_update(serializer)
-               instance = self.get_object()
-               response_serializer = TeamDetailSerializer(instance)
-               return Response(response_serializer.data, status=status.HTTP_200_OK)
-# list views
-class TeamMemberListAPIView(generics.ListAPIView):
-     serializer_class = TeamMemberDetailSerializer
-     lookup_field = 'team'
-     
-     def get_queryset(self):
-          team = self.kwargs.get('team')
-          return TeamMembers.objects.filter(team=team)
-     
-class TeamPositionListAPIView(generics.ListAPIView):
-     serializer_class = TeamPositionDetailSerializer
-     lookup_field = 'team'
-     
-     def get_queryset(self):
-          team = self.kwargs.get('team')
-          return TeamPositions.objects.filter(team=team)
-     
-
-class TeamByActivityListAPIView(generics.ListAPIView):
-     serializer_class = TeamSimpleDetailSerializer
-     
      def get_queryset(self):
           activity = self.request.query_params.get('activity')
           if activity is not None:
@@ -67,30 +29,204 @@ class TeamByActivityListAPIView(generics.ListAPIView):
           else:
                queryset = Team.objects.all()
           return queryset
+     
+class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, GenericAPIView):
+     queryset = Team.objects.all()
 
-# delete views
-class TeamDestroyAPIView(APIView):
-     def post(self, request):
-          user = get_object_or_404(User, name=request.data['user'])
-          team = get_object_or_404(Team, pk=request.data['team_pk'])
+     def get_serializer_class(self):
+          serializer_class = TeamDetailSerializer
 
-          if user == team.creator:
-               team.delete()
-               return Response({"message": "Team has successfully been destroyed"}, status=status.HTTP_204_NO_CONTENT)
-          return Response({"error": "user is not the team's creator. only team creator can destroy team"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+          if self.request.method == 'GET':
+               type = self.request.query_params.get('type')
+               if type is None or type == 'detailed':
+                    return TeamDetailSerializer
+               elif type == 'simple':
+                    return TeamSimpleDetailSerializer
+          elif self.request.method == 'PATCH':
+               return TeamCreateUpdateSerializer
+          return serializer_class
+
+     def get(self, request, *args, **kwargs):
+          return self.retrieve(request, *args, **kwargs)
+
+     def patch(self, request, *args, **kwargs):
+          user_pk = request.headers.get('UserID')
+          user = get_object_or_404(User, pk=user_pk)
+          team = self.get_object()
+          if user != team.creator:
+               raise PermissionDenied("user is not allowed to update this team")
+          return self.partial_update(request, *args, **kwargs)
+
+     def delete(self, request, *args, **kwargs):
+          user_pk = request.headers.get('UserID')
+          user = get_object_or_404(User, pk=user_pk)
+          team = self.get_object()
+          if user != team.creator:
+               raise PermissionDenied("user is not allowed to delete this team")
+          return self.destroy(request, *args, **kwargs)
+
+class TeamMemberListAPIView(generics.ListAPIView):
+     serializer_class = TeamMemberDetailSerializer
+     
+     def get_queryset(self):
+          team = get_object_or_404(Team, pk=self.kwargs.get('pk'))
+          return TeamMembers.objects.filter(team=team)
+     
+class TeamPositionListAPIView(generics.ListAPIView):
+     serializer_class = TeamPositionDetailSerializer
+     
+     def get_queryset(self):
+          team = get_object_or_404(Team, pk=self.kwargs.get('pk'))
+          return TeamPositions.objects.filter(team=team)
 
 
-
-# team application related views
-class SendTeamApplicationAPIView(APIView):
-     def post(self, request):
-          data = request.data
-
-          team = get_object_or_404(Team, id=data["team_id"])
-          applicant = get_object_or_404(User, name=data["applicant"])
-          position = get_object_or_404(Position, name=data["position"])
+# Team member views
+class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
+     serializer_class = TeamMemberDetailSerializer
+     
+     def get_queryset(self):
+          team_pk = self.kwargs.get('team_pk')
+          team = get_object_or_404(Team, pk=team_pk)
+          return TeamMembers.objects.filter(team=team)
+     
+     def create(self, request, *args, **kwargs):
+          team_pk = kwargs.get('team_pk')
+          user_pk = request.headers.get('UserID')
+          notification = get_object_or_404(Notification, pk=request.data['notification_id'], type="team_application_accepted")
+          background = request.data['background']
           
-          if team.positions.filter(name=position.name).exists():
+          user = get_object_or_404(User, pk=user_pk)
+          team_application = get_object_or_404(TeamApplication, pk=notification.related_id)
+          team = team_application.team
+          position = team_application.position
+          team_position = get_object_or_404(TeamPositions, team=team, position=position)
+          
+          if user != team_application.applicant:
+               raise PermissionDenied("user not allowed to accpet member invitation")
+          if team_pk != team.pk:
+               return Response({"detail": "team has nothing to do with this application"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+          if user in team.members.all():
+               return Response({"detail": "user is already team member"}, status=status.HTTP_409_CONFLICT)
+
+          # change notification type to "team_invitation_accept"
+          notification.type = "team_invitation_accept"
+          notification.is_read = True
+          notification.save()
+          
+          # update team's recruiting positions
+          team_position.cnt -= 1
+          if team_position.cnt == 0:
+               team_position.delete()
+          else:
+               team_position.save()
+          
+          # add user to team member
+          new_member = TeamMembers.objects.create(
+               team=team,
+               user=user,
+               position=position,
+               background=background
+          )
+          
+          # alert team that invitation was accepted
+          TeamNotification.objects.create(
+               type="team_invitation_accepted",
+               related=team_application,
+               to_team=team
+          )
+          serializer = TeamApplicationDetailSerializer(team_application)
+          return Response(serializer.data, status=status.HTTP_200_OK)
+
+class TeamMemberDeclineAPIView(APIView):
+     def put(self, request, *args, **kwargs):
+          notification = get_object_or_404(Notification, pk=request.data['notification_id'], type="team_application_accepted")
+          team_application = get_object_or_404(TeamApplication, pk=notification.related_id)
+          
+          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          print('hello')
+          
+          if user != team_application.applicant:
+               raise PermissionDenied("user not allowed to decline member invitation") 
+          
+          # delete notification of team_application_accepted
+          notification.delete()
+          
+          # send TeamNotification to team that invitation has been declined
+          TeamNotification.objects.create(
+               type="team_invitation_declined",
+               related=team_application,
+               to_team = team_application.team
+          )
+          return Response({"message": "team invitation successfully declined"}, status=status.HTTP_200_OK)
+     
+class TeamMemberDestroyAPIView(generics.DestroyAPIView):
+     queryset = TeamMembers.objects.all()
+     
+     def delete(self, request, *args, **kwargs):
+          team_pk = kwargs.get('team_pk')
+          member_pk = kwargs.get('member_pk')
+          user_pk = request.headers.get('UserID')
+          
+          team = get_object_or_404(Team, pk=team_pk)
+          member = get_object_or_404(TeamMembers, pk=member_pk)
+          user = get_object_or_404(User, pk=user_pk)
+          
+          if user != member.user:
+               raise PermissionDenied("user is not this member")
+          if user == team.creator:
+               return Response({'detail': 'creator cant leave team. if creator wants to leave, please delete the team itself'}, status=status.HTTP_409_CONFLICT)
+          if user in team.members.all():
+               member.delete()
+               return Response(status=status.HTTP_204_NO_CONTENT)
+          return Response({'detail': "user is this team's member"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
+          
+class TeamMemberDropAPIView(generics.DestroyAPIView):
+     queryset = TeamMembers.objects.all()
+     
+     def delete(self, request, *args, **kwargs):
+          team_pk = kwargs.get('team_pk')
+          member_pk =kwargs.get('member_pk')
+          user_pk = request.headers.get('UserID')
+          
+          team = get_object_or_404(Team, pk=team_pk)
+          member = get_object_or_404(TeamMembers, pk=member_pk)
+          user = get_object_or_404(User, pk=user_pk)
+          
+          if user != team.creator:
+               raise PermissionDenied("user not allowed to drop this member")
+          if member.user == team.creator:
+               return Response({'detail': 'you cannot drop the team creator. if you want to do this, please delete the team itself.'}, status=status.HTTP_409_CONFLICT)
+          print(team.members.all())
+          if member.user in team.members.all():
+               member.delete()
+               return Response(status=status.HTTP_204_NO_CONTENT)
+          return Response({'detail': "member is not this team's member"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
+     
+     
+# team application related views
+class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
+     serializer_class = TeamApplicationDetailSerializer
+     
+     def get_queryset(self):
+          team_pk = self.kwargs.get('team_pk')
+          user_pk = self.request.headers.get('UserID')
+          
+          team = get_object_or_404(Team, pk=team_pk)
+          user = get_object_or_404(User, pk=user_pk)
+          
+          if user in team.members.all():
+               return TeamApplication.objects.filter(team=team)
+          raise PermissionDenied("user is not allowed to view this team's applications")
+     
+     def create(self, request, *args, **kwargs):
+          team_pk = self.kwargs.get('team_pk')
+          user_pk = self.request.headers.get('UserID')
+
+          team = get_object_or_404(Team, pk=team_pk)
+          applicant = get_object_or_404(User, pk=user_pk)
+          position = get_object_or_404(Position, name=request.data["position"])
+          
+          if team.positions.all().filter(name=position.name).exists():
                if applicant not in team.members.all():
                     if not TeamApplication.objects.filter(applicant=applicant, team=team, accepted=None).exists():
                          team_application  = TeamApplication.objects.create(    # TeamNotification 자동적으로 생성됨
@@ -100,177 +236,82 @@ class SendTeamApplicationAPIView(APIView):
                          )
                          serializer = TeamApplicationDetailSerializer(team_application)
                          return Response(serializer.data, status=status.HTTP_200_OK)
-                    return Response({"error": "this team application already exists"}, status=status.HTTP_208_ALREADY_REPORTED)   
-               return Response({"error": "user is already a member of team"}, status=status.HTTP_409_CONFLICT) 
-          return Response({"error": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+                    return Response({"detail": "this team application already exists"}, status=status.HTTP_208_ALREADY_REPORTED)   
+               return Response({"detail": "user is already a member of team"}, status=status.HTTP_409_CONFLICT) 
+          return Response({"detail": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
      
-class AcceptTeamApplicationAPIView(APIView):
-     def post(self, request):
-          data = request.data
+class TeamApplicationAcceptAPIView(APIView):
+     def put(self, request, *args, **kwargs):
+          team_pk = kwargs.get('team_pk')
+          application_pk = kwargs.get('application_pk')
+          user_pk = request.headers.get('UserID')
           
-          team_application = get_object_or_404(TeamApplication, pk=data['team_application_id'], accepted=None)
-          user = get_object_or_404(User, name=data['user'])
+          team_application = get_object_or_404(TeamApplication, pk=application_pk)
+          user = get_object_or_404(User, pk=user_pk)
           team_application_notification = get_object_or_404(TeamNotification, related=team_application, type="team_application")
           team = team_application.team
           applicant = team_application.applicant
           
-          if user == team.creator:
-               if team_application.accepted is None:
-                    try:
-                         team_application.accepted = True
-                         
-                         # set application notification type to show it's processed
-                         team_application_notification.type = "team_application_accept"
-                         
-                         # set application notification as read (just in case)
-                         if not team_application_notification.is_read:
-                              team_application_notification.is_read = True
-                         
-                         # create team_application_accepted notifcation for user
-                         Notification.objects.create(
-                              type="team_application_accepted",
-                              to_user = applicant,
-                              related_id = team_application.pk
-                         )
-                         serializer = TeamApplicationDetailSerializer(team_application)
-                    except:
-                         Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
-                    else:
-                         team_application.save()
-                         team_application_notification.save()
-                         return Response(serializer.data, status=status.HTTP_200_OK)
-               return Response({"error": "this team application is already accepted"}, status=status.HTTP_409_CONFLICT)
-          return Response({"error": "user is not the team's creator"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-class DeclineTeamApplicationAPIView(APIView):
-     def post(self, request):
-          data = request.data
-          
-          team_application = get_object_or_404(TeamApplication, pk=data['team_application_id'], accepted=None)
-          user = get_object_or_404(User, name=request.data['user'])
-          team_application_notification = get_object_or_404(TeamNotification, related=team_application, type="team_application")
-          team = team_application.team
-          applicant = team_application.applicant
-
-          if user == team.creator:
-               if team_application.accepted is None:
-                    # set team application accepted to false
-                    team_application.accepted = False
-                    team_application.save()
+          if user != team.creator:
+               raise PermissionDenied("user is not allowed to accpet this team application")
+          if team_pk == team.pk:
+               try:
+                    team_application.accepted = True
                     
-                    # delete team notification
-                    team_application_notification.delete()
-
-                    # create team_application_declined notifcation for user
+                    # set application notification type to show it's processed
+                    team_application_notification.type = "team_application_accept"
+                    
+                    # set application notification as read (just in case)
+                    if not team_application_notification.is_read:
+                         team_application_notification.is_read = True
+                    
+                    # create team_application_accepted notifcation for user
                     Notification.objects.create(
-                         type="team_application_declined",
+                         type="team_application_accepted",
                          to_user = applicant,
                          related_id = team_application.pk
                     )
                     serializer = TeamApplicationDetailSerializer(team_application)
+               except:
+                    Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
+               else:
+                    team_application.save()
+                    team_application_notification.save()
                     return Response(serializer.data, status=status.HTTP_200_OK)
-               return Response({"error": "this team application is already accepted"}, status=status.HTTP_409_CONFLICT)
-          return Response({"error": "user is not the team's creator"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+          return Response({"detail": "team didn't receive this application"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-class UserDeclineTeamInvitationAPIView(APIView):
-     def post(self, request):
-          data = request.data
+class TeamApplicationDeclineAPIView(APIView):
+     def put(self, request, *args, **kwargs):
+          team_pk = kwargs.get('team_pk')
+          application_pk = kwargs.get('application_pk')
+          user_pk = request.headers.get('UserID')
           
-          user = get_object_or_404(User, name=request.data['user'])
-          notification = get_object_or_404(Notification, pk=data['notification_id'], type="team_application_accepted")
-          
-          team_application = get_object_or_404(TeamApplication, pk=notification.related_id)
-          
-          if user == team_application.applicant:
-               if team_application.accepted:
-                    # delete notification of team_application_accepted
-                    notification.delete()
-                    
-                    # send TeamNotification to team that invitation has been declined
-                    TeamNotification.objects.create(
-                         type="team_invitation_declined",
-                         related=team_application,
-                         to_team = team_application.team
-                    )
-                    return Response({"message": "team invitation successfully declined"}, status=status.HTTP_200_OK)
-               return Response({"error": "user can't decline invitation when application wasn't accepted"}, status=status.HTTP_409_CONFLICT)
-          return Response({"error": "user is not the invitation's recipient"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-                    
-class UserAcceptTeamInvitationAPIView(APIView):
-     def post(self, request):
-          data = request.data
-          
-          # request data
-          notification = get_object_or_404(Notification, pk=data['notification_id'], type="team_application_accepted")
-          user = get_object_or_404(User, name=request.data['user'])
-          background = data['background']
-          
-          # needed data
-          team_application = get_object_or_404(TeamApplication, pk=notification.related_id)
+          team_application = get_object_or_404(TeamApplication, pk=application_pk, accepted=None)
+          user = get_object_or_404(User, pk=user_pk)
+          team_application_notification = get_object_or_404(TeamNotification, related=team_application, type="team_application")
           team = team_application.team
-          position = team_application.position
-          team_position = get_object_or_404(TeamPositions, team=team, position=position)
-
-          if user not in team.members.all():
-               if team_application.accepted:
-                    # change notification type to "team_invitation_accept"
-                    notification.type = "team_invitation_accept"
-                    notification.is_read = True
-                    notification.save()
-                    
-                    # update team's recruiting positions
-                    team_position.cnt -= 1
-                    if team_position.cnt == 0:
-                         team_position.delete()
-                    else:
-                         team_position.save()
-                    
-                    # add user to team member
-                    new_member = TeamMembers.objects.create(
-                         team=team,
-                         user=user,
-                         position=position,
-                         background=background
-                    )
-                    
-                    # alert team that invitation was accepted
-                    TeamNotification.objects.create(
-                         type="team_invitation_accepted",
-                         related=team_application,
-                         to_team=team
-                    )
-                    return Response({"message": "user successfully entered team"}, status=status.HTTP_200_OK)
-               return Response({"error": "team application has not been accepted yet or has been declined"}, status=status.HTTP_409_CONFLICT)  
-          return Response({"error": "user is already team member"}, status=status.HTTP_409_CONFLICT)
-     
-class LeaveTeamAPIVIew(APIView):
-     def post(self, request):
-          data = request.data
+          applicant = team_application.applicant
           
-          team = get_object_or_404(Team, pk=data['team_pk'])
-          user = get_object_or_404(User, name=data['user'])
-          team_members = team.members.all()
-          if user in team_members:
-               TeamMembers.objects.get(user=user, team=team).delete()
-               return Response({'message': 'user successfully left the team'}, status=status.HTTP_204_NO_CONTENT)
-          return Response({'error': 'user is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
+          if user != team.creator:
+               raise PermissionDenied("user is not allowed to accpet this team application")
+          if team_pk == team.pk:
+               # set team application accepted to false
+               team_application.accepted = False
+               team_application.save()
+               
+               # delete team notification
+               team_application_notification.delete()
 
-class DropTeamMemberAPIVIew(APIView):
-     def post(self, request):
-          data = request.data
-          
-          team = get_object_or_404(Team, pk=data['team_pk'])
-          drop_member = get_object_or_404(User, name=data['drop_member'])
-          user = get_object_or_404(User, name=data['user'])
-          team_members = team.members.all()
-          if user == team.creator:
-               if team.creator != drop_member:
-                    if drop_member in team_members:
-                         TeamMembers.objects.get(user=drop_member, team=team).delete()
-                         return Response({'message': 'user successfully left the team'}, status=status.HTTP_204_NO_CONTENT)
-                    return Response({'error': 'drop_member is not a member of the team'}, status=status.HTTP_404_NOT_FOUND)
-               return Response({'error': 'you cannot drop the tem creator. if you want to do this, please delete the team itself.'}, status=status.HTTP_409_CONFLICT)
-          return Response({'error': "user is not the team creator"}, status=status.HTTP_403_FORBIDDEN)
+               # create team_application_declined notifcation for user
+               Notification.objects.create(
+                    type="team_application_declined",
+                    to_user = applicant,
+                    related_id = team_application.pk
+               )
+               serializer = TeamApplicationDetailSerializer(team_application)
+               return Response(serializer.data, status=status.HTTP_200_OK)
+          return Response({"detail": "team didn't receive this application"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
 
 # team likes related views
 class LikeTeamAPIView(APIView):
@@ -294,8 +335,20 @@ class UnlikeTeamAPIView(APIView):
                return Response({"error": "liked_team not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class UserTeamLikesListAPIView(APIView):
-     def post(self, request):
-          user = get_object_or_404(User, name=request.data["user"])
+     def get(self, request, *args, **kwargs):
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
           team_likes = [obj.team for obj in TeamLike.objects.filter(user=user)]
           serializer = TeamLikesListSerializer(team_likes)
           return Response(serializer.data, status=status.HTTP_200_OK)
+     
+class TeamLikeUnlikeAPIView(APIView):
+     def put(self, request, *args, **kwargs):
+          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+          try:
+               team_like = TeamLike.objects.get(team=team, user=user)
+               team_like.delete()
+               return Response({"message": "team unliked"}, status=status.HTTP_204_NO_CONTENT)
+          except:
+               TeamLike.objects.create(team=team, user=user)
+               return Response({"message": "team liked"}, status=status.HTTP_201_CREATED)
