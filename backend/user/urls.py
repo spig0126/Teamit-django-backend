@@ -4,7 +4,8 @@ from .views import *
 
 urlpatterns = [
      # user
-     path("", UserWithProfileCreateAPIView.as_view()),
+     path("", UserWithProfileDetailAPIView.as_view()),
+     path("recommended/", RecommendedUserListAPIView.as_view()),
      path("<int:pk>/", UserDetailAPIView.as_view()),
      path("name/available/", CheckUserNameAvailability.as_view()),
 
@@ -12,9 +13,12 @@ urlpatterns = [
      path("profiles/", UserWithProfileListAPIView.as_view()),
      path("<int:pk>/profile/", UserWithProfileRetrieveUpdateAPIView.as_view()), 
      
+     # friends
      path("send-friend-request/", SendFriendRequestAPIView.as_view()),
+     path("unsend-friend-request/", UnsendFriendRequestAPIView.as_view()),
      path("accept-friend-request/", AcceptFriendRequestAPIView.as_view()),
      path("decline-friend-request/", DeclineFriendRequestAPIView.as_view()),
+     path("unfriend/", UnfriendUserAPIView.as_view()),
      path("friends/", UserFriendsListAPIView.as_view()),
      
      # likes

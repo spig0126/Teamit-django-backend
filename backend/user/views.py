@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin
 from rest_framework.exceptions import PermissionDenied
+from django.db.models import Count
 
 from .models import *
 from .serializers import *
@@ -12,16 +13,29 @@ from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
 
-class UserWithProfileCreateAPIView(generics.CreateAPIView):
+class UserWithProfileDetailAPIView(generics.GenericAPIView):
      queryset = UserProfile.objects.all()
      serializer_class = UserProfileCreateSerializer
+
+     def get_serializer_class(self):
+          if self.request.method == 'GET':
+               return MyProfileDetailSerializer
+          else:
+               return UserProfileCreateSerializer
      
-     def create(self, request, *args, **kwargs):
+     def post(self, request, *args, **kwargs):    # create user
           serializer = self.get_serializer(data=request.data)
           if serializer.is_valid(raise_exception=True):
                serializer.save()
                return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
-               
+     
+     def get(self, request, *args, **kwargs):     # get my profile
+          user_pk = int(self.request.headers.get('UserID'))
+          user = get_object_or_404(User, pk=user_pk)
+          serializer = self.get_serializer(user)
+          return Response(serializer.data, status=status.HTTP_200_OK)
+          
+     
 class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
      queryset = User.objects.all()
      
@@ -34,7 +48,7 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
      def perform_update(self, serializer):
           return serializer.save()
      
-     def update(self, request, *args, **kwargs):
+     def update(self, request, *args, **kwargs):  # update my profile
           user_pk = int(request.headers.get('UserID'))
           if user_pk != self.kwargs.get('pk'):
                raise PermissionDenied("user not allowed to update this profile")
@@ -60,6 +74,12 @@ class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericA
           if user_pk != kwargs.get('pk'):
                raise PermissionDenied("user is not allowed to delete this user")
           return self.destroy(request, *args, **kwargs)
+
+class RecommendedUserListAPIView(generics.ListAPIView):
+     serializer_class = UserDetailSerializer
+     
+     def get_queryset(self):
+          return User.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
 
 class CheckUserNameAvailability(APIView):
      def get(self, request):
@@ -91,7 +111,20 @@ class SendFriendRequestAPIView(APIView):
                     return Response({"error": "this friend request is already sent"}, status=status.HTTP_208_ALREADY_REPORTED)    
                return Response({"error": "they are already friends"}, status=status.HTTP_409_CONFLICT)    
           return Response({"error": "sender and receiver is the same"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-     
+
+class UnsendFriendRequestAPIView(APIView):
+     def post(self, request):
+          data = request.data
+          to_user = User.objects.get(name=data['to_user'])
+          from_user = User.objects.get(name=data['from_user'])
+          
+          friend_request = get_object_or_404(FriendRequest, to_user=to_user, from_user=from_user, accepted=False)
+          notification = get_object_or_404(Notification, related_id=friend_request.pk, type='friend_request')
+
+          friend_request.delete()
+          notification.delete()
+          return Response({"message": "friend request successfuly unsent"}, status=status.HTTP_200_OK)
+
 class AcceptFriendRequestAPIView(APIView):
      def post(self, request):
           friend_request = get_object_or_404(FriendRequest, pk=request.data['friend_request_id'])
@@ -125,6 +158,23 @@ class AcceptFriendRequestAPIView(APIView):
                          return Response(serializer.data, status=status.HTTP_200_OK)
                return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
           return Response({"error": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+class UnfriendUserAPIView(APIView):
+     def post(self, request, *args, **kwargs):
+          userA = get_object_or_404(User, name=request.data['userA'])
+          userB = get_object_or_404(User, name=request.data['userB'])
+          
+          try:
+               friend_request = FriendRequest.objects.get(to_user=userA, from_user=userB)
+          except:
+               friend_request = FriendRequest.objects.get(to_user=userB, from_user=userA)
+               
+          Notification.objects.filter(related_id=friend_request.pk, type__startswith='f').delete()
+          friend_request.delete()
+          userA.friends.remove(userB)
+          userB.friends.remove(userA)
+          
+          return Response({"message": "unfriend request successful"}, status=status.HTTP_204_NO_CONTENT)
 
 class DeclineFriendRequestAPIView(APIView):
      def post(self, request):
