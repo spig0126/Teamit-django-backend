@@ -5,6 +5,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
+from django.db.models import Count
 
 from .models import *
 from .serializers import *
@@ -16,26 +17,31 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):
           if self.request.method == 'POST':
                return TeamCreateUpdateSerializer
           elif self.request.method == 'GET':
-               type = self.request.query_params.get('type')
-               if type is None or type == 'detailed':
-                    return TeamDetailSerializer
-               elif type == 'simple':
+               activity = self.request.query_params.get('activity')
+               if activity is None:
+                    return MyTeamSimpleDetailSerializer
+               else:
                     return TeamSimpleDetailSerializer
 
      def get_queryset(self):
           activity = self.request.query_params.get('activity')
-          if activity is not None:
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+          if activity is not None: # list all teams filtered by activity
                queryset = Team.objects.filter(activity=activity)
-          else:
-               queryset = Team.objects.all()
+          else:     # list my teams
+               queryset = Team.objects.filter(creator=user)
           return queryset
+
+class RecommendedTeamListAPIView(generics.ListAPIView):
+     serializer_class = TeamSimpleDetailSerializer
+     
+     def get_queryset(self):
+          return Team.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
      
 class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, GenericAPIView):
      queryset = Team.objects.all()
 
      def get_serializer_class(self):
-          serializer_class = TeamDetailSerializer
-
           if self.request.method == 'GET':
                type = self.request.query_params.get('type')
                if type is None or type == 'detailed':
@@ -44,7 +50,6 @@ class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin,
                     return TeamSimpleDetailSerializer
           elif self.request.method == 'PATCH':
                return TeamCreateUpdateSerializer
-          return serializer_class
 
      def get(self, request, *args, **kwargs):
           return self.retrieve(request, *args, **kwargs)
@@ -65,6 +70,17 @@ class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin,
                raise PermissionDenied("user is not allowed to delete this team")
           return self.destroy(request, *args, **kwargs)
 
+class MyTeamRoomDetailAPIView(generics.RetrieveAPIView):
+     queryset = Team.objects.all()
+     serializer_class = MyTeamRoomDetailSerializer
+     
+     def get(self, request, *args, **kwargs):
+          user_pk = request.headers.get('UserID')
+          user = get_object_or_404(User, pk=user_pk)
+          team = self.get_object()
+          if user not in team.members.all():
+               raise PermissionDenied("user is not allowed to view this team's room info")
+          return self.retrieve(request, *args, **kwargs)
 class TeamMemberListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      

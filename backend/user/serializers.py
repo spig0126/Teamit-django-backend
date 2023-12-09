@@ -169,6 +169,8 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
           viewed_user = instance
           if viewed_user in viewer_user.friends.all():
                return True
+          elif FriendRequest.objects.filter(to_user=viewed_user, from_user=viewer_user, accepted=False).exists():
+               return None
           return False
 
 class MyProfileDetailSerializer(serializers.ModelSerializer):
