@@ -18,5 +18,9 @@ class PositionDetailAPIView(generics.RetrieveAPIView):
                return get_object_or_404(queryset, pk=pk)
           else:
                return super().get_object()
+     
+class PositionListAPIView(generics.ListAPIView):
+     queryset = Position.objects.all()
+     serializer_class = PositionSerializer
 
 

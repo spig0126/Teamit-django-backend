@@ -10,7 +10,7 @@ class Province(models.Model):
 
 class City(models.Model):
      name = models.CharField(max_length=10)
-     province = models.ForeignKey(Province, on_delete=models.CASCADE)
+     province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name='cities')
 
      def __str__(self):
           return f"{self.province.name} {self.name}"

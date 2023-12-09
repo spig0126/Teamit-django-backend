@@ -1,11 +1,11 @@
 from django.urls import path
 
-from . import views
+from .views import *
 
 urlpatterns = [
-     path('city/<int:pk>/', views.CityDetailAPIView.as_view()), 
-     path('city/<str:name>/', views.CityDetailAPIView.as_view()), 
-     path('province/<int:pk>/', views.ProvinceDetailAPIView.as_view()), 
-     path('province/<str:name>/', views.ProvinceDetailAPIView.as_view()), 
-     path('', views.CityListAPIView.as_view()),
+     path('cities/<int:pk>/', CityDetailAPIView.as_view()), 
+     path('cities/<str:name>/', CityDetailAPIView.as_view()), 
+     path('provinces/<int:pk>/', ProvinceDetailAPIView.as_view()), 
+     path('provinces/<str:name>/', ProvinceDetailAPIView.as_view()), 
+     path('', CityByProvinceListAPIView.as_view()),
 ]

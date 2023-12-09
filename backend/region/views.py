@@ -4,26 +4,18 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 
 from .models import City, Province
-from .serializers import CitySerializer, ProvinceSerializer
-
-# Create your views here.
-# @api_view(["GET"])
-# def region_all(request, *args, **kwargs):
-#      data = {}
-#      for province in Province.objects.all():
-#           data[province.name] = []
-#           for city in City.objects.filter(province_id=province.id).all():
-#                data[province.name].append(city.name)
-#      print(data)
-#      return Response(data)
+from .serializers import *
 
 class CityListAPIView(generics.ListAPIView):
      queryset = City.objects.all()
-     serializer_class = CitySerializer
-     
+     serializer_class = CityWithProvinceSerializer
+
+class CityByProvinceListAPIView(generics.ListAPIView):
+     queryset = Province.objects.all()
+     serializer_class = ProvinceWithCitiesSerializer
 class CityDetailAPIView(generics.RetrieveAPIView):
      queryset = City.objects.all()
-     serializer_class = CitySerializer
+     serializer_class = CityWithProvinceSerializer
      lookup_field = 'name'
      
      def get_object(self):

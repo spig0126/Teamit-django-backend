@@ -20,13 +20,13 @@ from . import routers
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/region/", include("region.urls")),
+    path("api/regions/", include("region.urls")),
     path("api/users/", include("user.urls")),
-    path("api/position/", include("position.urls")),
-    path("api/interest/", include("interest.urls")),
-    path("api/activity/", include("activity.urls")),
+    path("api/positions/", include("position.urls")),
+    path("api/interests/", include("interest.urls")),
+    path("api/activities/", include("activity.urls")),
     path("api/teams/", include("team.urls")),
     path("api/teams/", include("post.urls")),
-    path("api/notification/", include("notification.urls")),
+    path("api/notifications/", include("notification.urls")),
     # path("api/", include("home.routers")),
 ]
