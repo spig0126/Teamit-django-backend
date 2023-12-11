@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from datetime import *
 
 from .models import *
 from position.models import *
@@ -125,6 +126,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
      creator = serializers.StringRelatedField()
      
      class Meta:
@@ -134,6 +136,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
                'name',
                'creator',
                'short_pr', 
+               'keywords',
                'meet_preference',
                'long_pr',
                'active_startdate',
@@ -142,6 +145,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
                'recruit_enddate',
                'cities',
                'activity',
+               'interest',
                'positions',
                'members'
           ]  
@@ -171,7 +175,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
-     creator = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
      is_member = serializers.SerializerMethodField()
      likes = serializers.SerializerMethodField()
      date_status = serializers.SerializerMethodField()
@@ -180,6 +184,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           fields = [
                'id',
                'name',
+               'keywords',
                'date_status',
                'creator',
                'is_member',
@@ -193,6 +198,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                'recruit_enddate',
                'cities',
                'activity',
+               'interest',
                'positions',
                'members'
           ]  
@@ -202,6 +208,8 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           user = get_object_or_404(User, pk=request.headers.get('UserID'))
           if user in instance.members.all():
                return True
+          elif TeamApplication.objects.filter(applicant=user, team=instance, accepted=None).exists():
+               return None
           return False
      def get_likes(self, instance):
           request = self.context.get('request')
@@ -220,6 +228,7 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add n
      positions = serializers.StringRelatedField(many=True)
      member_cnt = serializers.SerializerMethodField()
      activity = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
      date_status = serializers.SerializerMethodField()
 
      class Meta:
@@ -228,6 +237,7 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add n
                'id',
                'name',
                'activity',
+               'interest',
                'keywords', 
                'date_status',
                'member_cnt',
@@ -243,14 +253,18 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
      member_cnt = serializers.SerializerMethodField()
      activity = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
      notification_status = serializers.SerializerMethodField()
-
+     active = serializers.SerializerMethodField()
+     
      class Meta:
           model = Team
           fields = [
                'id',
                'name',
+               'active',
                'activity',
+               'interest',
                'keywords', 
                'notification_status',
                'member_cnt',
@@ -262,7 +276,11 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
      def get_notification_status(self, instance):
           from notification.models import TeamNotification
           return TeamNotification.objects.filter(to_team=instance, is_read=False).exists()
-     
+     def get_active(self, obj):
+          today = date.today()
+          active_enddate = date.fromisoformat(obj.active_enddate)
+          return True if (active_enddate - today).days >= 0 else False
+          
 class TeamSenderDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = Team

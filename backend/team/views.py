@@ -29,7 +29,7 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):
           if activity is not None: # list all teams filtered by activity
                queryset = Team.objects.filter(activity=activity)
           else:     # list my teams
-               queryset = Team.objects.filter(creator=user)
+               queryset = Team.objects.filter(members=user)
           return queryset
 
 class RecommendedTeamListAPIView(generics.ListAPIView):
@@ -159,7 +159,6 @@ class TeamMemberDeclineAPIView(APIView):
           team_application = get_object_or_404(TeamApplication, pk=notification.related_id)
           
           user = get_object_or_404(User, pk=request.headers.get('UserID'))
-          print('hello')
           
           if user != team_application.applicant:
                raise PermissionDenied("user not allowed to decline member invitation") 
@@ -212,7 +211,6 @@ class TeamMemberDropAPIView(generics.DestroyAPIView):
                raise PermissionDenied("user not allowed to drop this member")
           if member.user == team.creator:
                return Response({'detail': 'you cannot drop the team creator. if you want to do this, please delete the team itself.'}, status=status.HTTP_409_CONFLICT)
-          print(team.members.all())
           if member.user in team.members.all():
                member.delete()
                return Response(status=status.HTTP_204_NO_CONTENT)

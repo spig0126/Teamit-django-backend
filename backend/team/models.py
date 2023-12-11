@@ -19,6 +19,11 @@ class Team(models.Model):
                                    related_name='team',
                                    default=1
                                    )
+     interest = models.ForeignKey(Interest, 
+                                   on_delete=models.CASCADE,
+                                   related_name='interest',
+                                   default=1
+                                   )
      cities = models.ManyToManyField(
           City,
           related_name='team',
@@ -63,13 +68,15 @@ class Team(models.Model):
           if (recruit_startdate - today).days >= 0:
                return "모집예정"
           elif (recruit_enddate - today).days < 0:
-               print((recruit_enddate - today).days)
                return "모집완료"
           elif (active_enddate - today).days <= 0:
                return "활동종료"
           else:
                return "D" + str((today - recruit_enddate).days)
      
+     # @property
+     # def active_enddate(self):
+          
 
 class TeamPositions(models.Model):
      id = models.AutoField(primary_key=True)
