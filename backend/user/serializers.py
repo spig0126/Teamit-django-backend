@@ -181,6 +181,20 @@ class MyProfileDetailSerializer(serializers.ModelSerializer):
           model = User
           fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'profile']
 
+class RecommendedUserDetailSerializer(serializers.ModelSerializer):
+     interests = serializers.StringRelatedField(many=True)
+     positions = serializers.StringRelatedField(many=True)
+     keywords = serializers.SerializerMethodField()
+     short_pr = serializers.SerializerMethodField()
+     class Meta:
+          model = User
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'short_pr', 'keywords']
+     
+     def get_keywords(self, instance):
+          return instance.profile.keywords
+     def get_short_pr(self, instance):
+          return instance.profile.short_pr
+
 class FriendRequestDetailSerializer(serializers.ModelSerializer):
      to_user = serializers.StringRelatedField()
      from_user = serializers.StringRelatedField()

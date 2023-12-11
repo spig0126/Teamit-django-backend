@@ -76,7 +76,7 @@ class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericA
           return self.destroy(request, *args, **kwargs)
 
 class RecommendedUserListAPIView(generics.ListAPIView):
-     serializer_class = UserDetailSerializer
+     serializer_class = RecommendedUserDetailSerializer
      
      def get_queryset(self):
           return User.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
