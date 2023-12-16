@@ -5,6 +5,7 @@ from datetime import *
 from .models import *
 from position.models import *
 from activity.models import *
+from .utils import get_team_members_with_creator_first
 from user.models import User
 
 # create serializers
@@ -150,6 +151,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
                'members'
           ]  
 
+
 class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      last_post = serializers.SerializerMethodField()
@@ -169,6 +171,12 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
                return team_posts.order_by('created_at').first().content
           else:
                return None
+     
+     def to_representaation(self, instance):
+          data = super().to_representaation(instance)
+          members = get_team_members_with_creator_first(instance)
+          data['members'] = members
+          return data
           
 class TeamDetailSerializer(serializers.ModelSerializer):
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
@@ -223,6 +231,13 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           
      def get_date_status(self, obj):
           return obj.date_status
+     
+          
+     def to_representaation(self, instance):
+          data = super().to_representaation(instance)
+          members = get_team_members_with_creator_first(instance)
+          data['members'] = members
+          return data
           
 class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add notification
      positions = serializers.StringRelatedField(many=True)
