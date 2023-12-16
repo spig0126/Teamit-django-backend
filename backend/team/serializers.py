@@ -54,7 +54,7 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
           creator_position = Position.objects.get(name=creator_position)
           try:
                for city in cities:
-                    province_name, city_name = city.strip().split()
+                    province_name, city_name = city.strip().split(' ', 1)
                     province = Province.objects.get(name=province_name).id
                     city_instances.append(City.objects.get(name=city_name, province=province))
                for position in positions:
@@ -80,21 +80,18 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                     new_activity = get_object_or_404(Activity, name=value)
                     instance.activity = new_activity
                elif attr == 'cities':
+                    instance.cities.clear()
                     city_instances = []
                     for city in value:
-                         province_name, city_name = city.strip().split()
+                         province_name, city_name = city.strip().split(' ', 1)
                          province = Province.objects.get(name=province_name).id
                          city_instances.append(get_object_or_404(City, name=city_name, province=province))
                     instance.cities.set(city_instances)
                elif attr == 'positions':
+                    instance.positions.clear()
                     for position_data in value:
-                         position = get_object_or_404(Position, name=position_data["name"])
-                         if TeamPositions.objects.filter(team=instance, position=position).exists():
-                              team_position = get_object_or_404(TeamPositions, team=instance, position=position)
-                              team_position.cnt = position_data["cnt"]
-                              team_position.save()
-                         else:
-                              TeamPositions.objects.create(team=instance, position=position, cnt=position_data['cnt'], pr=position_data['pr'])
+                         position = get_object_or_404(Position, name=position_data['position'])
+                         TeamPositions.objects.create(team=instance, position=position, cnt=position_data['cnt'], pr=position_data['pr'])
                else:
                     setattr(instance, attr, value)
           instance.save()
@@ -244,7 +241,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           data['members'] = members
           return data
           
-class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add notification
+class TeamSimpleDetailSerializer(serializers.ModelSerializer):  
      positions = serializers.StringRelatedField(many=True)
      member_cnt = serializers.SerializerMethodField()
      activity = serializers.StringRelatedField()
@@ -269,7 +266,29 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add n
      def get_date_status(self, obj):
           return obj.date_status
 
-
+class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):  
+     positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
+     cities = serializers.StringRelatedField(many=True)
+     activity = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'short_pr', 
+               'keywords',
+               'activity',
+               'interest',
+               'cities',
+               'meet_preference',
+               'long_pr',
+               'active_startdate',
+               'active_enddate',
+               'recruit_startdate',
+               'recruit_enddate',
+               'positions'
+          ]  
 
 class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)

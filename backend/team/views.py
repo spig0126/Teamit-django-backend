@@ -88,6 +88,10 @@ class MyTeamRoomDetailAPIView(generics.RetrieveAPIView):
           serializer = self.get_serializer(instance=team, context=serializer_context)
           return Response(serializer.data, status=status.HTTP_200_OK)
 
+class TeamBeforeUpdateDetailAPIView(generics.RetrieveAPIView):
+     queryset = Team.objects.all()
+     serializer_class = TeamBeforeUpdateDetailSerializer
+
 class TeamMemberListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      
