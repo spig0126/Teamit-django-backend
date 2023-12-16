@@ -74,9 +74,6 @@ class Team(models.Model):
                return "활동종료"
           else:
                return "D" + str((today - recruit_enddate).days)
-     
-     # @property
-     # def active_enddate(self):
           
 
 class TeamPositions(models.Model):

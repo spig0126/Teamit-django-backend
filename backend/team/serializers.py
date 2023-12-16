@@ -80,7 +80,6 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                     new_activity = get_object_or_404(Activity, name=value)
                     instance.activity = new_activity
                elif attr == 'cities':
-                    instance.cities.clear()
                     city_instances = []
                     for city in value:
                          province_name, city_name = city.strip().split(' ', 1)
@@ -88,7 +87,6 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                          city_instances.append(get_object_or_404(City, name=city_name, province=province))
                     instance.cities.set(city_instances)
                elif attr == 'positions':
-                    instance.positions.clear()
                     for position_data in value:
                          position = get_object_or_404(Position, name=position_data['position'])
                          TeamPositions.objects.create(team=instance, position=position, cnt=position_data['cnt'], pr=position_data['pr'])
