@@ -38,7 +38,12 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
      serializer_class = TeamSimpleDetailSerializer
      
      def get_queryset(self):
-          return Team.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
+          teams = Team.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
+          show_top = self.request.query_params.get('show_top', None)
+          if show_top == 'true':
+               teams = teams[:10]
+          print(len(teams))
+          return teams
      
 class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, GenericAPIView):
      queryset = Team.objects.all()

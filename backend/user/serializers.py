@@ -186,14 +186,17 @@ class RecommendedUserDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
      keywords = serializers.SerializerMethodField()
      short_pr = serializers.SerializerMethodField()
+     liked_cnt = serializers.SerializerMethodField()
      class Meta:
           model = User
-          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'short_pr', 'keywords']
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'short_pr', 'keywords', 'liked_cnt']
      
      def get_keywords(self, instance):
           return instance.profile.keywords
      def get_short_pr(self, instance):
           return instance.profile.short_pr
+     def get_liked_cnt(self, instance):
+          return instance.liked_by.count()
 
 class FriendRequestDetailSerializer(serializers.ModelSerializer):
      to_user = serializers.StringRelatedField()
@@ -284,7 +287,7 @@ class UserWithProfileUpdateSerializer(serializers.ModelSerializer):
      
 # list serializers
 class UserLikesListSerializer(serializers.ListSerializer):
-     child = UserSimpleDetailSerializer()
+     child = UserDetailSerializer()
      
      class Meta:
           model = User

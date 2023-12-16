@@ -79,7 +79,11 @@ class RecommendedUserListAPIView(generics.ListAPIView):
      serializer_class = RecommendedUserDetailSerializer
      
      def get_queryset(self):
-          return User.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
+          users = User.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
+          show_top = self.request.query_params.get('show_top', None)
+          if show_top == 'true':
+               users = users[:10]
+          return users
 
 class CheckUserNameAvailability(APIView):
      def get(self, request):
