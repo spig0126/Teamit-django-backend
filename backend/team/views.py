@@ -82,7 +82,11 @@ class MyTeamRoomDetailAPIView(generics.RetrieveAPIView):
           team = self.get_object()
           if user not in team.members.all():
                raise PermissionDenied("user is not allowed to view this team's room info")
-          return self.retrieve(request, *args, **kwargs)
+          
+          # pass user instance as contest to serailizer
+          serializer_context = {'user': user}
+          serializer = self.get_serializer(instance=team, context=serializer_context)
+          return Response(serializer.data, status=status.HTTP_200_OK)
 
 class TeamMemberListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer

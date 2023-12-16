@@ -151,16 +151,18 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
                'members'
           ]  
 
-
 class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      last_post = serializers.SerializerMethodField()
+     has_new_team_notifications = serializers.SerializerMethodField()
+     
      class Meta:
           model = Team
           fields = [
                'id',
                'name',
                'creator',
+               'has_new_team_notifications',
                'members',
                'last_post'
           ]  
@@ -171,6 +173,9 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
                return team_posts.order_by('created_at').first().content
           else:
                return None
+     
+     def get_has_new_team_notifications(self, instance):
+          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
      
      def to_representaation(self, instance):
           data = super().to_representaation(instance)
@@ -263,6 +268,8 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):   # need to add n
           return obj.member_cnt
      def get_date_status(self, obj):
           return obj.date_status
+
+
 
 class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
