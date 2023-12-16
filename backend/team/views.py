@@ -6,11 +6,13 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
 from django.db.models import Count
+from django.db.models import F
 
 from .models import *
 from .serializers import *
 from notification.models import *
 from position.models import Position
+
 # CRUD views for Team
 class TeamListCreateAPIView(generics.ListCreateAPIView):     
      def get_serializer_class(self):
@@ -81,6 +83,7 @@ class MyTeamRoomDetailAPIView(generics.RetrieveAPIView):
           if user not in team.members.all():
                raise PermissionDenied("user is not allowed to view this team's room info")
           return self.retrieve(request, *args, **kwargs)
+
 class TeamMemberListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      
@@ -136,20 +139,21 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
           else:
                team_position.save()
           
-          # add user to team member
-          new_member = TeamMembers.objects.create(
-               team=team,
-               user=user,
-               position=position,
-               background=background
-          )
-          
           # alert team that invitation was accepted
           TeamNotification.objects.create(
                type="team_invitation_accepted",
                related=team_application,
                to_team=team
           )
+          
+          # add user to team member
+          TeamMembers.objects.create(
+               team=team,
+               user=user,
+               position=position,
+               background=background
+          )
+          
           serializer = TeamApplicationDetailSerializer(team_application)
           return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -172,6 +176,7 @@ class TeamMemberDeclineAPIView(APIView):
                related=team_application,
                to_team = team_application.team
           )
+          
           return Response({"message": "team invitation successfully declined"}, status=status.HTTP_200_OK)
      
 class TeamMemberDestroyAPIView(generics.DestroyAPIView):
@@ -270,14 +275,11 @@ class TeamApplicationAcceptAPIView(APIView):
                raise PermissionDenied("user is not allowed to accpet this team application")
           if team_pk == team.pk:
                try:
+                    # update team application accepted status
                     team_application.accepted = True
                     
                     # set application notification type to show it's processed
                     team_application_notification.type = "team_application_accept"
-                    
-                    # set application notification as read (just in case)
-                    if not team_application_notification.is_read:
-                         team_application_notification.is_read = True
                     
                     # create team_application_accepted notifcation for user
                     Notification.objects.create(

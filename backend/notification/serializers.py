@@ -9,7 +9,6 @@ from user.models import FriendRequest
 
 # detail serializers
 class TeamNotificationDetailSerializer(serializers.ModelSerializer):
-     # sender = serializers.SerializerMethodField()
      team_application = TeamApplicationSimpleDetailSerializer(source='related')
      sender = UserSimpleDetailSerializer(source='related.applicant')
      
@@ -19,7 +18,6 @@ class TeamNotificationDetailSerializer(serializers.ModelSerializer):
                'id', 
                'type',
                'created_at',
-               'is_read',
                'sender',
                'team_application'
           ]
@@ -30,8 +28,7 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
           fields = [
                'id', 
                'type',
-               'created_at',
-               'is_read'
+               'created_at'
           ]
           
      def to_representation(self, instance):

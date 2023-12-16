@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import *
 
+
 from activity.models import *
 from region.models import *
 from position.models import *
@@ -96,6 +97,7 @@ class TeamMembers(models.Model):
      user = models.ForeignKey(User, on_delete=models.CASCADE)
      position = models.ForeignKey(Position, on_delete=models.CASCADE, default=1)
      background = models.CharField(default='')
+     noti_unread_cnt = models.IntegerField(default=0)
 
 class TeamApplication(models.Model):
      team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='applications')
@@ -110,6 +112,7 @@ class TeamApplication(models.Model):
           if is_new:
                from notification.models import TeamNotification
                
+               # create team notification
                TeamNotification.objects.create(
                     type="team_application",
                     to_team = self.team,
