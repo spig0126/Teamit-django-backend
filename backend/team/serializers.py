@@ -11,6 +11,7 @@ from user.models import User
 # create serializers
 class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      activity = serializers.CharField(write_only=True, required=False)
+     interest = serializers.CharField(write_only=True, required=False)
      cities = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
      positions = serializers.ListField(child=serializers.JSONField(), write_only=True, required=False)
      creator_background = serializers.CharField(write_only=True)
@@ -24,13 +25,14 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                'creator_background',
                'creator_position',
                'short_pr', 
+               'keywords',
                'activity', 
+               'interest',
                'cities', 
                'meet_preference',
                'long_pr', 
                'active_startdate', 
                'active_enddate', 
-               'keywords',
                'positions', 
                'recruit_startdate', 
                'recruit_enddate'
@@ -40,12 +42,14 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
           request = self.context.get('request')
 
           activity = validated_data.pop('activity', None)
+          interest = validated_data.pop('interest', None)
           cities = validated_data.pop('cities', None)
           positions = validated_data.pop('positions', None)
           creator_background = validated_data.pop('creator_background', None)
           creator_position = validated_data.pop('creator_position', None)
           
           validated_data['activity'] = Activity.objects.get(name=activity)
+          validated_data['interest'] = Interest.objects.get(name=interest)
           validated_data['creator'] = User.objects.get(pk=int(request.headers.get('UserID')))
           
           team_instance = Team.objects.create(**validated_data)
@@ -79,6 +83,9 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                if attr == 'activity':
                     new_activity = get_object_or_404(Activity, name=value)
                     instance.activity = new_activity
+               elif attr == 'interest':
+                    new_interest = get_object_or_404(Interest, name=value)
+                    instance.interest = new_interest
                elif attr == 'cities':
                     city_instances = []
                     for city in value:
@@ -129,20 +136,20 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
           model = Team
           fields = [
                'id',
-               'name',
+               'name', 
                'creator',
                'short_pr', 
                'keywords',
-               'meet_preference',
-               'long_pr',
-               'active_startdate',
-               'active_enddate',
-               'recruit_startdate',
-               'recruit_enddate',
-               'cities',
-               'activity',
+               'activity', 
                'interest',
-               'positions',
+               'cities', 
+               'meet_preference',
+               'long_pr', 
+               'active_startdate', 
+               'active_enddate', 
+               'positions', 
+               'recruit_startdate', 
+               'recruit_enddate',
                'members'
           ]  
 
@@ -192,21 +199,21 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           fields = [
                'id',
                'name',
-               'keywords',
-               'date_status',
                'creator',
-               'is_member',
+               'date_status',
                'likes',
-               'short_pr', 
-               'meet_preference',
-               'long_pr',
-               'active_startdate',
-               'active_enddate',
-               'recruit_startdate',
-               'recruit_enddate',
-               'cities',
+               'is_member',
+               'short_pr',
+               'keywords', 
                'activity',
                'interest',
+               'cities',
+               'meet_preference',
+               'active_startdate',
+               'active_enddate',
+               'long_pr',
+               'recruit_startdate',
+               'recruit_enddate',
                'positions',
                'members'
           ]  
