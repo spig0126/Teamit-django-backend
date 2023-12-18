@@ -30,12 +30,15 @@ SECRET_KEY = "django-insecure-@fha-fhryn3+e6$q(zgaed^nbz19y5_b8p2g^*)aw%e2f+=3fb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
 INSTALLED_APPS = [
+    "rest_framework",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -49,12 +52,15 @@ INSTALLED_APPS = [
     "user",
     "team",
     "notification",
-    "post"
+    "post",
+    "corsheaders",
+    
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -89,11 +95,11 @@ WSGI_APPLICATION = "home.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME"),
-        "USER": env("DB_USER"),
-        "PASSWORD": env("DB_PASSWORD"),
-        "HOST": env("DB_HOST"),
-        "PORT": env("DB_PORT"),
+        "NAME": env("RDS_NAME"),
+        "USER": env("RDS_USER"),
+        "PASSWORD": env("RDS_PASSWORD"),
+        "HOST": env("RDS_HOST"),
+        "PORT": "5432",
     }
 }
 
