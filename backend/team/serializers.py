@@ -320,13 +320,12 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
      def get_member_cnt(self, obj):
           return obj.member_cnt
      def get_notification_status(self, instance):
-          from notification.models import TeamNotification
-          return TeamNotification.objects.filter(to_team=instance, is_read=False).exists()
+          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
      def get_active(self, obj):
           today = date.today()
           active_enddate = date.fromisoformat(obj.active_enddate)
           return True if (active_enddate - today).days >= 0 else False
-          
+     
 class TeamSenderDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = Team

@@ -15,24 +15,33 @@ from position.models import Position
 
 # CRUD views for Team
 class TeamListCreateAPIView(generics.ListCreateAPIView):     
+     def get(self, request, *args, **kwargs):
+          self.activity = request.query_params.get('activity', None)
+          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          return super().get(request, *args, **kwargs)
+
+     def get_queryset(self):
+          if self.activity is not None: # list all teams filtered by activity
+               queryset = Team.objects.filter(activity=self.activity)
+          else:     # list my teams
+               queryset = Team.objects.filter(members=self.user)
+          return queryset
+     
+     def get_serializer_context(self):
+          context = super().get_serializer_context()
+          context['user'] = self.user
+          return context
+   
      def get_serializer_class(self):
           if self.request.method == 'POST':
                return TeamCreateUpdateSerializer
           elif self.request.method == 'GET':
-               activity = self.request.query_params.get('activity')
-               if activity is None:
+               if self.activity is None:
                     return MyTeamSimpleDetailSerializer
                else:
                     return TeamSimpleDetailSerializer
 
-     def get_queryset(self):
-          activity = self.request.query_params.get('activity')
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
-          if activity is not None: # list all teams filtered by activity
-               queryset = Team.objects.filter(activity=activity)
-          else:     # list my teams
-               queryset = Team.objects.filter(members=user)
-          return queryset
+ 
 
 class RecommendedTeamListAPIView(generics.ListAPIView):
      serializer_class = TeamSimpleDetailSerializer
