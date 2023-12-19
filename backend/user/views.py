@@ -83,7 +83,7 @@ class RecommendedUserListAPIView(generics.ListAPIView):
           show_top = self.request.query_params.get('show_top', None)
           if show_top == 'true':
                users = users[:10]
-          return users
+          return users[:50]
 
 class CheckUserNameAvailability(APIView):
      def get(self, request):
