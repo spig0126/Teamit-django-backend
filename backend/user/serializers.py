@@ -13,15 +13,33 @@ from region.serializers import *
 
 # create serializers
 class UserCreateSerializer(serializers.ModelSerializer):
+     avatar_num = serializers.IntegerField(write_only=True)
+     background_num = serializers.IntegerField(write_only=True)
+     
      class Meta:
           model = User
           fields = [
                'id', 
                'name', 
                'avatar',
-               'background'
+               'avatar_num',
+               'background',
+               'background_num'
           ]
-          
+     
+     def create(self, validated_data):
+        avatar_num = validated_data.pop('avatar_num')
+        background_num = validated_data.pop('background_num')
+
+        avatar = 'avatars/{avatar_num}.png'
+        background = 'backgrounds/bg{background_num}.png'
+
+        validated_data['avatar'] = avatar
+        validated_data['background'] = background
+
+        instance = User.objects.create(**validated_data)
+        return instance
+   
 class UserProfileCreateSerializer(serializers.ModelSerializer):
      user = UserCreateSerializer()
      positions = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
@@ -44,8 +62,15 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
      def create(self, validated_data):
           # check if all fields were provided
           try:
+               # user data
                user_data = validated_data.pop('user')
-               user_name = user_data['name']
+               avatar_num = user_data.pop('avatar_num')
+               background_num = user_data.pop('background_num')
+
+               user_data['avatar'] = f'avatars/{avatar_num}.png'
+               user_data['background'] = f'backgrounds/bg{background_num}.png'
+
+               # user profile data
                positions = validated_data.pop('positions')
                interests = validated_data.pop('interests')
                activities = validated_data.pop('activities')

@@ -30,8 +30,8 @@ class User(models.Model):
           Position,
           related_name="users",
      )
-     avatar = models.CharField(default='png', blank=True)
-     background = models.CharField(default='', blank=True)
+     avatar = models.ImageField(upload_to='avatars/', default='avatars/1.png') 
+     background = models.ImageField(upload_to='backgrounds/', default='backgrounds/bg1.png') 
      friends = models.ManyToManyField(
           'self',
           symmetrical=True
