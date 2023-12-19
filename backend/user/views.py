@@ -6,6 +6,8 @@ from rest_framework.decorators import api_view
 from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin
 from rest_framework.exceptions import PermissionDenied
 from django.db.models import Count
+from django.shortcuts import render
+import requests
 
 from .models import *
 from .serializers import *
@@ -34,8 +36,7 @@ class UserWithProfileDetailAPIView(generics.GenericAPIView):
           user = get_object_or_404(User, pk=user_pk)
           serializer = self.get_serializer(user)
           return Response(serializer.data, status=status.HTTP_200_OK)
-          
-     
+               
 class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
      queryset = User.objects.all()
      
@@ -44,10 +45,6 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
                return UserWithProfileDetailSerializer
           elif self.request.method in ('PUT', 'PATCH'):
                return UserWithProfileUpdateSerializer
-     
-     def perform_update(self, serializer):
-          return serializer.save()
-     
      def update(self, request, *args, **kwargs):  # update my profile
           user_pk = int(request.headers.get('UserID'))
           if user_pk != self.kwargs.get('pk'):
@@ -56,8 +53,7 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
                instance = self.get_object()
                serializer = self.get_serializer(instance, data=request.data, partial=True)
                if serializer.is_valid(raise_exception=True):
-                    updated_instance = self.perform_update(serializer)
-                    print(updated_instance)
+                    updated_instance = serializer.save()
                     response_serializer = MyProfileDetailSerializer(updated_instance)
                     return Response(response_serializer.data, status=status.HTTP_200_OK)
           
@@ -74,6 +70,21 @@ class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericA
           if user_pk != kwargs.get('pk'):
                raise PermissionDenied("user is not allowed to delete this user")
           return self.destroy(request, *args, **kwargs)
+
+class UserImageUpdateAPIView(generics.UpdateAPIView):
+     queryset = User.objects.all()
+     serializer_class = UserImageUpdateSerializer
+     
+     def update(self, request, *args, **kwargs):
+          user_pk = int(request.headers.get('UserID'))
+          if user_pk != self.kwargs.get('pk'):
+               raise PermissionDenied("user not allowed to update images")
+          instance = self.get_object()
+          serializer = self.get_serializer(instance, data=request.data, partial=True)
+          if serializer.is_valid(raise_exception=True):
+               updated_instance = serializer.save()
+               response_serializer = MyProfileDetailSerializer(updated_instance)
+               return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 class RecommendedUserListAPIView(generics.ListAPIView):
      serializer_class = RecommendedUserDetailSerializer
@@ -223,3 +234,9 @@ class LikeUnlikeAPIView(APIView):
           except:
                UserLikes.objects.create(from_user=from_user, to_user=to_user)
                return Response({"message": "user liked"}, status=status.HTTP_201_CREATED) 
+          
+def test(request):
+     test_user = User.objects.get(pk=73)  # Replace with your actual API endpoint
+     serializer = UserDetailSerializer(test_user)
+
+     return render(request, 'user_profile.html', {'user_data': serializer.data})

@@ -11,6 +11,34 @@ from interest.serializers import *
 from activity.serializers import *
 from region.serializers import *
 
+# field serializers
+class UserAvatarImageField(serializers.Field):
+     def to_internal_value(self, data):
+        # Convert the integer value to the actual image path
+          try:
+               avatar_num = int(data)
+               avatar = f'avatars/{avatar_num}.png'
+               return avatar
+          except:
+               return f'avatars/1.png'
+     
+     def to_representation(self, value):
+          return value
+
+class UserBackgroundImageField(serializers.Field):
+     def to_internal_value(self, data):
+        # Convert the integer value to the actual image path
+          try:
+               background_num = int(data)
+               background = f'backgrounds/bg{background_num}.png'
+               return background
+          except:
+               return f'backgrounds/bg1.png'
+          
+     def to_representation(self, value):
+          return value
+
+
 # create serializers
 class UserCreateSerializer(serializers.ModelSerializer):
      avatar_num = serializers.IntegerField(write_only=True)
@@ -26,19 +54,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
                'background',
                'background_num'
           ]
-     
-     def create(self, validated_data):
-        avatar_num = validated_data.pop('avatar_num')
-        background_num = validated_data.pop('background_num')
-
-        avatar = 'avatars/{avatar_num}.png'
-        background = 'backgrounds/bg{background_num}.png'
-
-        validated_data['avatar'] = avatar
-        validated_data['background'] = background
-
-        instance = User.objects.create(**validated_data)
-        return instance
    
 class UserProfileCreateSerializer(serializers.ModelSerializer):
      user = UserCreateSerializer()
@@ -232,6 +247,17 @@ class FriendRequestDetailSerializer(serializers.ModelSerializer):
           fields = '__all__'
 
 # update serializers
+class UserImageUpdateSerializer(serializers.ModelSerializer):
+     avatar = UserAvatarImageField()
+     background = UserBackgroundImageField()
+     
+     class Meta:
+          model = User
+          fields = [
+               'avatar',
+               'background'
+          ]
+
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
      activities = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
      cities = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)

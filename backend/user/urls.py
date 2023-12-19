@@ -7,6 +7,7 @@ urlpatterns = [
      path("", UserWithProfileDetailAPIView.as_view()),
      path("recommended/", RecommendedUserListAPIView.as_view()),
      path("<int:pk>/", UserDetailAPIView.as_view()),
+     path("<int:pk>/images/", UserImageUpdateAPIView.as_view()),
      path("name/available/", CheckUserNameAvailability.as_view()),
 
      # user profile
@@ -24,4 +25,6 @@ urlpatterns = [
      # likes
      path("<int:pk>/like/", LikeUnlikeAPIView.as_view()),
      path("likes/", UserLikesListAPIView.as_view()),
+     
+     path("test/", test)
 ]
