@@ -3,6 +3,7 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from datetime import datetime
 from django.db import transaction
+from re import search
 
 from .models import *
 from position.models import Position
@@ -15,11 +16,10 @@ from region.serializers import *
 # field serializers
 class UserAvatarImageField(serializers.Field):
      def to_internal_value(self, data):
-        # Convert the integer value to the actual image path
+          # Convert the signed url to image path
           try:
-               avatar_num = int(data)
-               avatar = f'avatars/{avatar_num}.png'
-               return avatar
+               match = search('avatars/([1-9]|10|11)\.png', data)
+               return match.group(0)
           except:
                return f'avatars/1.png'
      
@@ -28,11 +28,10 @@ class UserAvatarImageField(serializers.Field):
 
 class UserBackgroundImageField(serializers.Field):
      def to_internal_value(self, data):
-        # Convert the integer value to the actual image path
+          # Convert the signed url to image path
           try:
-               background_num = int(data)
-               background = f'backgrounds/bg{background_num}.png'
-               return background
+               match = search('backgrounds/bg([1-9]|10|11)\.png', data)
+               return match.group(0)
           except:
                return f'backgrounds/bg1.png'
           
@@ -79,8 +78,7 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
           user_data = validated_data.pop('user')
         
           # Create User instance using the nested UserSerializer
-          user_field_serializer = self.fields['user']
-          user_serializer = user_field_serializer(data=user_data)
+          user_serializer = UserCreateSerializer(data=user_data)
           if user_serializer.is_valid():
                user = user_serializer.save()
           else:
