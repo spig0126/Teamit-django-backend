@@ -30,5 +30,6 @@ urlpatterns = [
     path("api/teams/", include("team.urls")),
     path("api/teams/", include("post.urls")),
     path("api/notifications/", include("notification.urls")),
+    path("api/articles/", include("article.urls")),
     # path("api/", include("home.routers")),
 ]

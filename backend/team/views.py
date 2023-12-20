@@ -15,11 +15,10 @@ from notification.models import *
 from position.models import Position
 
 # CRUD views for Team
-class TeamListCreateAPIView(generics.ListCreateAPIView):    
-     def get(self, request, *args, **kwargs):
-          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
-          
-          return super().get(request, *args, **kwargs)
+class TeamListCreateAPIView(generics.ListCreateAPIView):  
+     def initial(self, request, *args, **kwargs):
+        self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+        super().initial(request, *args, **kwargs)
 
      def get_queryset(self):
           return Team.objects.filter(members=self.user)   

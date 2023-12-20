@@ -6,8 +6,8 @@ from django.core.files.storage import default_storage
 import base64
 from io import BytesIO
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.core.files.base import ContentFile
 
+from home.serializers import ImageBase64Field
 from .models import *
 from position.models import *
 from position.serializers import PositionsField, PositionField
@@ -17,32 +17,6 @@ from region.serializers import CitiesField
 from interest.serializers import InterestField
 from .utils import get_team_members_with_creator_first
 from user.models import User
-
-# field serializers
-class ImageBase64Field(serializers.Field):
-     def to_internal_value(self, data):
-          # decode image 
-          try: 
-               image_data = base64.b64decode(data)
-               
-               # Create an InMemoryUploadedFile from image_data
-               image_io = BytesIO(image_data)
-               image_file = InMemoryUploadedFile(
-                    image_io,
-                    None,  # field_name
-                    'main.png',  # file_name
-                    'image/png',  # content_type
-                    image_io.tell,  # size
-                    None  # content_type_extra
-               )
-               return image_file
-          except Exception as error:
-               print("An exception occurred:", error)
-               raise serializers.ValidationError("Invalid image format")
-     
-     def to_representation(self, value):
-          return value
-
 
 # create serializers
 class TeamMemberCreateSerializer(serializers.ModelSerializer):
