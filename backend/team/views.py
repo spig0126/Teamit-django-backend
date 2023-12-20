@@ -16,12 +16,9 @@ from position.models import Position
 
 # CRUD views for Team
 class TeamListCreateAPIView(generics.ListCreateAPIView):    
-     # parser_classes = (MultiPartParser,)
-     
      def get(self, request, *args, **kwargs):
           self.activity = request.query_params.get('activity', None)
           self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
-          print('hello')
           
           return super().get(request, *args, **kwargs)
 
@@ -114,7 +111,7 @@ class MyTeamRoomDetailAPIView(generics.RetrieveAPIView):
 class TeamBeforeUpdateDetailAPIView(generics.RetrieveAPIView):
      queryset = Team.objects.all()
      serializer_class = TeamBeforeUpdateDetailSerializer
-
+     
 class TeamMemberListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      

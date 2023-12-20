@@ -7,7 +7,8 @@ urlpatterns = [
      path("", TeamListCreateAPIView.as_view()),   #create team, get list by activity, get my team list
      path("recommended/", RecommendedTeamListAPIView.as_view()), # get recommended team list
      path("<int:pk>/", TeamDetailAPIView.as_view()),   # update, delete, retrieve team
-     path("<int:pk>/before/", TeamBeforeUpdateDetailAPIView.as_view()),  # get my team room info
+     path("<int:pk>/room/", MyTeamRoomDetailAPIView.as_view()),  # get my team room info
+     path("<int:pk>/before/", TeamBeforeUpdateDetailAPIView.as_view()),  
      path("<int:pk>/positions/", TeamPositionListAPIView.as_view()),
      
      # team member       

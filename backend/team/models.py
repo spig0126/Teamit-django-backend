@@ -6,17 +6,17 @@ from activity.models import *
 from region.models import *
 from position.models import *
 from user.models import *
-from .utils import team_image_upload_path
 
 
 # Create your models here.
 class Team(models.Model):
      id = models.AutoField(primary_key=True)
-     # img = models.ImageField(upload_to=team_image_upload_path)
      creator = models.ForeignKey(User, on_delete=models.CASCADE, default=54)
      name = models.CharField(max_length=20)
      short_pr = models.CharField(max_length=50)
      keywords = models.CharField(default='')
+     image = models.ImageField(upload_to='teams/', default='teams/default.png')
+     
      activity = models.ForeignKey(Activity, 
                                    on_delete=models.CASCADE, 
                                    related_name='team',
@@ -38,21 +38,20 @@ class Team(models.Model):
           ]
      )
      long_pr = models.TextField(default='')
-     active_startdate = models.CharField(max_length=10, default='1900-01-01')
-     active_enddate = models.CharField(max_length=10, default='1900-01-02')
+     active_startdate = models.CharField(max_length=10, default='2024-01-01')
+     active_enddate = models.CharField(max_length=10, default='2024-01-02')
      positions = models.ManyToManyField(
           Position,
           through="TeamPositions",
           related_name="teams",
      )
-     recruit_startdate = models.CharField(max_length=10, default='1900-01-01')
-     recruit_enddate = models.CharField(max_length=10, default='1900-01-01')
+     recruit_startdate = models.CharField(max_length=10, default='2024-01-01')
+     recruit_enddate = models.CharField(max_length=10, default='2024-01-02')
      members = models.ManyToManyField(
           User,
           through="TeamMembers",
           related_name="teams"
      )
-     image = models.CharField(default='')
      
      def __str__(self):
           return self.name
@@ -97,6 +96,10 @@ class TeamMembers(models.Model):
      position = models.ForeignKey(Position, on_delete=models.CASCADE, default=1)
      background = models.CharField(default='')
      noti_unread_cnt = models.IntegerField(default=0)
+     
+     @property
+     def avatar(self):
+          return self.user.avatar.url
 
 class TeamApplication(models.Model):
      team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='applications')

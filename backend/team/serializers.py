@@ -2,6 +2,11 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from datetime import *
 from django.db import transaction
+from django.core.files.storage import default_storage
+import base64
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.base import ContentFile
 
 from .models import *
 from position.models import *
@@ -12,6 +17,32 @@ from region.serializers import CitiesField
 from interest.serializers import InterestField
 from .utils import get_team_members_with_creator_first
 from user.models import User
+
+# field serializers
+class ImageBase64Field(serializers.Field):
+     def to_internal_value(self, data):
+          # decode image 
+          try: 
+               image_data = base64.b64decode(data)
+               
+               # Create an InMemoryUploadedFile from image_data
+               image_io = BytesIO(image_data)
+               image_file = InMemoryUploadedFile(
+                    image_io,
+                    None,  # field_name
+                    'main.png',  # file_name
+                    'image/png',  # content_type
+                    image_io.tell,  # size
+                    None  # content_type_extra
+               )
+               return image_file
+          except Exception as error:
+               print("An exception occurred:", error)
+               raise serializers.ValidationError("Invalid image format")
+     
+     def to_representation(self, value):
+          return value
+
 
 # create serializers
 class TeamMemberCreateSerializer(serializers.ModelSerializer):
@@ -36,19 +67,19 @@ class TeamPositionCreateSerializer(serializers.ModelSerializer):
                'cnt'
           ]
 
-
 class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      activity = ActivityField()
      interest = InterestField()
      cities = CitiesField()
      positions = TeamPositionCreateSerializer(many=True)
      creator = TeamMemberCreateSerializer()
+     image = ImageBase64Field(write_only=True)
      
      class Meta: 
           model = Team
           fields = [
                'name', 
-               # 'img',
+               'image',
                'creator',
                'short_pr', 
                'keywords',
@@ -68,15 +99,24 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      def create(self, validated_data):
           creator_data = validated_data.pop('creator', None)
           positions_data = validated_data.pop('positions', [])
+          image = validated_data.pop('image', None)
           user = User.objects.get(pk=int(self.context.get('request').headers.get('UserID')))
 
           validated_data['creator'] = user
           team = super().create(validated_data)
           
+          
           # add creator as team member and create team positions
           TeamMembers.objects.create(team=team, user=user, **creator_data)
           for position_data in positions_data:
                TeamPositions.objects.create(team=team, **position_data)
+               
+          # uploat image to S3, store image path in db
+          image_path = f'teams/{team.pk}/main.png'
+          default_storage.save(image_path, image)
+          team.image = image_path
+          team.save()
+          
           return team
           
      @transaction.atomic 
@@ -88,6 +128,11 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                     instance.positions.clear()
                     for item in value:
                          TeamPositions.objects.create(team=instance, **item)
+               elif attr == 'image':
+                    # uploat image to S3, store image path in db
+                    image_path = f'teams/{instance.pk}/main.png'
+                    default_storage.save(image_path, value)
+                    instance.image = image_path
                else:
                     setattr(instance, attr, value)
           instance.save()
@@ -111,9 +156,17 @@ class TeamPositionDetailSerializer(serializers.ModelSerializer):
 class TeamMemberDetailSerializer(serializers.ModelSerializer):
      user = serializers.StringRelatedField(read_only=True)
      position = serializers.StringRelatedField(read_only=True)
+     avatar = serializers.ReadOnlyField()
      class Meta:
           model = TeamMembers
-          fields = '__all__'
+          fields = [
+               'id',
+               'user',
+               'position',
+               'background',
+               'avatar',
+               'team'
+          ]
 
 class MyTeamDetailSerializer(serializers.ModelSerializer):
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
@@ -129,6 +182,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
                'id',
                'name', 
                'creator',
+               'image',
                'short_pr', 
                'keywords',
                'activity', 
@@ -185,10 +239,12 @@ class TeamDetailSerializer(serializers.ModelSerializer):
      is_member = serializers.SerializerMethodField()
      likes = serializers.SerializerMethodField()
      date_status = serializers.SerializerMethodField()
+     
      class Meta:
           model = Team
           fields = [
                'id',
+               'image',
                'name',
                'creator',
                'date_status',
@@ -249,6 +305,7 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):
           fields = [
                'id',
                'name',
+               'image',
                'activity',
                'interest',
                'keywords', 
@@ -271,6 +328,7 @@ class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):
           model = Team
           fields = [
                'id',
+               'image',
                'name',
                'short_pr', 
                'keywords',
@@ -299,6 +357,7 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
           fields = [
                'id',
                'name',
+               'image',
                'active',
                'activity',
                'interest',
