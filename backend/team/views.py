@@ -5,6 +5,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
+from rest_framework.parsers import MultiPartParser
 from django.db.models import Count
 from django.db.models import F
 
@@ -14,10 +15,14 @@ from notification.models import *
 from position.models import Position
 
 # CRUD views for Team
-class TeamListCreateAPIView(generics.ListCreateAPIView):     
+class TeamListCreateAPIView(generics.ListCreateAPIView):    
+     # parser_classes = (MultiPartParser,)
+     
      def get(self, request, *args, **kwargs):
           self.activity = request.query_params.get('activity', None)
           self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          print('hello')
+          
           return super().get(request, *args, **kwargs)
 
      def get_queryset(self):
@@ -25,11 +30,15 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):
                queryset = Team.objects.filter(activity=self.activity)
           else:     # list my teams
                queryset = Team.objects.filter(members=self.user)
+               
           return queryset
      
      def get_serializer_context(self):
           context = super().get_serializer_context()
-          context['user'] = self.user
+          try:
+               context['user'] = self.user
+          except:
+               pass
           return context
    
      def get_serializer_class(self):

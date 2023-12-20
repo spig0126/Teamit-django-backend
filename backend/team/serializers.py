@@ -1,29 +1,55 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from datetime import *
+from django.db import transaction
 
 from .models import *
 from position.models import *
+from position.serializers import PositionsField, PositionField
 from activity.models import *
+from activity.serializers import ActivityField
+from region.serializers import CitiesField
+from interest.serializers import InterestField
 from .utils import get_team_members_with_creator_first
 from user.models import User
 
 # create serializers
+class TeamMemberCreateSerializer(serializers.ModelSerializer):
+     position = PositionField()
+     
+     class Meta:
+          model = TeamMembers
+          fields = [
+               'position',
+               'background',
+               'noti_unread_cnt'
+          ]
+
+class TeamPositionCreateSerializer(serializers.ModelSerializer):
+     position = PositionField()
+     
+     class Meta:
+          model = TeamPositions
+          fields = [
+               'position',
+               'pr',
+               'cnt'
+          ]
+
+
 class TeamCreateUpdateSerializer(serializers.ModelSerializer):
-     activity = serializers.CharField(write_only=True, required=False)
-     interest = serializers.CharField(write_only=True, required=False)
-     cities = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
-     positions = serializers.ListField(child=serializers.JSONField(), write_only=True, required=False)
-     creator_background = serializers.CharField(write_only=True)
-     creator_position = serializers.CharField(write_only=True)
+     activity = ActivityField()
+     interest = InterestField()
+     cities = CitiesField()
+     positions = TeamPositionCreateSerializer(many=True)
+     creator = TeamMemberCreateSerializer()
      
      class Meta: 
           model = Team
           fields = [
                'name', 
+               # 'img',
                'creator',
-               'creator_background',
-               'creator_position',
                'short_pr', 
                'keywords',
                'activity', 
@@ -37,66 +63,31 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                'recruit_startdate', 
                'recruit_enddate'
           ]
-          
-     def create(self, validated_data):
-          request = self.context.get('request')
 
-          activity = validated_data.pop('activity', None)
-          interest = validated_data.pop('interest', None)
-          cities = validated_data.pop('cities', None)
-          positions = validated_data.pop('positions', None)
-          creator_background = validated_data.pop('creator_background', None)
-          creator_position = validated_data.pop('creator_position', None)
+     @transaction.atomic 
+     def create(self, validated_data):
+          creator_data = validated_data.pop('creator', None)
+          positions_data = validated_data.pop('positions', [])
+          user = User.objects.get(pk=int(self.context.get('request').headers.get('UserID')))
+
+          validated_data['creator'] = user
+          team = super().create(validated_data)
           
-          validated_data['activity'] = Activity.objects.get(name=activity)
-          validated_data['interest'] = Interest.objects.get(name=interest)
-          validated_data['creator'] = User.objects.get(pk=int(request.headers.get('UserID')))
+          # add creator as team member and create team positions
+          TeamMembers.objects.create(team=team, user=user, **creator_data)
+          for position_data in positions_data:
+               TeamPositions.objects.create(team=team, **position_data)
+          return team
           
-          team_instance = Team.objects.create(**validated_data)
-          user_instance = validated_data['creator']
-          city_instances = []
-          creator_position = Position.objects.get(name=creator_position)
-          try:
-               for city in cities:
-                    province_name, city_name = city.strip().split(' ', 1)
-                    province = Province.objects.get(name=province_name).id
-                    city_instances.append(City.objects.get(name=city_name, province=province))
-               for position in positions:
-                    position_instance = Position.objects.get(name=position['name'])
-                    TeamPositions.objects.create(team=team_instance, position=position_instance, cnt=position['cnt'], pr=position['pr'])
-               team_instance.cities.set(city_instances)
-               TeamMembers.objects.create(team=team_instance, user=user_instance, background=creator_background, position=creator_position)
-          except Province.DoesNotExist:
-               team_instance.delete()
-               raise serializers.ValidationError({"province": "province does not exist"})
-          except (City.DoesNotExist, ValueError):
-               team_instance.delete()
-               raise serializers.ValidationError({"city": "city does not exist"}) 
-          except Position.DoesNotExist:
-               team_instance.delete()
-               raise serializers.ValidationError({"positions": "certain position does not exist"})
-          
-          return team_instance
-     
+     @transaction.atomic 
      def update(self, instance, validated_data):
           for attr, value in validated_data.items():
-               if attr == 'activity':
-                    new_activity = get_object_or_404(Activity, name=value)
-                    instance.activity = new_activity
-               elif attr == 'interest':
-                    new_interest = get_object_or_404(Interest, name=value)
-                    instance.interest = new_interest
-               elif attr == 'cities':
-                    city_instances = []
-                    for city in value:
-                         province_name, city_name = city.strip().split(' ', 1)
-                         province = Province.objects.get(name=province_name).id
-                         city_instances.append(get_object_or_404(City, name=city_name, province=province))
-                    instance.cities.set(city_instances)
+               if attr == 'cities':
+                    instance.cities.set(value)
                elif attr == 'positions':
-                    for position_data in value:
-                         position = get_object_or_404(Position, name=position_data['position'])
-                         TeamPositions.objects.create(team=instance, position=position, cnt=position_data['cnt'], pr=position_data['pr'])
+                    instance.positions.clear()
+                    for item in value:
+                         TeamPositions.objects.create(team=instance, **item)
                else:
                     setattr(instance, attr, value)
           instance.save()

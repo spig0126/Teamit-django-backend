@@ -2,15 +2,17 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import *
 
-
 from activity.models import *
 from region.models import *
 from position.models import *
 from user.models import *
+from .utils import team_image_upload_path
+
 
 # Create your models here.
 class Team(models.Model):
      id = models.AutoField(primary_key=True)
+     # img = models.ImageField(upload_to=team_image_upload_path)
      creator = models.ForeignKey(User, on_delete=models.CASCADE, default=54)
      name = models.CharField(max_length=20)
      short_pr = models.CharField(max_length=50)

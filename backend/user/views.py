@@ -49,13 +49,7 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
           user_pk = int(request.headers.get('UserID'))
           if user_pk != self.kwargs.get('pk'):
                raise PermissionDenied("user not allowed to update this profile")
-          else:
-               instance = self.get_object()
-               serializer = self.get_serializer(instance, data=request.data, partial=True)
-               if serializer.is_valid(raise_exception=True):
-                    updated_instance = serializer.save()
-                    response_serializer = MyProfileDetailSerializer(updated_instance)
-                    return Response(response_serializer.data, status=status.HTTP_200_OK)
+          return super().update(request, *args, **kwargs)
           
 class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericAPIView):
      queryset = User.objects.all()
@@ -66,7 +60,6 @@ class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericA
      
      def delete(self,request, *args, **kwargs):
           user_pk = int(request.headers.get('UserID'))
-          print(type(user_pk), type(kwargs.get('pk')))
           if user_pk != kwargs.get('pk'):
                raise PermissionDenied("user is not allowed to delete this user")
           return self.destroy(request, *args, **kwargs)
@@ -79,12 +72,7 @@ class UserImageUpdateAPIView(generics.UpdateAPIView):
           user_pk = int(request.headers.get('UserID'))
           if user_pk != self.kwargs.get('pk'):
                raise PermissionDenied("user not allowed to update images")
-          instance = self.get_object()
-          serializer = self.get_serializer(instance, data=request.data, partial=True)
-          if serializer.is_valid(raise_exception=True):
-               updated_instance = serializer.save()
-               response_serializer = MyProfileDetailSerializer(updated_instance)
-               return Response(response_serializer.data, status=status.HTTP_200_OK)
+          return super().update(request, *args, **kwargs)
 
 class RecommendedUserListAPIView(generics.ListAPIView):
      serializer_class = RecommendedUserDetailSerializer
