@@ -11,8 +11,9 @@ class CityListAPIView(generics.ListAPIView):
      serializer_class = CityWithProvinceSerializer
 
 class CityByProvinceListAPIView(generics.ListAPIView):
-     queryset = Province.objects.all()
+     queryset = Province.objects.all().order_by('id')
      serializer_class = ProvinceWithCitiesSerializer
+     
 class CityDetailAPIView(generics.RetrieveAPIView):
      queryset = City.objects.all()
      serializer_class = CityWithProvinceSerializer

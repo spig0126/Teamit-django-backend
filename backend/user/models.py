@@ -1,6 +1,6 @@
 from django.db import models
 from dateutil.relativedelta import *
-from datetime import date
+from datetime import *
 
 from region.models import Province, City
 from position.models import Position
@@ -47,7 +47,7 @@ class UserProfile(models.Model):
      )
 
      # 필수정보 (아래 항목들 + User의 positions, avatar, interests)
-     birthdate = models.CharField(max_length=8, default="19000101")
+     birthdate = models.CharField(max_length=10, default="1900-01-01")
      sex = models.CharField(max_length=1, choices=Sex.choices, default=Sex.UNSPECIFIED)
      cities = models.ManyToManyField(
           City,
@@ -73,7 +73,7 @@ class UserProfile(models.Model):
      @property
      def age(self):
           today = date.today()
-          birthdate = date(self.birthdate)
+          birthdate = date.fromisoformat(self.birthdate)
           age = relativedelta(today, birthdate)
           return age.years
 

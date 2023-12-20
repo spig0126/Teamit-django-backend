@@ -345,7 +345,6 @@ class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):
           ]  
 
 class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
-     positions = serializers.StringRelatedField(many=True)
      member_cnt = serializers.SerializerMethodField()
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
@@ -361,10 +360,9 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
                'active',
                'activity',
                'interest',
-               'keywords', 
                'notification_status',
                'member_cnt',
-               'positions'
+               'keywords'
           ]
           
      def get_member_cnt(self, obj):

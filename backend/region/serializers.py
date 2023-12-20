@@ -53,10 +53,12 @@ class CityWithProvinceSerializer(serializers.ModelSerializer):
      
 class ProvinceWithCitiesSerializer(serializers.ModelSerializer):
      cities = serializers.SerializerMethodField()
+     
      class Meta:
           model = Province
           fields = ['id', 'name', 'cities']
      
      def get_cities(self, instance):
-          serializer = CitySerializer(instance.cities, many=True)
+          cities_queryset = instance.cities.all().order_by('id')
+          serializer = CitySerializer(cities_queryset, many=True)
           return serializer.data

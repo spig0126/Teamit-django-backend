@@ -20,7 +20,7 @@ class PositionDetailAPIView(generics.RetrieveAPIView):
                return super().get_object()
      
 class PositionListAPIView(generics.ListAPIView):
-     queryset = Position.objects.all()
+     queryset = Position.objects.all().order_by('id')
      serializer_class = PositionSerializer
 
 

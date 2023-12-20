@@ -66,14 +66,21 @@ class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericA
           return self.destroy(request, *args, **kwargs)
 
 class RecommendedUserListAPIView(generics.ListAPIView):
-     serializer_class = RecommendedUserDetailSerializer
-     
+     def initial(self, request, *args, **kwargs):
+        self.show_top = self.request.query_params.get('show_top', None) == 'true'
+        super().initial(request, *args, **kwargs)
+
      def get_queryset(self):
           users = User.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
-          show_top = self.request.query_params.get('show_top', None)
-          if show_top == 'true':
+          if self.show_top:
                users = users[:10]
           return users[:50]
+     
+     def get_serializer_class(self):
+          if self.show_top:
+               return RecommendedUserDetailSerializer
+          else:
+               return UserWithProfileDetailSerializer
 
 class CheckUserNameAvailability(APIView):
      def get(self, request):

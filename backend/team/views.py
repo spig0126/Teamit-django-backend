@@ -17,47 +17,44 @@ from position.models import Position
 # CRUD views for Team
 class TeamListCreateAPIView(generics.ListCreateAPIView):    
      def get(self, request, *args, **kwargs):
-          self.activity = request.query_params.get('activity', None)
           self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
           
           return super().get(request, *args, **kwargs)
 
      def get_queryset(self):
-          if self.activity is not None: # list all teams filtered by activity
-               queryset = Team.objects.filter(activity=self.activity)
-          else:     # list my teams
-               queryset = Team.objects.filter(members=self.user)
-               
-          return queryset
-     
+          return Team.objects.filter(members=self.user)   
+            
      def get_serializer_context(self):
           context = super().get_serializer_context()
-          try:
-               context['user'] = self.user
-          except:
-               pass
+          context['user'] = self.user
           return context
    
      def get_serializer_class(self):
-          if self.request.method == 'POST':
+          if self.request.method == 'POST':  # create team
                return TeamCreateUpdateSerializer
-          elif self.request.method == 'GET':
-               if self.activity is None:
-                    return MyTeamSimpleDetailSerializer
-               else:
-                    return TeamSimpleDetailSerializer
+          elif self.request.method == 'GET': # list my teams
+               return MyTeamSimpleDetailSerializer
 
- 
 
 class RecommendedTeamListAPIView(generics.ListAPIView):
      serializer_class = TeamSimpleDetailSerializer
      
      def get_queryset(self):
-          teams = Team.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
-          show_top = self.request.query_params.get('show_top', None)
-          if show_top == 'true':
+          show_top = self.request.query_params.get('show_top', None) == 'true'
+          activity = request.query_params.get('activity', None)
+          
+          teams = Team.objects.all()
+          
+          # filter teams by activity
+          if activity is not None: # list all teams filtered by activity
+               teams = teams.objects.filter(activity=int(activity)) 
+               
+          # order teams by like_cnt
+          teams = teams.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
+          
+          if show_top:
                teams = teams[:10]
-          print(len(teams))
+               
           return teams
      
 class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, GenericAPIView):

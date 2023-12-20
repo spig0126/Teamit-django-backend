@@ -114,12 +114,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class UserProfileDetailSerializer(serializers.ModelSerializer):
      activities = serializers.StringRelatedField(many=True)
      cities = serializers.StringRelatedField(many=True)
+     age = serializers.ReadOnlyField()
      
      class Meta:
           model = UserProfile
           fields = [
                'visibility', 
-               'birthdate', 
+               'age',
                'sex', 
                'activities',
                'cities',
@@ -171,14 +172,13 @@ class MyProfileDetailSerializer(serializers.ModelSerializer):
           fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'profile']
 
 class RecommendedUserDetailSerializer(serializers.ModelSerializer):
-     interests = serializers.StringRelatedField(many=True)
      positions = serializers.StringRelatedField(many=True)
      keywords = serializers.SerializerMethodField()
      short_pr = serializers.SerializerMethodField()
      liked_cnt = serializers.SerializerMethodField()
      class Meta:
           model = User
-          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'short_pr', 'keywords', 'liked_cnt']
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'short_pr', 'keywords', 'liked_cnt']
      
      def get_keywords(self, instance):
           return instance.profile.keywords
