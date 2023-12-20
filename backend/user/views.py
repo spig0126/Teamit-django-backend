@@ -8,6 +8,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.db.models import Count
 from django.shortcuts import render
 import requests
+from django.core.files.storage import default_storage
 
 from .models import *
 from .serializers import *
@@ -64,16 +65,6 @@ class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericA
                raise PermissionDenied("user is not allowed to delete this user")
           return self.destroy(request, *args, **kwargs)
 
-class UserImageUpdateAPIView(generics.UpdateAPIView):
-     queryset = User.objects.all()
-     serializer_class = UserImageUpdateSerializer
-     
-     def update(self, request, *args, **kwargs):
-          user_pk = int(request.headers.get('UserID'))
-          if user_pk != self.kwargs.get('pk'):
-               raise PermissionDenied("user not allowed to update images")
-          return super().update(request, *args, **kwargs)
-
 class RecommendedUserListAPIView(generics.ListAPIView):
      serializer_class = RecommendedUserDetailSerializer
      
@@ -97,6 +88,41 @@ class CheckUserNameAvailability(APIView):
 class UserWithProfileListAPIView(generics.ListAPIView):
      queryset = User.objects.all()
      serializer_class = UserWithProfileDetailSerializer
+
+# apis related to images
+class UserImageUpdateAPIView(generics.UpdateAPIView):
+     queryset = User.objects.all()
+     serializer_class = UserImageUpdateSerializer
+     
+     def update(self, request, *args, **kwargs):
+          user_pk = int(request.headers.get('UserID'))
+          if user_pk != self.kwargs.get('pk'):
+               raise PermissionDenied("user not allowed to update images")
+          return super().update(request, *args, **kwargs)
+
+class AvatarImageListAPIView(APIView):
+     def get(self, request):
+          folder_path = 'avatars/'
+
+          # List files in the folder using default storage
+          files = default_storage.listdir(folder_path)
+
+          # Extract URLs of the images
+          image_urls = [default_storage.url(f'{folder_path}{file}') for file in files[1]]
+
+          return Response(image_urls)
+
+class BackgroundImageListAPIView(APIView):
+     def get(self, request):
+          folder_path = 'backgrounds/'
+
+          # List files in the folder using default storage
+          files = default_storage.listdir(folder_path)
+
+          # Extract URLs of the images
+          image_urls = [default_storage.url(f'{folder_path}{file}') for file in files[1]]
+
+          return Response(image_urls)
 
 # apis related to friends
 class SendFriendRequestAPIView(APIView):

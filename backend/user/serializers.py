@@ -38,7 +38,9 @@ class UserBackgroundImageField(serializers.Field):
      def to_representation(self, value):
           return value
 
-
+class ImageSerializer(serializers.Serializer):
+    url = serializers.CharField()
+    
 # create serializers
 class UserCreateSerializer(serializers.ModelSerializer):
      avatar = UserAvatarImageField()
