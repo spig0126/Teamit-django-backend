@@ -27,8 +27,4 @@ urlpatterns = [
      path("likes/", UserLikesListAPIView.as_view()),
      
      path("test/", test),
-     
-     # etc
-     path("avatars/", AvatarImageListAPIView.as_view()),
-     path("backgrounds/", BackgroundImageListAPIView.as_view()),
 ]

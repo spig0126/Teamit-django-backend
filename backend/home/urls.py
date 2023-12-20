@@ -17,9 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from . import routers
+from .views import *
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/images/", ImageRetrieveAPIView.as_view()),
     path("api/regions/", include("region.urls")),
     path("api/users/", include("user.urls")),
     path("api/positions/", include("position.urls")),

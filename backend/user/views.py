@@ -89,7 +89,6 @@ class UserWithProfileListAPIView(generics.ListAPIView):
      queryset = User.objects.all()
      serializer_class = UserWithProfileDetailSerializer
 
-# apis related to images
 class UserImageUpdateAPIView(generics.UpdateAPIView):
      queryset = User.objects.all()
      serializer_class = UserImageUpdateSerializer
@@ -99,30 +98,6 @@ class UserImageUpdateAPIView(generics.UpdateAPIView):
           if user_pk != self.kwargs.get('pk'):
                raise PermissionDenied("user not allowed to update images")
           return super().update(request, *args, **kwargs)
-
-class AvatarImageListAPIView(APIView):
-     def get(self, request):
-          folder_path = 'avatars/'
-
-          # List files in the folder using default storage
-          files = default_storage.listdir(folder_path)
-
-          # Extract URLs of the images
-          image_urls = [default_storage.url(f'{folder_path}{file}') for file in files[1]]
-
-          return Response(image_urls)
-
-class BackgroundImageListAPIView(APIView):
-     def get(self, request):
-          folder_path = 'backgrounds/'
-
-          # List files in the folder using default storage
-          files = default_storage.listdir(folder_path)
-
-          # Extract URLs of the images
-          image_urls = [default_storage.url(f'{folder_path}{file}') for file in files[1]]
-
-          return Response(image_urls)
 
 # apis related to friends
 class SendFriendRequestAPIView(APIView):
