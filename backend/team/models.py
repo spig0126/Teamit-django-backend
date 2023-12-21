@@ -11,7 +11,7 @@ from user.models import *
 # Create your models here.
 class Team(models.Model):
      id = models.AutoField(primary_key=True)
-     creator = models.ForeignKey(User, on_delete=models.CASCADE, default=54)
+     creator = models.ForeignKey(User, on_delete=models.CASCADE, default=54, related_name='created_teams')
      name = models.CharField(max_length=20)
      short_pr = models.CharField(max_length=50)
      keywords = models.CharField(default='')
@@ -67,9 +67,10 @@ class Team(models.Model):
           recruit_enddate = date.fromisoformat(self.recruit_enddate)
           active_enddate = date.fromisoformat(self.active_enddate)
           
+          recruiting_positions = len(self.positions.all())
           if (recruit_startdate - today).days >= 0:
                return "모집예정"
-          elif (recruit_enddate - today).days < 0:
+          elif (recruit_enddate - today).days < 0 or not recruiting_positions:
                return "모집완료"
           elif (active_enddate - today).days <= 0:
                return "활동종료"

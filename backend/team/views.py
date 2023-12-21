@@ -40,7 +40,6 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
      serializer_class = TeamSimpleDetailSerializer
      
      def get_queryset(self):
-          activity = self.request.query_params.get('activity', None)
           user_pk = self.request.headers.get('UserID', None)
           
           teams = Team.objects.all()
@@ -49,19 +48,11 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
           # exclude teams user is already member to
           my_teams = user.teams.all()
           teams = teams.exclude(pk__in=my_teams.values_list('pk', flat=True))
-          
-          # filter teams by activity          
-          if activity is not None: # list all teams filtered by activity
-               teams = teams.objects.filter(activity=int(activity)) 
-          
+
           # filter teams by recruit_enddate and order teams randomly
           today_date = date.today().isoformat()
-          teams = teams.filter(recruit_enddate__gte=today_date)
-          teams = [team for team in teams if team.member_cnt > 0]
-          teams = teams.order_by('?')  
-          
-          if activity is not None:
-               return teams
+          teams = teams.filter(recruit_enddate__gte=today_date).order_by('?')
+          teams = [team for team in teams if len(team.positions.all()) > 0]
                
           return teams[:50]
      
