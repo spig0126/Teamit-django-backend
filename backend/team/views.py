@@ -19,10 +19,16 @@ from position.models import Position
 class TeamListCreateAPIView(generics.ListCreateAPIView):  
      def initial(self, request, *args, **kwargs):
         self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+        self.activity = request.query_params.get('activity', None)
         super().initial(request, *args, **kwargs)
 
      def get_queryset(self):
-          return Team.objects.filter(members=self.user)   
+          if self.activity is not None: # list all teams filtered by activity
+               queryset = Team.objects.filter(activity=self.activity)
+               queryset = queryset.exclude(pk__in=self.user.teams.all().values_list('pk', flat=True)).order_by('?')
+          else:     # list my teams
+               queryset = Team.objects.filter(members=self.user)
+          return queryset
             
      def get_serializer_context(self):
           context = super().get_serializer_context()
@@ -33,7 +39,10 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):
           if self.request.method == 'POST':  # create team
                return TeamCreateUpdateSerializer
           elif self.request.method == 'GET': # list my teams
-               return MyTeamSimpleDetailSerializer
+               if self.activity is None:
+                    return MyTeamSimpleDetailSerializer
+               else:
+                    return TeamSimpleDetailSerializer
 
 
 class RecommendedTeamListAPIView(generics.ListAPIView):
@@ -132,6 +141,7 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
           team = get_object_or_404(Team, pk=team_pk)
           return TeamMembers.objects.filter(team=team)
      
+     @transaction.atomic
      def create(self, request, *args, **kwargs):
           team_pk = kwargs.get('team_pk')
           user_pk = request.headers.get('UserID')
@@ -182,6 +192,7 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
           return Response(serializer.data, status=status.HTTP_200_OK)
 
 class TeamMemberDeclineAPIView(APIView):
+     @transaction.atomic
      def put(self, request, *args, **kwargs):
           notification = get_object_or_404(Notification, pk=request.data['notification_id'], type="team_application_accepted")
           team_application = get_object_or_404(TeamApplication, pk=notification.related_id)
@@ -206,6 +217,7 @@ class TeamMemberDeclineAPIView(APIView):
 class TeamMemberDestroyAPIView(generics.DestroyAPIView):
      queryset = TeamMembers.objects.all()
      
+     @transaction.atomic
      def delete(self, request, *args, **kwargs):
           team_pk = kwargs.get('team_pk')
           member_pk = kwargs.get('member_pk')
@@ -227,6 +239,7 @@ class TeamMemberDestroyAPIView(generics.DestroyAPIView):
 class TeamMemberDropAPIView(generics.DestroyAPIView):
      queryset = TeamMembers.objects.all()
      
+     @transaction.atomic
      def delete(self, request, *args, **kwargs):
           team_pk = kwargs.get('team_pk')
           member_pk =kwargs.get('member_pk')
@@ -261,6 +274,7 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
                return TeamApplication.objects.filter(team=team)
           raise PermissionDenied("user is not allowed to view this team's applications")
      
+     @transaction.atomic
      def create(self, request, *args, **kwargs):
           team_pk = self.kwargs.get('team_pk')
           user_pk = self.request.headers.get('UserID')
@@ -284,6 +298,7 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
           return Response({"detail": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
      
 class TeamApplicationAcceptAPIView(APIView):
+     @transaction.atomic
      def put(self, request, *args, **kwargs):
           team_pk = kwargs.get('team_pk')
           application_pk = kwargs.get('application_pk')
@@ -321,6 +336,7 @@ class TeamApplicationAcceptAPIView(APIView):
           return Response({"detail": "team didn't receive this application"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 class TeamApplicationDeclineAPIView(APIView):
+     @transaction.atomic
      def put(self, request, *args, **kwargs):
           team_pk = kwargs.get('team_pk')
           application_pk = kwargs.get('application_pk')
@@ -362,6 +378,7 @@ class UserTeamLikesListAPIView(APIView):
           return Response(serializer.data, status=status.HTTP_200_OK)
      
 class TeamLikeUnlikeAPIView(APIView):
+     @transaction.atomic
      def put(self, request, *args, **kwargs):
           team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
           user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
