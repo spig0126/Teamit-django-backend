@@ -176,6 +176,7 @@ class AcceptFriendRequestAPIView(APIView):
           return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
 
 class UnfriendUserAPIView(APIView):
+     @transaction.atomic
      def post(self, request, *args, **kwargs):
           userA = get_object_or_404(User, name=request.data['userA'])
           userB = get_object_or_404(User, name=request.data['userB'])
@@ -193,6 +194,7 @@ class UnfriendUserAPIView(APIView):
           return Response({"message": "unfriend request successful"}, status=status.HTTP_204_NO_CONTENT)
 
 class DeclineFriendRequestAPIView(APIView):
+     @transaction.atomic
      def post(self, request):
           friend_request_id = request.data['friend_request_id']
           friend_request = get_object_or_404(FriendRequest, pk=friend_request_id)
