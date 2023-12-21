@@ -8,6 +8,7 @@ from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyM
 from rest_framework.parsers import MultiPartParser
 from django.db.models import Count
 from django.db.models import F
+from datetime import date
 
 from .models import *
 from .serializers import *
@@ -39,22 +40,30 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
      serializer_class = TeamSimpleDetailSerializer
      
      def get_queryset(self):
-          show_top = self.request.query_params.get('show_top', None) == 'true'
-          activity = request.query_params.get('activity', None)
+          activity = self.request.query_params.get('activity', None)
+          user_pk = self.request.headers.get('UserID', None)
           
           teams = Team.objects.all()
+          user = get_object_or_404(User, pk=user_pk)
           
-          # filter teams by activity
+          # exclude teams user is already member to
+          my_teams = user.teams.all()
+          teams = teams.exclude(pk__in=my_teams.values_list('pk', flat=True))
+          
+          # filter teams by activity          
           if activity is not None: # list all teams filtered by activity
                teams = teams.objects.filter(activity=int(activity)) 
-               
-          # order teams by like_cnt
-          teams = teams.objects.order_by('?')
           
-          if show_top:
-               teams = teams[:10]
+          # filter teams by recruit_enddate and order teams randomly
+          today_date = date.today().isoformat()
+          teams = teams.filter(recruit_enddate__gte=today_date)
+          teams = [team for team in teams if team.member_cnt > 0]
+          teams = teams.order_by('?')  
+          
+          if activity is not None:
+               return teams
                
-          return teams
+          return teams[:50]
      
 class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, GenericAPIView):
      queryset = Team.objects.all()
