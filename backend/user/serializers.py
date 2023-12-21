@@ -30,10 +30,10 @@ class UserBackgroundImageField(serializers.Field):
      def to_internal_value(self, data):
           # Convert the signed url to image path
           try:
-               match = search('backgrounds/bg([1-9]|10|11)\.png', data)
+               match = search('backgrounds/([1-9]|10|11)\.png', data)
                return match.group(0)
           except:
-               return f'backgrounds/bg1.png'
+               return f'backgrounds/1.png'
           
      def to_representation(self, value):
           return value
@@ -114,13 +114,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class UserProfileDetailSerializer(serializers.ModelSerializer):
      activities = serializers.StringRelatedField(many=True)
      cities = serializers.StringRelatedField(many=True)
-     age = serializers.ReadOnlyField()
-     
+
      class Meta:
           model = UserProfile
           fields = [
                'visibility', 
-               'age',
+               'birthdate',
                'sex', 
                'activities',
                'cities',
@@ -139,6 +138,7 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
      likes = serializers.SerializerMethodField()
      friends = serializers.SerializerMethodField()
+     
      class Meta:
           model = User
           fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'likes', 'friends', 'profile']
@@ -160,7 +160,9 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
           if viewed_user in viewer_user.friends.all():
                return True
           elif FriendRequest.objects.filter(to_user=viewed_user, from_user=viewer_user, accepted=False).exists():
-               return None
+               return "pending"
+          elif FriendRequest.objects.filter(to_user=viewer_user, from_user=viewed_user, accepted=False).exists():
+               return "received"
           return False
 
 class MyProfileDetailSerializer(serializers.ModelSerializer):
@@ -284,6 +286,9 @@ class UserWithProfileUpdateSerializer(serializers.ModelSerializer):
                profile_instance.activities.set(activities)
           if cities is not None:
                profile_instance.cities.set(cities)
+          
+          instance.save()
+          profile_instance.save()
           return instance
      
      def to_representation(self, instance):
