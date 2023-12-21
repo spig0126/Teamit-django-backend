@@ -257,6 +257,27 @@ class TeamMemberDropAPIView(generics.DestroyAPIView):
                member.delete()
                return Response(status=status.HTTP_204_NO_CONTENT)
           return Response({'detail': "member is not this team's member"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
+
+class TeamMemberChangePositionAPIView(generics.UpdateAPIView):
+     serializer_class = TeamMemberDetailSerializer
+     lookup_field = 'member_pk'
+     
+     def get_object(self):
+          return get_object_or_404(TeamMembers, pk=self.kwargs.get('member_pk'))
+     
+     def get_queryset(self):
+          # check if user is team's creator
+          team_pk = self.kwargs.get('team_pk')
+          teammember_pk = self.kwargs.get('member_pk')
+          user_pk = self.request.headers.get('UserID')
+          
+          team = get_object_or_404(Team, pk=team_pk)
+          user = get_object_or_404(User, pk=user_pk)
+          
+          if user != team.creator:
+               raise PermissionDenied("user is not allowed to change this team member's position")
+          
+          return TeamMembers.objects.filter(pk=teammember_pk)
      
      
 # team application related views

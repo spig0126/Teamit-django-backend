@@ -14,6 +14,7 @@ urlpatterns = [
      # team member       
      path("<int:team_pk>/members/", TeamMemberListCreateAPIView.as_view()),
      path("<int:team_pk>/members/decline/", TeamMemberDeclineAPIView.as_view()),
+     path("<int:team_pk>/members/<int:member_pk>/", TeamMemberChangePositionAPIView.as_view()),
      path("<int:team_pk>/members/<int:member_pk>/leave/", TeamMemberDestroyAPIView.as_view()),
      path("<int:team_pk>/members/<int:member_pk>/drop/", TeamMemberDropAPIView.as_view()),
      

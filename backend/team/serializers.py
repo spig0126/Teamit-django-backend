@@ -27,7 +27,6 @@ class TeamMemberCreateSerializer(serializers.ModelSerializer):
           fields = [
                'position',
                'background',
-               'noti_unread_cnt'
           ]
 
 class TeamPositionCreateSerializer(serializers.ModelSerializer):
@@ -46,7 +45,7 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      interest = InterestField()
      cities = CitiesField()
      positions = TeamPositionCreateSerializer(many=True)
-     creator = TeamMemberCreateSerializer()
+     creator = TeamMemberCreateSerializer()  # add creator as team member 
      image = ImageBase64Field(write_only=True)
      
      class Meta: 
@@ -79,8 +78,7 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
           validated_data['creator'] = user
           team = super().create(validated_data)
           
-          
-          # add creator as team member and create team positions
+          # create team positions
           TeamMembers.objects.create(team=team, user=user, **creator_data)
           for position_data in positions_data:
                TeamPositions.objects.create(team=team, **position_data)
@@ -129,8 +127,9 @@ class TeamPositionDetailSerializer(serializers.ModelSerializer):
 
 class TeamMemberDetailSerializer(serializers.ModelSerializer):
      user = serializers.StringRelatedField(read_only=True)
-     position = serializers.StringRelatedField(read_only=True)
+     position = PositionField()
      avatar = serializers.ReadOnlyField()
+     
      class Meta:
           model = TeamMembers
           fields = [
@@ -247,6 +246,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           elif TeamApplication.objects.filter(applicant=user, team=instance, accepted=None).exists():
                return None
           return False
+     
      def get_likes(self, instance):
           request = self.context.get('request')
           user = get_object_or_404(User, pk=request.headers.get('UserID'))
