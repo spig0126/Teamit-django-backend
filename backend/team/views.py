@@ -49,7 +49,7 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
                teams = teams.objects.filter(activity=int(activity)) 
                
           # order teams by like_cnt
-          teams = teams.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
+          teams = teams.objects.order_by('?')
           
           if show_top:
                teams = teams[:10]

@@ -9,6 +9,7 @@ from django.db.models import Count
 from django.shortcuts import render
 import requests
 from django.core.files.storage import default_storage
+from django.db.models import F
 
 from .models import *
 from .serializers import *
@@ -22,6 +23,9 @@ class UserWithProfileDetailAPIView(generics.GenericAPIView):
 
      def get_serializer_class(self):
           if self.request.method == 'GET':
+               simple = self.request.query_params.get('simple', None) == 'true'
+               if simple:
+                    return UserSimpleDetailSerializer
                return MyProfileDetailSerializer
           else:
                return UserProfileCreateSerializer
@@ -33,7 +37,7 @@ class UserWithProfileDetailAPIView(generics.GenericAPIView):
                return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
      
      def get(self, request, *args, **kwargs):     # get my profile
-          user_pk = int(self.request.headers.get('UserID'))
+          user_pk = self.request.headers.get('UserID', None)
           user = get_object_or_404(User, pk=user_pk)
           serializer = self.get_serializer(user)
           return Response(serializer.data, status=status.HTTP_200_OK)
@@ -46,6 +50,7 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
                return UserWithProfileDetailSerializer
           elif self.request.method in ('PUT', 'PATCH'):
                return UserWithProfileUpdateSerializer
+          
      def update(self, request, *args, **kwargs):  # update my profile
           user_pk = int(request.headers.get('UserID'))
           if user_pk != self.kwargs.get('pk'):
@@ -68,12 +73,12 @@ class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericA
 class RecommendedUserListAPIView(generics.ListAPIView):
      def initial(self, request, *args, **kwargs):
         self.show_top = self.request.query_params.get('show_top', None) == 'true'
+        self.user_pk = self.request.headers.get('UserID', None)
         super().initial(request, *args, **kwargs)
 
      def get_queryset(self):
-          users = User.objects.annotate(like_cnt=Count('liked_by')).order_by('-like_cnt')
-          if self.show_top:
-               users = users[:10]
+          users = User.objects.order_by('?')
+          users = users.exclude(pk=self.user_pk)
           return users[:50]
      
      def get_serializer_class(self):
