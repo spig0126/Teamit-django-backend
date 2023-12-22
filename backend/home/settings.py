@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "notification",
     "post",
     "article",
+    "report",
     "corsheaders",
     
 ]

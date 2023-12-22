@@ -79,6 +79,7 @@ class RecommendedUserListAPIView(generics.ListAPIView):
      def initial(self, request, *args, **kwargs):
         self.show_top = self.request.query_params.get('show_top', None) == 'true'
         self.user_pk = self.request.headers.get('UserID', None)
+        self.user = get_object_or_404(User, pk=self.user_pk)
         super().initial(request, *args, **kwargs)
 
      def get_serializer_context(self):
@@ -92,7 +93,7 @@ class RecommendedUserListAPIView(generics.ListAPIView):
           
           # exclude user itself and blocked users
           users = users.exclude(pk=self.user_pk)
-          users = users.exclude(pk__in=user.blocked_users.all().values_list('pk', flat=True))
+          users = users.exclude(pk__in=self.user.blocked_users.all().values_list('pk', flat=True))
           
           return users[:50]
      

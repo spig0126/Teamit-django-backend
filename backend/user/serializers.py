@@ -38,6 +38,22 @@ class UserBackgroundImageField(serializers.Field):
      def to_representation(self, value):
           return value
 
+class UserField(serializers.Field):
+     def to_internal_value(self, data):
+          # Convert user pk/name to user instance
+          try:
+               if isinstance(data, str):
+                    user = User.objects.get(name=data)
+               else:
+                    user = User.objects.get(pk=data)
+               return user
+          except User.DoesNotExist:
+               raise serializers.ValidationError("Invalid user name/pk")
+          
+     def to_representation(self, value):
+          return value
+
+
 class ImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     
