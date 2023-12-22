@@ -44,6 +44,12 @@ class UserWithProfileDetailAPIView(generics.GenericAPIView):
 class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
      queryset = User.objects.all()
      
+     def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == 'GET':
+          context['viewer_user'] = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+        return context
+     
      def get_serializer_class(self):
           if self.request.method == 'GET':
                return UserWithProfileDetailSerializer
@@ -75,6 +81,12 @@ class RecommendedUserListAPIView(generics.ListAPIView):
         self.user_pk = self.request.headers.get('UserID', None)
         super().initial(request, *args, **kwargs)
 
+     def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == 'GET':
+          context['viewer_user'] = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+        return context
+   
      def get_queryset(self):
           users = User.objects.order_by('?')
           users = users.exclude(pk=self.user_pk)
@@ -99,6 +111,12 @@ class CheckUserNameAvailability(APIView):
 class UserWithProfileListAPIView(generics.ListAPIView):
      queryset = User.objects.all()
      serializer_class = UserWithProfileDetailSerializer
+     
+     def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == 'GET':
+          context['viewer_user'] = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+        return context
 
 class UserImageUpdateAPIView(generics.UpdateAPIView):
      queryset = User.objects.all()
@@ -238,8 +256,23 @@ class LikeUnlikeAPIView(APIView):
                UserLikes.objects.create(from_user=from_user, to_user=to_user)
                return Response({"message": "user liked"}, status=status.HTTP_201_CREATED) 
           
-def test(request):
-     test_user = User.objects.get(pk=73)  # Replace with your actual API endpoint
-     serializer = UserDetailSerializer(test_user)
+# block user related apis
+class BlockUnblockUserAPIView(APIView):
+     def put(self, request, *args, **kwargs):
+          from_user = get_object_or_404(User, pk=request.headers.get('UserID', None))
+          to_user = get_object_or_404(User, pk=kwargs.get('pk', None))
+          
+          if to_user in from_user.blocked_users.all():
+               from_user.blocked_users.remove(to_user)
+               return Response({"message": "user unblocked"}, status=status.HTTP_204_NO_CONTENT)
+          else:
+               from_user.blocked_users.add(to_user)
+               return Response({"message": "user blocked"}, status=status.HTTP_201_CREATED) 
 
-     return render(request, 'user_profile.html', {'user_data': serializer.data})
+class BlockedUserListAPIView(generics.ListAPIView):
+     serializer_class = UserDetailSerializer
+     
+     def get_queryset(self):
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID', None))
+          return user.blocked_users.all()
+     

@@ -26,4 +26,8 @@ urlpatterns = [
      # team like
      path("<int:team_pk>/like/", TeamLikeUnlikeAPIView.as_view()),
      path("likes/", UserTeamLikesListAPIView.as_view()),
+     
+     # team block
+     path("<int:team_pk>/block/", BlockUnblockTeamAPIView.as_view()),
+     path("blocked/", BlockedTeamListAPIView.as_view()),
 ]

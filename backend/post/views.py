@@ -8,6 +8,16 @@ from .models import *
 from .serializers import *
 
 class TeamPostListCreateAPIView(generics.ListCreateAPIView):
+     def initial(self, request, *args, **kwargs):
+          self.team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
+          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          super().initial(request, *args, **kwargs)
+          
+     def get_serializer_context(self):
+          context = super().get_serializer_context()
+          context['user'] = self.user
+          return context
+     
      def get_serializer_class(self):
           if self.request.method == 'POST':
                return TeamPostCreateUpdateSerializer
@@ -18,11 +28,6 @@ class TeamPostListCreateAPIView(generics.ListCreateAPIView):
           team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
           return team.posts.all()
 
-     def dispatch(self, request, *args, **kwargs):
-          self.team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
-          return super().dispatch(request, *args, **kwargs)
-          
      def post(self, request, *args, **kwargs):
           try:
                member = TeamMembers.objects.get(team=self.team, user=self.user)
@@ -38,21 +43,30 @@ class TeamPostListCreateAPIView(generics.ListCreateAPIView):
 
 class TeamPostDetailAPIView(UpdateModelMixin, DestroyModelMixin, RetrieveModelMixin, generics.GenericAPIView):
      queryset = TeamPost.objects.all()
+     lookup_field = 'post_pk'
 
-     def get_serializer_class(self):
-          if self.request.method == 'GET':
-               return TeamPostDetailSerializer
-          return  TeamPostCreateUpdateSerializer
-     
-     def dispatch(self, request, *args, **kwargs):
+     def initial(self, request, *args, **kwargs):
           self.team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          self.user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
           try:
                self.post = self.team.posts.get(pk=self.kwargs.get('post_pk'))
                self.member = TeamMembers.objects.get(team=self.team, user=self.user)
           except:
                raise PermissionDenied("user not allowed")
-          return super().dispatch(request, *args, **kwargs) 
+          super().initial(request, *args, **kwargs)
+          
+     def get_serializer_context(self):
+          context = super().get_serializer_context()
+          context['user'] = self.user
+          return context
+     
+     def get_serializer_class(self):
+          if self.request.method == 'GET':
+               return TeamPostDetailSerializer
+          return  TeamPostCreateUpdateSerializer
+     
+     def get_object(self):
+          return get_object_or_404(TeamPost, pk=self.kwargs.get('post_pk'))
 
      def delete(self, request, *args, **kwargs):
           return self.destroy(request, *args, **kwargs)
@@ -96,7 +110,7 @@ class TeamPostCommenDestroyAPIView(generics.DestroyAPIView):
           comment.delete()
           return Response(status=status.HTTP_204_NO_CONTENT)
 
-class TeamPostLikesListAPIView(generics.ListAPIView):
+class TeamPostViewerListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      
      def get_queryset(self):
@@ -107,13 +121,13 @@ class TeamPostLikesListAPIView(generics.ListAPIView):
                member = TeamMembers.objects.get(team=team, user=user)
           except:
                raise PermissionDenied("user not allowed")
-          return post.likes.all()
+          return post.viewed.all()
      
      def get(self, request, *args, **kwargs):
           return self.list(request, *args, **kwargs)
 
 
-class TeamPostLikeUnlikeAPIView(APIView):
+class ToggleViewedStatus(APIView):
      def put(self, request, *args, **kwargs):
           team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
           user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
@@ -122,9 +136,9 @@ class TeamPostLikeUnlikeAPIView(APIView):
                member = TeamMembers.objects.get(team=team, user=user)
           except:
                raise PermissionDenied("user not allowed")
-          if member in post.likes.all():
-               post.likes.remove(member)
-               return Response({"message": "post unliked"}, status=status.HTTP_204_NO_CONTENT)
+          if member in post.viewed.all():
+               post.viewed.remove(member)
+               return Response({"message": "post unviewed"}, status=status.HTTP_204_NO_CONTENT)
           else:
-               post.likes.add(member)
-               return Response({"message": "post liked"}, status=status.HTTP_201_CREATED)
+               post.viewed.add(member)
+               return Response({"message": "post viewed"}, status=status.HTTP_201_CREATED)

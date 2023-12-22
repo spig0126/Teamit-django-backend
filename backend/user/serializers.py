@@ -138,14 +138,14 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
      likes = serializers.SerializerMethodField()
      friends = serializers.SerializerMethodField()
+     blocked = serializers.SerializerMethodField()
      
      class Meta:
           model = User
-          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'likes', 'friends', 'profile']
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'likes', 'friends', 'blocked', 'profile']
 
      def get_likes(self, instance):
-          request = self.context.get('request')
-          viewer_user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          viewer_user = self.context.get('viewer_user')
           viewed_user = instance
           try:
                UserLikes.objects.get(from_user=viewer_user, to_user=viewed_user)
@@ -154,8 +154,7 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
                return False
      
      def get_friends(self, instance):
-          request = self.context.get('request')
-          viewer_user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          viewer_user = self.context.get('viewer_user')
           viewed_user = instance
           if viewed_user in viewer_user.friends.all():
                return True
@@ -164,6 +163,14 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
           elif FriendRequest.objects.filter(to_user=viewer_user, from_user=viewed_user, accepted=False).exists():
                return "received"
           return False
+
+     def get_blocked(self, instance):
+          viewer_user = self.context.get('viewer_user')
+          viewed_user = instance
+          if viewer_user.blocked_users.filter(pk=viewed_user.pk).exists():
+               return True
+          return False
+
 
 class MyProfileDetailSerializer(serializers.ModelSerializer):
      profile = UserProfileDetailSerializer(read_only=True)

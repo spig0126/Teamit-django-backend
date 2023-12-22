@@ -7,14 +7,14 @@ class TeamPost(models.Model):
      post_to = models.ForeignKey(Team, related_name='posts', on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True)
      content = models.TextField()
-     likes = models.ManyToManyField(
+     viewed = models.ManyToManyField(
           TeamMembers,
-          related_name="likes"
+          related_name="viewed_posts"
      )
      
      @property
-     def like_cnt(self):
-          return self.likes.count()
+     def viewed_cnt(self):
+          return self.viewed.count()
 
 
 class TeamPostComment(models.Model):

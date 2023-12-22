@@ -128,7 +128,6 @@ class TeamPositionDetailSerializer(serializers.ModelSerializer):
 class TeamMemberDetailSerializer(serializers.ModelSerializer):
      user = serializers.StringRelatedField(read_only=True)
      position = PositionField()
-     avatar = serializers.ReadOnlyField()
      
      class Meta:
           model = TeamMembers
@@ -212,6 +211,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
      is_member = serializers.SerializerMethodField()
      likes = serializers.SerializerMethodField()
      date_status = serializers.SerializerMethodField()
+     blocked = serializers.SerializerMethodField()
      
      class Meta:
           model = Team
@@ -223,6 +223,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                'date_status',
                'likes',
                'is_member',
+               'blocked',
                'short_pr',
                'keywords', 
                'activity',
@@ -239,8 +240,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           ]  
           
      def get_is_member(self, instance):
-          request = self.context.get('request')
-          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          user = self.context.get('user')
           if user in instance.members.all():
                return True
           elif TeamApplication.objects.filter(applicant=user, team=instance, accepted=None).exists():
@@ -248,8 +248,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           return False
      
      def get_likes(self, instance):
-          request = self.context.get('request')
-          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          user = self.context.get('user')
           team = instance
           try:
                TeamLike.objects.get(user=user, team=team)
@@ -260,6 +259,12 @@ class TeamDetailSerializer(serializers.ModelSerializer):
      def get_date_status(self, obj):
           return obj.date_status
      
+     def get_blocked(self, instance):
+          user = self.context.get('user')
+          team = instance
+          if team in user.blocked_teams.all():
+               return True
+          return False
           
      def to_representaation(self, instance):
           data = super().to_representaation(instance)

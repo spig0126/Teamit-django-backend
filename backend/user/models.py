@@ -1,6 +1,7 @@
 from django.db import models
 from dateutil.relativedelta import *
 from datetime import *
+from django.conf import settings
 
 from region.models import Province, City
 from position.models import Position
@@ -35,6 +36,14 @@ class User(models.Model):
      friends = models.ManyToManyField(
           'self',
           symmetrical=True
+     )
+     blocked_users = models.ManyToManyField(
+          'self', 
+          symmetrical=False
+     )
+     blocked_teams = models.ManyToManyField(
+          settings.TEAM_MODEL,
+          related_name="blocked_by"
      )
      
      def __str__(self):

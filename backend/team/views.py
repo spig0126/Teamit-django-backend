@@ -67,7 +67,16 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
      
 class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, GenericAPIView):
      queryset = Team.objects.all()
-
+     
+     def initial(self, request, *args, **kwargs):
+          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          super().initial(request, *args, **kwargs)
+          
+     def get_serializer_context(self):
+          context = super().get_serializer_context()
+          context['user'] = self.user
+          return context
+   
      def get_serializer_class(self):
           if self.request.method == 'GET':
                type = self.request.query_params.get('type')
@@ -82,18 +91,13 @@ class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin,
           return self.retrieve(request, *args, **kwargs)
 
      def patch(self, request, *args, **kwargs):
-          user_pk = request.headers.get('UserID')
-          user = get_object_or_404(User, pk=user_pk)
-          team = self.get_object()
-          if user != team.creator:
+          if self.user != team.creator:
                raise PermissionDenied("user is not allowed to update this team")
           return self.partial_update(request, *args, **kwargs)
 
      def delete(self, request, *args, **kwargs):
-          user_pk = request.headers.get('UserID')
-          user = get_object_or_404(User, pk=user_pk)
           team = self.get_object()
-          if user != team.creator:
+          if self.user != team.creator:
                raise PermissionDenied("user is not allowed to delete this team")
           return self.destroy(request, *args, **kwargs)
 
@@ -410,3 +414,27 @@ class TeamLikeUnlikeAPIView(APIView):
           except:
                TeamLike.objects.create(team=team, user=user)
                return Response({"message": "team liked"}, status=status.HTTP_201_CREATED)
+
+
+# block team related views
+class BlockUnblockTeamAPIView(APIView):
+     def put(self, request, *args, **kwargs):
+          user = get_object_or_404(User, pk=request.headers.get('UserID', None))
+          team = get_object_or_404(Team, pk=kwargs.get('team_pk', None))
+          
+          if user in team.members.all():
+               raise PermissionDenied("user is not allowed to block this team. user is member of team")
+          
+          if team in user.blocked_teams.all():
+               user.blocked_teams.remove(team)
+               return Response({"message": "team unblocked"}, status=status.HTTP_204_NO_CONTENT)
+          else:
+               user.blocked_teams.add(team)
+               return Response({"message": "team blocked"}, status=status.HTTP_201_CREATED) 
+
+class BlockedTeamListAPIView(generics.ListAPIView):
+     serializer_class = TeamSimpleDetailSerializer
+
+     def get_queryset(self):
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID', None))
+          return user.blocked_teams.all()

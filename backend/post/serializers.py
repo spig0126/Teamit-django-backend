@@ -7,7 +7,8 @@ from user.models import User
 
 # detail serializers
 class TeamPostCommentDetailSerializer(serializers.ModelSerializer):
-     writer = serializers.StringRelatedField()
+     writer = TeamMemberDetailSerializer()
+     blocked_writer = serializers.SerializerMethodField()
      
      class Meta:
           model = TeamPostComment
@@ -15,60 +16,91 @@ class TeamPostCommentDetailSerializer(serializers.ModelSerializer):
                'id',
                'writer',
                'created_at',
+               'blocked_writer',
                'content'
           ]
+     
+     def get_blocked_writer(self, instance):
+          user = self.context.get('user')
+          if instance.writer.user in user.blocked_users.all():
+               return True
+          return False
 
 class TeamPostSimpleDetailSerializer(serializers.ModelSerializer):
      writer = TeamMemberDetailSerializer()
      comment_cnt = serializers.SerializerMethodField()
-     like_cnt = serializers.SerializerMethodField()
-     likes = serializers.SerializerMethodField()
+     viewed_cnt = serializers.ReadOnlyField()
+     viewed = serializers.SerializerMethodField()
+     blocked_writer = serializers.SerializerMethodField()
      
      class Meta:
           model = TeamPost
           fields = [
                'id',
                'writer',
+               'blocked_writer',
                'post_to',
                'created_at',
                'content',
                'comment_cnt',
-               'like_cnt',
-               'likes'
+               'viewed_cnt',
+               'viewed'
           ]
      
      def get_comment_cnt(self, obj):
           return obj.comments.count()
-     def get_like_cnt(self, obj):
-          return obj.like_cnt
-     def get_likes(self, instance):
+     
+     def get_viewed(self, instance):
           request = self.context.get('request')
           user = get_object_or_404(User, pk=request.headers.get('UserID'))
-          if instance.likes.filter(user=user):
+          if instance.viewed.filter(user=user).exists():
+               return True
+          return False
+     
+     def get_blocked_writer(self, instance):
+          user = self.context.get('user')
+          if instance.writer.user in user.blocked_users.all():
                return True
           return False
 
 class TeamPostDetailSerializer(serializers.ModelSerializer):
      writer = TeamMemberDetailSerializer()
      comment_cnt = serializers.SerializerMethodField()
-     like_cnt = serializers.SerializerMethodField()
+     viewed_cnt = serializers.ReadOnlyField()
+     viewed = serializers.SerializerMethodField()
      comments = TeamPostCommentDetailSerializer(many=True)
+     blocked_writer = serializers.SerializerMethodField()
+     
      class Meta:
           model = TeamPost
           fields = [
                'id',
                'writer',
+               'blocked_writer',
                'post_to',
                'created_at',
                'content',
                'comment_cnt',
-               'like_cnt',
+               'viewed_cnt',
+               'viewed',
                'comments'
           ]
      def get_comment_cnt(self, obj):
           return obj.comments.count()
-     def get_like_cnt(self, obj):
-          return obj.like_cnt
+     
+     def get_viewed(self, instance):
+          request = self.context.get('request')
+          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          if instance.viewed.filter(user=user).exists():
+               return True
+          return False
+     
+     def get_blocked_writer(self, instance):
+          user = self.context.get('user')
+          if instance.writer.user in user.blocked_users.all():
+               return True
+          return False
+
 # create serializer
 class TeamPostCreateUpdateSerializer(serializers.ModelSerializer):
      class Meta:
