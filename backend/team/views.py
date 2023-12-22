@@ -400,7 +400,8 @@ class UserTeamLikesListAPIView(APIView):
      def get(self, request, *args, **kwargs):
           user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
           team_likes = [obj.team for obj in TeamLike.objects.filter(user=user)]
-          serializer = TeamLikesListSerializer(team_likes)
+          context = {'user': user}
+          serializer = TeamLikesListSerializer(team_likes, context=context)
           return Response(serializer.data, status=status.HTTP_200_OK)
      
 class TeamLikeUnlikeAPIView(APIView):

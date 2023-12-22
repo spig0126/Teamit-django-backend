@@ -393,7 +393,43 @@ class TeamNotificationSenderDetailSerializer(serializers.Serializer):
                data['position'] = team_application.position.name
                data['accepted'] = team_application.accepted
           return data
-     
+   
+class LikedTeamDetailSerializer(serializers.ModelSerializer):
+     positions = serializers.StringRelatedField(many=True)
+     member_cnt = serializers.SerializerMethodField()
+     activity = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
+     date_status = serializers.SerializerMethodField()
+     likes = serializers.SerializerMethodField()
+
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'image',
+               'activity',
+               'interest',
+               'keywords', 
+               'date_status',
+               'member_cnt',
+               'likes',
+               'positions',
+          ]
+          
+     def get_member_cnt(self, obj):
+          return obj.member_cnt
+     def get_date_status(self, obj):
+          return obj.date_status
+     def get_likes(self, instance):
+          user = self.context.get('user')
+          team = instance
+          try:
+               TeamLike.objects.get(user=user, team=team)
+               return True
+          except:
+               return False
+          
 
 class TeamApplicationDetailSerializer(serializers.ModelSerializer):
      team = serializers.StringRelatedField()
@@ -405,7 +441,7 @@ class TeamApplicationDetailSerializer(serializers.ModelSerializer):
 
 # list serializers
 class TeamLikesListSerializer(serializers.ListSerializer):
-     child = TeamSimpleDetailSerializer()
+     child = LikedTeamDetailSerializer()
      class Meta:
           model = Team
           fields = '__all__'

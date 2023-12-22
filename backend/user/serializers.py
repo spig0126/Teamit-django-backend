@@ -187,7 +187,6 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
                return True
           return False
 
-
 class MyProfileDetailSerializer(serializers.ModelSerializer):
      profile = UserProfileDetailSerializer(read_only=True)
      interests = serializers.StringRelatedField(many=True)
@@ -220,6 +219,24 @@ class FriendRequestDetailSerializer(serializers.ModelSerializer):
           model = FriendRequest
           fields = '__all__'
 
+class LikedUserDetailSerialzier(serializers.ModelSerializer):
+     interests = serializers.StringRelatedField(many=True)
+     positions = serializers.StringRelatedField(many=True)
+     likes = serializers.SerializerMethodField()
+     
+     class Meta:
+          model = User
+          fields = ['id', 'name', 'avatar', 'background', 'positions', 'interests', 'likes']
+          
+     def get_likes(self, instance):
+          viewer_user = self.context.get('viewer_user')
+          viewed_user = instance
+          try:
+               UserLikes.objects.get(from_user=viewer_user, to_user=viewed_user)
+               return True
+          except:
+               return False
+          
 # update serializers
 class UserImageUpdateSerializer(serializers.ModelSerializer):
      avatar = UserAvatarImageField()
@@ -319,7 +336,7 @@ class UserWithProfileUpdateSerializer(serializers.ModelSerializer):
      
 # list serializers
 class UserLikesListSerializer(serializers.ListSerializer):
-     child = UserDetailSerializer()
+     child = LikedUserDetailSerialzier()
      
      class Meta:
           model = User

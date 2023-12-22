@@ -12,6 +12,7 @@ from django.core.files.storage import default_storage
 
 from .models import *
 from .serializers import *
+from .index import UserIndex
 from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
@@ -246,7 +247,9 @@ class UserLikesListAPIView(APIView):
      def get(self, request):
           user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
           user_likes = [obj.to_user for obj in UserLikes.objects.filter(from_user=user)]
-          serializer = UserLikesListSerializer(user_likes)
+          
+          context = {'viewer_user': user}
+          serializer = UserLikesListSerializer(user_likes, context=context)
           return Response(serializer.data, status=status.HTTP_200_OK)
 
 class LikeUnlikeAPIView(APIView):
@@ -280,4 +283,7 @@ class BlockedUserListAPIView(generics.ListAPIView):
      def get_queryset(self):
           user = get_object_or_404(User, pk=self.request.headers.get('UserID', None))
           return user.blocked_users.all()
+     
+# search api
+# class UserSearchAPIView(generics.ListAPIView):
      
