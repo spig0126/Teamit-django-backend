@@ -89,7 +89,11 @@ class RecommendedUserListAPIView(generics.ListAPIView):
    
      def get_queryset(self):
           users = User.objects.order_by('?')
+          
+          # exclude user itself and blocked users
           users = users.exclude(pk=self.user_pk)
+          users = users.exclude(pk__in=user.blocked_users.all().values_list('pk', flat=True))
+          
           return users[:50]
      
      def get_serializer_class(self):

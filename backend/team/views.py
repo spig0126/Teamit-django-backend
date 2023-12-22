@@ -16,7 +16,7 @@ from notification.models import *
 from position.models import Position
 
 # CRUD views for Team
-class TeamListCreateAPIView(generics.ListCreateAPIView):  
+class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
         self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
         self.activity = request.query_params.get('activity', None)
@@ -54,9 +54,10 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
           teams = Team.objects.all()
           user = get_object_or_404(User, pk=user_pk)
           
-          # exclude teams user is already member to
+          # exclude blocked teams and teams user is already member to 
           my_teams = user.teams.all()
           teams = teams.exclude(pk__in=my_teams.values_list('pk', flat=True))
+          teams = teams.exclude(pk__in=user.blocked_teams.all().values_list('pk', flat=True))
 
           # filter teams by recruit_enddate and order teams randomly
           today_date = date.today().isoformat()
