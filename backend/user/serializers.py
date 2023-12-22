@@ -51,7 +51,7 @@ class UserField(serializers.Field):
                raise serializers.ValidationError("Invalid user name/pk")
           
      def to_representation(self, value):
-          return value
+          return value.name
 
 
 class ImageSerializer(serializers.Serializer):

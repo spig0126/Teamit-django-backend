@@ -16,7 +16,7 @@ class ReasonField(serializers.Field):
 
 class ReportDetailSerializer(serializers.ModelSerializer):
      reason = ReasonField()
-     reporter = UserField()
+     reported_user = UserField()
      
      class Meta:
           model = Report

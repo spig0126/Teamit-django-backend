@@ -23,7 +23,7 @@ class ReportUserOrTeamAPIView(generics.CreateAPIView):
           user = get_object_or_404(User, pk=user_pk)
           reported_type = request.data.get('reported_type', None)
           reported_team_pk = request.data.get('reported_team', None)
-          reported_user_pk = request.data.get('reported_user_pk', None)
+          reported_user_name = request.data.get('reported_user', None)
           block = request.data.pop('block', None)
           
           # abort if user is team's creator
@@ -33,7 +33,8 @@ class ReportUserOrTeamAPIView(generics.CreateAPIView):
                     raise PermissionDenied("User is not allowed to report this team. user is creator of team.")
           
           # abort if reported user isreported
-          # if user_pk == 
+          if user.name == reported_user_name:
+               return Response({"detail": "user cannot report oneself"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
           # add user instance to request data
           request.data['reporter'] = user_pk
           
