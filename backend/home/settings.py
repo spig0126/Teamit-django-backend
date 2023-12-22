@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "post",
     "article",
     "report",
+    "search",
     "corsheaders",
     
 ]
@@ -155,3 +156,9 @@ DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+ALGOLIA = {
+    'APPLICATION_ID': env('APPLICATION_ID'),
+    'API_KEY': env('API_KEY')
+}
+
