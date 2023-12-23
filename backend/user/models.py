@@ -48,6 +48,32 @@ class User(models.Model):
      
      def __str__(self):
           return self.name
+     
+     @property
+     def interest_names(self):
+          return ', '.join([str(interest) for interest in self.interests.all()])
+     @property
+     def position_names(self):
+          return ', '.join([str(position) for position in self.positions.all()])
+     @property
+     def city_names(self):
+          try:
+               return ', '.join([str(city) for city in self.profile.cities.all()])
+          except:
+               return ''
+     @property
+     def activity_names(self):
+          try:
+               return ', '.join([str(activity) for activity in self.profile.activities.all()])
+          except:
+               return ''
+     @property
+     def keywords(self):
+          try:
+               return self.profile.keywords
+          except:
+               return ''
+     
 
 class UserProfile(models.Model):
      user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')

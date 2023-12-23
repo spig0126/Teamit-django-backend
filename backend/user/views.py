@@ -13,6 +13,7 @@ from django.core.files.storage import default_storage
 from .models import *
 from .serializers import *
 from .index import UserIndex
+from . import client
 from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
@@ -285,5 +286,17 @@ class BlockedUserListAPIView(generics.ListAPIView):
           return user.blocked_users.all()
      
 # search api
-# class UserSearchAPIView(generics.ListAPIView):
+class UserSearchAPIView(generics.ListAPIView):
+    serializer_class = UserDetailSerializer
+
+    def get_queryset(self):
+          # Retrieve the search query from the request
+          query = self.request.query_params.get('q')
+
+          if query:
+               results = client.perform_search(query)
+               pks = [result['objectID'] for result in results['hits']]
+               return User.objects.filter(pk__in=pks)
+          else:
+               return User.objects.all()
      

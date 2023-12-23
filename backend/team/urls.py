@@ -30,4 +30,7 @@ urlpatterns = [
      # team block
      path("<int:team_pk>/block/", BlockUnblockTeamAPIView.as_view()),
      path("blocked/", BlockedTeamListAPIView.as_view()),
+     
+     # search
+     path("search/", TeamSearchAPIView.as_view())
 ]

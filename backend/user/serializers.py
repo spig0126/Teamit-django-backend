@@ -73,7 +73,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
                'background',
                'positions',
                'interests'
-               
           ]
 
 class UserProfileCreateSerializer(serializers.ModelSerializer):
@@ -88,6 +87,7 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
                'activities', 
                'birthdate',
                'sex', 
+               'short_pr',
                'cities'
           ]
      
@@ -236,7 +236,9 @@ class LikedUserDetailSerialzier(serializers.ModelSerializer):
                return True
           except:
                return False
-          
+ 
+ 
+         
 # update serializers
 class UserImageUpdateSerializer(serializers.ModelSerializer):
      avatar = UserAvatarImageField()

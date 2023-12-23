@@ -28,5 +28,8 @@ urlpatterns = [
      
      # block
      path("<int:pk>/block/", BlockUnblockUserAPIView.as_view()),
-     path("blocked/", BlockedUserListAPIView.as_view())
+     path("blocked/", BlockedUserListAPIView.as_view()),
+     
+     # serach
+     path("search/", UserSearchAPIView.as_view()),
 ]

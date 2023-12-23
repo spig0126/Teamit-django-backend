@@ -12,6 +12,8 @@ from datetime import date
 
 from .models import *
 from .serializers import *
+from .index import TeamIndex
+from . import client
 from notification.models import *
 from position.models import Position
 
@@ -440,3 +442,19 @@ class BlockedTeamListAPIView(generics.ListAPIView):
      def get_queryset(self):
           user = get_object_or_404(User, pk=self.request.headers.get('UserID', None))
           return user.blocked_teams.all()
+     
+# search api
+class TeamSearchAPIView(generics.ListAPIView):
+    serializer_class = SearchedTeamDetailSerializer
+
+    def get_queryset(self):
+          # Retrieve the search query from the request
+          query = self.request.query_params.get('q')
+
+          if query:
+               results = client.perform_search(query)
+               pks = [result['objectID'] for result in results['hits']]
+               return Team.objects.filter(pk__in=pks)
+          else:
+               return Team.objects.all()
+     

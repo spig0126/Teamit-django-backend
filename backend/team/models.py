@@ -76,6 +76,22 @@ class Team(models.Model):
                return "활동종료"
           else:
                return "D" + str((today - recruit_enddate).days)
+     
+     @property
+     def activity_name(self):
+          return str(self.activity)
+     
+     @property
+     def interest_name(self):
+          return str(self.interest)
+     
+     @property
+     def position_names(self):
+          return ', '.join([str(position) for position in self.positions.all()])
+     
+     @property
+     def city_names(self):
+          return ', '.join([str(city) for city in self.cities.all()])
           
 
 class TeamPositions(models.Model):

@@ -271,7 +271,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           members = get_team_members_with_creator_first(instance)
           data['members'] = members
           return data
-          
+
 class TeamSimpleDetailSerializer(serializers.ModelSerializer):  
      positions = serializers.StringRelatedField(many=True)
      member_cnt = serializers.SerializerMethodField()
@@ -297,6 +297,25 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):
           return obj.member_cnt
      def get_date_status(self, obj):
           return obj.date_status
+
+class SearchedTeamDetailSerializer(serializers.ModelSerializer):
+     activity = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
+     member_cnt = serializers.ReadOnlyField()
+     date_status = serializers.ReadOnlyField()
+
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'image',
+               'activity',
+               'interest',
+               'keywords',
+               'member_cnt',
+               'date_status'
+          ]
 
 class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):  
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
