@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import date
 
 class Article(models.Model):
      id = models.AutoField(primary_key=True)
@@ -8,3 +9,12 @@ class Article(models.Model):
      link = models.URLField()
      created_at = models.DateTimeField(auto_now_add=True, blank=True)
      
+class EventArticle(models.Model):
+     id = models.AutoField(primary_key=True)
+     title = models.CharField(max_length=30, default='')
+     subtitle = models.CharField(default='')
+     image = models.ImageField(upload_to='event_articles/')
+     link = models.URLField()
+     created_at = models.DateTimeField(auto_now_add=True, blank=True)
+     start_date = models.DateTimeField()
+     end_date = models.DateTimeField()
