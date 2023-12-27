@@ -46,7 +46,7 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      cities = CitiesField()
      positions = TeamPositionCreateSerializer(many=True)
      creator = TeamMemberCreateSerializer()  # add creator as team member 
-     image = ImageBase64Field(write_only=True)
+     image = ImageBase64Field(write_only=True, required=False)
      
      class Meta: 
           model = Team
@@ -84,8 +84,10 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                TeamPositions.objects.create(team=team, **position_data)
                
           # uploat image to S3, store image path in db
-          image_path = f'teams/{team.pk}/main.png'
-          default_storage.save(image_path, image)
+          if image is not None:
+               image_path = f'teams/{team.pk}/main.png'
+               default_storage.save(image_path, image)
+          image_path = f'teams/default.png'
           team.image = image_path
           team.save()
           

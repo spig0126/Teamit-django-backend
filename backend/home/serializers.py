@@ -7,6 +7,9 @@ class ImageBase64Field(serializers.Field):
      def to_internal_value(self, data):
           # decode image 
           try: 
+               if data == None:
+                    return None
+               
                image_data = base64.b64decode(data)
                
                # Create an InMemoryUploadedFile from image_data

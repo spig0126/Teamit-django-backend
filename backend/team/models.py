@@ -15,7 +15,7 @@ class Team(models.Model):
      name = models.CharField(max_length=20)
      short_pr = models.CharField(max_length=50)
      keywords = models.CharField(default='')
-     image = models.ImageField(upload_to='teams/', default='teams/default.png')
+     image = models.ImageField(upload_to='teams/', default='teams/default.png', null=True)
      
      activity = models.ForeignKey(Activity, 
                                    on_delete=models.CASCADE, 
