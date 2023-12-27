@@ -53,7 +53,6 @@ class UserField(serializers.Field):
      def to_representation(self, value):
           return value.name
 
-
 class ImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     
@@ -63,7 +62,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
      background = UserBackgroundImageField()
      positions = PositionsField()
      interests = InterestsField()
-     
+
      class Meta:
           model = User
           fields = [

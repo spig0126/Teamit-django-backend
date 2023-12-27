@@ -129,11 +129,10 @@ class UserImageUpdateAPIView(generics.UpdateAPIView):
      queryset = User.objects.all()
      serializer_class = UserImageUpdateSerializer
      
-     def update(self, request, *args, **kwargs):
-          user_pk = int(request.headers.get('UserID'))
-          if user_pk != self.kwargs.get('pk'):
-               raise PermissionDenied("user not allowed to update images")
-          return super().update(request, *args, **kwargs)
+     def get_object(self):
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+          return user
+
 
 # apis related to friends
 class SendFriendRequestAPIView(APIView):
@@ -234,7 +233,7 @@ class UserFriendsListAPIView(generics.ListAPIView):
      serializer_class = UserDetailSerializer
      
      def get_queryset(self):
-          user = get_object_or_404(User, name=self.request.data["user"])
+          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
           queryset = user.friends.all()
           return queryset
      
