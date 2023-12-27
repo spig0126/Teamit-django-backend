@@ -15,7 +15,7 @@ class TeamNotificationListAPIView(generics.ListAPIView):
      
      def get_queryset(self):
           user = get_object_or_404(User, pk=int(self.request.headers.get('UserID')))
-          team = get_object_or_404(Team, pk=self.request.data['team_id'])
+          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
           
           # check if user is team member
           try:
