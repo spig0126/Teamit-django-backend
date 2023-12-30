@@ -16,7 +16,6 @@ class ReasonField(serializers.Field):
 
 class ReportDetailSerializer(serializers.ModelSerializer):
      reason = ReasonField()
-     reported_user = UserField()
      
      class Meta:
           model = Report
@@ -25,5 +24,8 @@ class ReportDetailSerializer(serializers.ModelSerializer):
                'reported_type',
                'reported_user',
                'reported_team',
+               'reported_team_post',
+               'reported_team_post_comment',
                'reason',
+               'created_at'
           ]
