@@ -294,7 +294,12 @@ class UserSearchAPIView(generics.ListAPIView):
 
           if query:
                results = client.perform_search(query)
-               pks = [result['objectID'] for result in results['hits']]
+               pks = set([result['objectID'] for result in results['hits']])
+               
+               # exclude user itself and blocked users
+               users = users.exclude(pk=self.user_pk)
+               users = users.exclude(pk__in=self.user.blocked_users.all().values_list('pk', flat=True))
+               
                return User.objects.filter(pk__in=pks)
           else:
                return User.objects.all()
