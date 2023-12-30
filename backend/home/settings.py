@@ -11,12 +11,24 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
-import environ
-
-env = environ.Env()
-environ.Env.read_env()
+import firebase_admin
+from firebase_admin import credentials
+from decouple import AutoConfig, config
+import os
 
 TEAM_MODEL = 'team.Team'
+
+
+# Initialize Firebase Admin SDK
+CONFIG_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+firebase_credentials_path = os.path.join(CONFIG_BASE_DIR, '.config', 'firebase-credentials.json')
+
+cred = credentials.Certificate(firebase_credentials_path)
+firebase_admin.initialize_app(cred)
+
+# Load variables from .env file
+ENV_FILE_PATH = os.path.join(CONFIG_BASE_DIR, '.config', '.env') 
+config = AutoConfig(search_path=ENV_FILE_PATH)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,7 +38,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-@fha-fhryn3+e6$q(zgaed^nbz19y5_b8p2g^*)aw%e2f+=3fb"
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -100,10 +112,10 @@ WSGI_APPLICATION = "home.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("RDS_NAME"),
-        "USER": env("RDS_USER"),
-        "PASSWORD": env("RDS_PASSWORD"),
-        "HOST": env("RDS_HOST"),
+        "NAME": config("RDS_NAME"),
+        "USER": config("RDS_USER"),
+        "PASSWORD": config("RDS_PASSWORD"),
+        "HOST": config("RDS_HOST"),
         "PORT": "5432",
     }
 }
@@ -141,10 +153,10 @@ USE_I18N = True
 USE_TZ = True
 
 
-AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME")
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME")
 
 # Use S3 as the default storage for static and media files
 STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/"
@@ -159,7 +171,7 @@ DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ALGOLIA = {
-    'APPLICATION_ID': env('APPLICATION_ID'),
-    'API_KEY': env('API_KEY')
+    'APPLICATION_ID': config('APPLICATION_ID'),
+    'API_KEY': config('API_KEY')
 }
 
