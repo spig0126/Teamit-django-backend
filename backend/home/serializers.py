@@ -24,7 +24,6 @@ class ImageBase64Field(serializers.Field):
                )
                return image_file
           except Exception as error:
-               print("An exception occurred:", error)
                raise serializers.ValidationError("Invalid image format")
      
      def to_representation(self, value):
