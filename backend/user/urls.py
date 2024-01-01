@@ -3,16 +3,17 @@ from django.urls import path
 from .views import *
 
 urlpatterns = [
+     # user profile
+     path("<str:name>/", UserDetailAPIView.as_view(), name='destroy user'),
+     path("<str:name>/profile/", UserWithProfileRetrieveUpdateAPIView.as_view(), name='update my profile / retrieve user profile'), 
+     path("profiles/", UserWithProfileListAPIView.as_view(), name='create user / retrieve my profile'),
+     
      # user
      path("", UserWithProfileDetailAPIView.as_view()),
      path("recommended/", RecommendedUserListAPIView.as_view()),
-     path("<int:pk>/", UserDetailAPIView.as_view()),
      path("images/", UserImageUpdateAPIView.as_view()),
      path("name/available/", CheckUserNameAvailability.as_view()),
 
-     # user profile
-     path("profiles/", UserWithProfileListAPIView.as_view()),
-     path("<int:pk>/profile/", UserWithProfileRetrieveUpdateAPIView.as_view()), 
      
      # friends
      path("send-friend-request/", SendFriendRequestAPIView.as_view()),

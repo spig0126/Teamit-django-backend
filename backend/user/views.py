@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import render
@@ -14,14 +14,20 @@ from .models import *
 from .serializers import *
 from .index import UserIndex
 from . import client
+from .exceptions import *
+from .permissions import *
 from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
 
 class UserWithProfileDetailAPIView(generics.GenericAPIView):
      queryset = UserProfile.objects.all()
-     serializer_class = UserProfileCreateSerializer
 
+     def initial(self, request, *args, **kwargs):
+          if self.request.method == 'POST':
+               request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+          
      def get_serializer_class(self):
           if self.request.method == 'GET':
                simple = self.request.query_params.get('simple', None) == 'true'
@@ -36,76 +42,76 @@ class UserWithProfileDetailAPIView(generics.GenericAPIView):
           if serializer.is_valid(raise_exception=True):
                serializer.save()
                return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
-     
-     def get(self, request, *args, **kwargs):     # get my profile
-          user_pk = self.request.headers.get('UserID', None)
-          user = get_object_or_404(User, pk=user_pk)
-          serializer = self.get_serializer(user)
-          return Response(serializer.data, status=status.HTTP_200_OK)
-               
+          
+@permission_classes([CanEditUser])
 class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
-     queryset = User.objects.all()
+     lookup_field = 'name'
      
+     def get_object(self):
+          name = self.kwargs.get(self.lookup_field)
+          try:
+               obj = User.objects.get(name=name)
+               return obj
+          except User.DoesNotExist:
+               raise UserNotFoundWithName()
+
      def get_serializer_context(self):
-        context = super().get_serializer_context()
-        if self.request.method == 'GET':
-          context['viewer_user'] = get_object_or_404(User, pk=self.request.headers.get('UserID'))
-        return context
+          context = super().get_serializer_context()
+          if self.request.method == 'GET':
+               context['viewer_user'] = self.request.user
+          return context
      
      def get_serializer_class(self):
           if self.request.method == 'GET':
+               if self.request.user.name == self.kwargs.get('name'):
+                    return MyProfileDetailSerializer
                return UserWithProfileDetailSerializer
           elif self.request.method in ('PUT', 'PATCH'):
                return UserWithProfileUpdateSerializer
-          
-     def update(self, request, *args, **kwargs):  # update my profile
-          user_pk = int(request.headers.get('UserID'))
-          if user_pk != self.kwargs.get('pk'):
-               raise PermissionDenied("user not allowed to update this profile")
-          return super().update(request, *args, **kwargs)
-          
-class UserDetailAPIView(RetrieveModelMixin, DestroyModelMixin, generics.GenericAPIView):
+
+@permission_classes([CanEditUser])
+class UserDetailAPIView(generics.DestroyAPIView):
      queryset = User.objects.all()
      serializer_class = UserDetailSerializer
-     
-     def get(self, request, *args, **kwargs):
-          return self.retrieve(request, *args, **kwargs)
-     
-     def delete(self,request, *args, **kwargs):
-          user_pk = int(request.headers.get('UserID'))
-          if user_pk != kwargs.get('pk'):
-               raise PermissionDenied("user is not allowed to delete this user")
-          return self.destroy(request, *args, **kwargs)
+     lookup_field = 'name'
+          
+     def get_object(self):
+          name = self.kwargs.get(self.lookup_field)
+          try:
+               obj = User.objects.get(name=name)
+               return obj
+          except User.DoesNotExist:
+               raise UserNotFoundWithName()
+
 
 class RecommendedUserListAPIView(generics.ListAPIView):
-     def initial(self, request, *args, **kwargs):
-        self.show_top = self.request.query_params.get('show_top', None) == 'true'
-        self.user_pk = self.request.headers.get('UserID', None)
-        self.user = get_object_or_404(User, pk=self.user_pk)
-        super().initial(request, *args, **kwargs)
-
      def get_serializer_context(self):
         context = super().get_serializer_context()
         if self.request.method == 'GET':
-          context['viewer_user'] = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+          context['viewer_user'] = self.request.user
         return context
    
      def get_queryset(self):
           users = User.objects.order_by('?')
           
           # exclude user itself and blocked users
-          users = users.exclude(pk=self.user_pk)
-          users = users.exclude(pk__in=self.user.blocked_users.all().values_list('pk', flat=True))
+          users = users.exclude(pk=self.request.user.pk)
+          users = users.exclude(pk__in=self.request.user.blocked_users.all().values_list('pk', flat=True))
           
           return users[:50]
      
      def get_serializer_class(self):
-          if self.show_top:
+          show_top = self.request.query_params.get('show_top', None) == 'true'
+          if show_top:
                return RecommendedUserDetailSerializer
           else:
                return UserWithProfileDetailSerializer
 
 class CheckUserNameAvailability(APIView):
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+        
      def get(self, request):
           name = request.GET.get('name')
           
@@ -116,22 +122,24 @@ class CheckUserNameAvailability(APIView):
                return Response({"message": "name '{}' is available".format(name)}, status=status.HTTP_200_OK)
                     
 class UserWithProfileListAPIView(generics.ListAPIView):
-     queryset = User.objects.all()
      serializer_class = UserWithProfileDetailSerializer
      
      def get_serializer_context(self):
-        context = super().get_serializer_context()
-        if self.request.method == 'GET':
-          context['viewer_user'] = get_object_or_404(User, pk=self.request.headers.get('UserID'))
-        return context
-
+          context = super().get_serializer_context()
+          if self.request.method == 'GET':
+               context['viewer_user'] = self.request.user
+          return context
+     
+     def get_queryset(self):
+          users = User.objects.all().exclude(pk=self.request.user.pk)
+          return users
+          
 class UserImageUpdateAPIView(generics.UpdateAPIView):
      queryset = User.objects.all()
      serializer_class = UserImageUpdateSerializer
      
      def get_object(self):
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
-          return user
+          return self.request.user
 
 
 # apis related to friends
