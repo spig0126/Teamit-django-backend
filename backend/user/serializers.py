@@ -67,6 +67,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
           model = User
           fields = [
                'id', 
+               'uid',
                'name', 
                'avatar',
                'background',
@@ -266,8 +267,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
           ]
      
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
-     activities = AcitivitiesField()
      cities = CitiesField()
+     activities = AcitivitiesField()
      
      class Meta:
           model = UserProfile

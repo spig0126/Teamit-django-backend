@@ -21,7 +21,8 @@ class Sex(models.TextChoices):
 
 # Models
 class User(models.Model):
-     id = models.CharField(max_length=128, primary_key=True)
+     id = models.AutoField(primary_key=True)
+     uid = models.CharField(max_length=128, unique=True, default='')
      name = models.CharField(max_length=20, unique=True)
      interests = models.ManyToManyField(
           Interest,
