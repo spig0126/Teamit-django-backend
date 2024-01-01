@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "interest",
     "activity",
     "user",
+    "firebase_auth",
     "team",
     "notification",
     "post",
@@ -71,7 +72,6 @@ INSTALLED_APPS = [
     "report",
     "search",
     "corsheaders",
-    
 ]
 
 MIDDLEWARE = [
@@ -84,6 +84,13 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'firebase_auth.authentication.FirebaseAuthentication'
+    ],
+    # ...
+}
 
 ROOT_URLCONF = "home.urls"
 
