@@ -134,11 +134,13 @@ class FriendRequest(models.Model):
           if is_new:
                from notification.models import Notification
                
-               Notification.objects.create(
-                    type="friend_request",
-                    to_user = self.to_user,
-                    related_id = self.id,
-               )
+               # send notification only if receiver didn't block sender
+               if self.from_user not in self.to_user.blocked_users.all():
+                    Notification.objects.create(
+                         type="friend_request",
+                         to_user = self.to_user,
+                         related_id = self.id,
+                    )
           
 class UserLikes(models.Model):
      from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')

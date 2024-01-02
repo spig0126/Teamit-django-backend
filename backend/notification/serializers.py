@@ -41,7 +41,7 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
                     data['sender'] = UserSimpleDetailSerializer(sender).data
                     data['accepted'] = friend_request.accepted
                except FriendRequest.DoesNotExist:
-                    data['sender'] = False
+                    data['sender'] = None
           else:
                try:
                     team_application = TeamApplication.objects.get(pk=self.instance.related_id)
@@ -49,5 +49,5 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
                     data['sender_team'] = TeamSenderDetailSerializer(sender_team).data
                     data['team_application'] = TeamApplicationSimpleDetailSerializer(team_application).data
                except TeamApplication.DoesNotExist:
-                    data['sender_team'] = False
+                    data['sender_team'] = None
           return data
