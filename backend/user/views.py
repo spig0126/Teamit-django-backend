@@ -190,12 +190,13 @@ class AcceptFriendRequestAPIView(APIView):
                     friend_request_notification.type = "friend_request_accept"
 
                     # create notifcation for friend_request_accepted
-                    Notification.objects.create(
-                         type="friend_request_accepted", 
-                         to_user=friend_request.from_user, 
-                         related_id= friend_request.pk
-                    )
-                    
+                    if to_user not in from_user.blocked_users.all():
+                         Notification.objects.create(
+                              type="friend_request_accepted", 
+                              to_user=friend_request.from_user, 
+                              related_id= friend_request.pk
+                         )
+                         
                     serializer = FriendRequestDetailSerializer(friend_request)
                except:
                     return Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
