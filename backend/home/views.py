@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.core.files.storage import default_storage
 
 from .utilities import fetch_user_info, generate_firebase_custom_token
-
+from user.models import User
 class ThirdPartyLoginView(APIView):
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True
@@ -42,6 +42,19 @@ class ThirdPartyLoginView(APIView):
           # Return custom_token as response
           return Response({'custom_token': custom_token}, status=status.HTTP_200_OK)
 
+class CheckUserWithUID(APIView):
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+     
+     def post(self, request):
+          try:
+               User.objects.get(uid=request.data.get('uid'))
+               return Response({'user_exists': True}, status=status.HTTP_200_OK)
+          except User.DoesNotExist:
+               return Response({'user_exists': False}, status=status.HTTP_400_BAD_REQUEST)
+               
+          
 class ImageRetrieveAPIView(APIView):
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True

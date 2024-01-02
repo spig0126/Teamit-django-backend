@@ -6,6 +6,7 @@ from .views import *
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/third-party-login/", ThirdPartyLoginView.as_view()),
+    path("api/check-user/", CheckUserWithUID.as_view()),
     path("api/images/", ImageRetrieveAPIView.as_view()),
     path("api/regions/", include("region.urls")),
     path("api/users/", include("user.urls")),
