@@ -10,6 +10,7 @@ urlpatterns = [
      path("<int:team_pk>/room/", MyTeamRoomDetailAPIView.as_view(), name='get my team room info'), 
      path("<int:team_pk>/before/", TeamBeforeUpdateDetailAPIView.as_view()),  
      path("<int:team_pk>/positions/", TeamPositionListAPIView.as_view()),
+     path("<int:team_pk>/unread/status/", HasUnreadTeamNotifications.as_view()),
      
      # team member       
      path("<int:team_pk>/members/", TeamMemberListCreateAPIView.as_view()),

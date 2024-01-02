@@ -120,7 +120,22 @@ class MyTeamRoomDetailAPIView(generics.RetrieveAPIView):
           context = super().get_serializer_context()
           context['user'] = self.request.user
           return context
-    
+
+
+@permission_classes([IsTeamMemberPermission])
+class HasUnreadTeamNotifications(APIView):
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          super().initial(request, *args, **kwargs)
+          
+     def get(self, request, *args, **kwargs):
+          member = TeamMembers.objects.get(team=self.team, user=request.user)
+          data = {"has_new_team_notifications": False}
+          if member.noti_unread_cnt:
+               data['has_new_team_notifications'] = True
+          return Response(data, status=status.HTTP_200_OK)
+          
+
 @permission_classes([IsTeamCreatorPermission]) 
 class TeamBeforeUpdateDetailAPIView(generics.RetrieveAPIView):
      queryset = Team.objects.all()
