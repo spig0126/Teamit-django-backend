@@ -14,6 +14,7 @@ class EventArticle(models.Model):
      title = models.CharField(max_length=30, default='')
      subtitle = models.CharField(default='')
      image = models.ImageField(upload_to='event_articles/')
+     background_color = models.CharField(max_length=10, default='0xffEEE7F7')
      link = models.URLField()
      created_at = models.DateTimeField(auto_now_add=True, blank=True)
      start_date = models.DateTimeField()
