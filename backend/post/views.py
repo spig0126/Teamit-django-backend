@@ -3,14 +3,20 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.mixins import UpdateModelMixin, DestroyModelMixin, RetrieveModelMixin
 from rest_framework.views import APIView
+from rest_framework.decorators import permission_classes
+
 
 from .models import *
 from .serializers import *
+from .permissions import *
+from .exceptions import *
+from team.utils import get_team_by_pk, get_member_by_team_and_user
 
+@permission_classes([IsTeamMemberPermission])
 class TeamPostListCreateAPIView(generics.ListCreateAPIView):
      def initial(self, request, *args, **kwargs):
-          self.team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.user = request.user
           super().initial(request, *args, **kwargs)
           
      def get_serializer_context(self):
@@ -25,34 +31,29 @@ class TeamPostListCreateAPIView(generics.ListCreateAPIView):
                return TeamPostSimpleDetailSerializer
      
      def get_queryset(self):
-          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          return team.posts.all()
+          return self.team.posts.all()
 
      def post(self, request, *args, **kwargs):
-          try:
-               member = TeamMembers.objects.get(team=self.team, user=self.user)
-          except:
-               raise PermissionDenied("user not allowed to write post to this team")
+          member = TeamMembers.objects.get(team=self.team, user=self.user)
           request.data['writer'] = member.pk
+          request.data['post_to'] = self.team.pk
           return self.create(request, *args, **kwargs)
 
      def get(self, request, *args, **kwargs):
-          if self.user not in self.team.members.all():
-               raise PermissionDenied("user not allowed to view team's posts")
           return self.list(request, *args, **kwargs)
 
+@permission_classes([IsTeamMemberPermission, IsTeamPostWriterPermission])
 class TeamPostDetailAPIView(UpdateModelMixin, DestroyModelMixin, RetrieveModelMixin, generics.GenericAPIView):
      queryset = TeamPost.objects.all()
      lookup_field = 'post_pk'
 
      def initial(self, request, *args, **kwargs):
-          self.team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          self.user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.user = request.user
           try:
-               self.post = self.team.posts.get(pk=self.kwargs.get('post_pk'))
-               self.member = TeamMembers.objects.get(team=self.team, user=self.user)
+               self.team_post = self.team.posts.get(pk=self.kwargs.get('post_pk'))
           except:
-               raise PermissionDenied("user not allowed")
+               raise TeamPostNotFoundInTeam()
           super().initial(request, *args, **kwargs)
           
      def get_serializer_context(self):
@@ -66,7 +67,7 @@ class TeamPostDetailAPIView(UpdateModelMixin, DestroyModelMixin, RetrieveModelMi
           return  TeamPostCreateUpdateSerializer
      
      def get_object(self):
-          return get_object_or_404(TeamPost, pk=self.kwargs.get('post_pk'))
+          return self.team_post
 
      def delete(self, request, *args, **kwargs):
           return self.destroy(request, *args, **kwargs)
@@ -75,70 +76,80 @@ class TeamPostDetailAPIView(UpdateModelMixin, DestroyModelMixin, RetrieveModelMi
           return self.partial_update(request, *args, **kwargs)
      
      def get(self, request, *args, **kwargs):
-          serializer = self.get_serializer(self.post)
-          return Response(serializer.data, status=status.HTTP_200_OK)
+          return self.retrieve(request, *args, **kwargs)
      
+@permission_classes([IsTeamMemberPermission])
 class TeamPostCommenCreateAPIView(generics.CreateAPIView):
      serializer_class = TeamPostCommentCreateSerializer
      queryset = TeamPostComment.objects.all()
      
-     def post(self, request, *args, **kwargs):
-          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.user = request.user
           try:
-               post = team.posts.get(pk=self.kwargs.get('post_pk'))
-               member = TeamMembers.objects.get(team=team, user=user)
+               self.team_post = self.team.posts.get(pk=self.kwargs.get('post_pk'))
           except:
-               raise PermissionDenied("user not allowed")
+               raise TeamPostNotFoundInTeam()
+          super().initial(request, *args, **kwargs)
+          
+     def post(self, request, *args, **kwargs):
+          member = TeamMembers.objects.get(team=self.team, user=self.user)
           request.data['writer'] = member.pk
-          request.data['comment_to'] = post.pk
+          request.data['comment_to'] = self.team_post.pk
           return self.create(request, *args, **kwargs)
-     
+
+@permission_classes([IsTeamMemberPermission, IsTeamPostCommentWriterPermission])   
 class TeamPostCommenDestroyAPIView(generics.DestroyAPIView):
      queryset = TeamPostComment.objects.all()
      lookup_field = 'comment_pk'
      
-     def delete(self, request, *args, **kwargs):
-          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.user = request.user
           try:
-               post = team.posts.get(pk=self.kwargs.get('post_pk'))
-               member = TeamMembers.objects.get(team=team, user=user)
-          except:
-               raise PermissionDenied("user not allowed")
-          comment = get_object_or_404(TeamPostComment, pk=self.kwargs.get('comment_pk'))
-          comment.delete()
-          return Response(status=status.HTTP_204_NO_CONTENT)
+               self.team_post = self.team.posts.get(pk=self.kwargs.get('post_pk'))
+               self.comment = self.team_post.comments.get(pk=self.kwargs.get('comment_pk'))
+          except TeamPost.DoesNotExist:
+               raise TeamPostNotFoundInTeam()
+          except TeamPostComment.DoesNotExist:
+               raise TeamPostCommentNotFoundInTeam()
+          super().initial(request, *args, **kwargs)
+     
+     def get_object(self):
+          return self.comment
 
+@permission_classes([IsTeamMemberPermission])
 class TeamPostViewerListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      
-     def get_queryset(self):
-          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.user = request.user
           try:
-               post = team.posts.get(pk=self.kwargs.get('post_pk'))
-               member = TeamMembers.objects.get(team=team, user=user)
+               self.team_post = self.team.posts.get(pk=self.kwargs.get('post_pk'))
           except:
-               raise PermissionDenied("user not allowed")
-          return post.viewed.all()
+               raise TeamPostNotFoundInTeam()
+          super().initial(request, *args, **kwargs)
      
-     def get(self, request, *args, **kwargs):
-          return self.list(request, *args, **kwargs)
+     def get_queryset(self):
+          return self.team_post.viewed.all()
 
-
+@permission_classes([IsTeamMemberPermission])
 class ToggleViewedStatus(APIView):
-     def put(self, request, *args, **kwargs):
-          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.user = request.user
           try:
-               post = team.posts.get(pk=self.kwargs.get('post_pk'))
-               member = TeamMembers.objects.get(team=team, user=user)
+               self.team_post = self.team.posts.get(pk=self.kwargs.get('post_pk'))
           except:
-               raise PermissionDenied("user not allowed")
-          if member in post.viewed.all():
-               post.viewed.remove(member)
+               raise TeamPostNotFoundInTeam()
+          super().initial(request, *args, **kwargs)
+          
+     def put(self, request, *args, **kwargs):
+          member = TeamMembers.objects.get(team=self.team, user=self.user)
+          if member in self.team_post.viewed.all():
+               self.team_post.viewed.remove(member)
                return Response({"message": "post unviewed"}, status=status.HTTP_204_NO_CONTENT)
           else:
-               post.viewed.add(member)
+               self.team_post.viewed.add(member)
                return Response({"message": "post viewed"}, status=status.HTTP_201_CREATED)

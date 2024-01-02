@@ -12,10 +12,11 @@ from django.core.files.storage import default_storage
 
 from .models import *
 from .serializers import *
-from .index import UserIndex
-from . import client
 from .exceptions import *
 from .permissions import *
+from .index import UserIndex
+from . import client
+from .utils import *
 from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
@@ -144,10 +145,10 @@ class UserImageUpdateAPIView(generics.UpdateAPIView):
 
 # apis related to friends
 class SendFriendRequestAPIView(APIView):
-     def post(self, request):
-          data = request.data
-          to_user = User.objects.get(name=data['to_user'])
-          from_user = User.objects.get(name=data['from_user'])
+     @transaction.atomic
+     def post(self, request, name):
+          to_user = get_user_by_name(name)
+          from_user = request.user
           
           if to_user != from_user: 
                if to_user not in from_user.friends.all():   # if not friend
@@ -163,12 +164,10 @@ class SendFriendRequestAPIView(APIView):
 
 class UnsendFriendRequestAPIView(APIView):
      @transaction.atomic
-     def post(self, request):
-          data = request.data
-          to_user = User.objects.get(name=data['to_user'])
-          from_user = User.objects.get(name=data['from_user'])
-          
-          friend_request = get_object_or_404(FriendRequest, to_user=to_user, from_user=from_user, accepted=False)
+     def post(self, request, name):
+          to_user = get_user_by_name(name)
+          from_user = request.user
+          friend_request = get_friend_request(from_user, to_user, False)
           notification = get_object_or_404(Notification, related_id=friend_request.pk, type='friend_request')
 
           friend_request.delete()
@@ -177,10 +176,10 @@ class UnsendFriendRequestAPIView(APIView):
 
 class AcceptFriendRequestAPIView(APIView):
      @transaction.atomic
-     def post(self, request):
-          from_user = get_object_or_404(User, name=request.data['from_user'])
-          to_user = get_object_or_404(User, name=request.data['to_user'])
-          friend_request = get_object_or_404(FriendRequest, from_user=from_user, to_user=to_user)
+     def post(self, request, name):
+          from_user = get_user_by_name(name)
+          to_user = request.user
+          friend_request = get_friend_request(from_user, to_user, False)
           
           if not friend_request.accepted:
                try:
@@ -209,15 +208,19 @@ class AcceptFriendRequestAPIView(APIView):
 
 class UnfriendUserAPIView(APIView):
      @transaction.atomic
-     def post(self, request, *args, **kwargs):
-          userA = get_object_or_404(User, name=request.data['userA'])
-          userB = get_object_or_404(User, name=request.data['userB'])
+     def post(self, request, name):
+          userA = request.user
+          userB = get_user_by_name(name)
           
-          try:
+          friend_request = None
+          if FriendRequest.objects.filter(to_user=userA, from_user=userB).exists():
                friend_request = FriendRequest.objects.get(to_user=userA, from_user=userB)
-          except:
-               friend_request = FriendRequest.objects.get(to_user=userB, from_user=userA)
-               
+          else:
+               try:
+                    friend_request = FriendRequest.objects.get(to_user=userB, from_user=userA)
+               except FriendRequest.DoesNotExist():
+                    raise FriendRequestNotFound()
+
           Notification.objects.filter(related_id=friend_request.pk, type__startswith='f').delete()
           friend_request.delete()
           userA.friends.remove(userB)
@@ -227,43 +230,38 @@ class UnfriendUserAPIView(APIView):
 
 class DeclineFriendRequestAPIView(APIView):
      @transaction.atomic
-     def post(self, request):
-          friend_request_id = request.data['friend_request_id']
-          friend_request = get_object_or_404(FriendRequest, pk=friend_request_id)
-          accepting_user = get_object_or_404(User, name=request.data['user'])
-          if friend_request.to_user == accepting_user:
-               Notification.objects.get(type="friend_request", related_id=friend_request_id).delete()
-               FriendRequest.objects.get(pk=friend_request_id).delete()
-               return Response({"message": "friend request successfully declined"}, status=status.HTTP_200_OK)
-          return Response({"error": "this friend request was not sent to this user"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+     def post(self, request, name):
+          from_user = get_user_by_name(name)
+          to_user = request.user
+          friend_request = get_friend_request(from_user, to_user, False)
+          notification = get_object_or_404(Notification, related_id=friend_request.pk, type='friend_request')
+          
+          notification.delete()
+          friend_request.delete()
+          
+          return Response({"message": "friend request successfully declined"}, status=status.HTTP_200_OK)
+
 
 class UserFriendsListAPIView(generics.ListAPIView):
      serializer_class = UserDetailSerializer
      
      def get_queryset(self):
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
-          queryset = user.friends.all()
-          return queryset
-     
-     def post(self, request, *args, **kwargs):
-          queryset = self.get_queryset()
-          serializer = self.serializer_class(queryset, many=True)
-          return Response(serializer.data, status=status.HTTP_200_OK)
+          return self.request.user.friends.all()
      
 # likes related apis
 class UserLikesListAPIView(APIView):
      def get(self, request):
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
-          user_likes = [obj.to_user for obj in UserLikes.objects.filter(from_user=user)]
+          user_likes = [obj.to_user for obj in UserLikes.objects.filter(from_user=request.user)]
           
-          context = {'viewer_user': user}
+          context = {'viewer_user': request.user}
           serializer = UserLikesListSerializer(user_likes, context=context)
           return Response(serializer.data, status=status.HTTP_200_OK)
 
 class LikeUnlikeAPIView(APIView):
      def put(self, request, *args, **kwargs):
-          from_user = get_object_or_404(User, pk=self.request.headers.get('UserID'))
-          to_user = get_object_or_404(User, pk=self.kwargs.get('pk'))
+          from_user = request.user
+          print(kwargs.get('name'))
+          to_user = get_object_or_404(User, name=kwargs.get('name'))
           try:
                user_like = UserLikes.objects.get(from_user=from_user, to_user=to_user)
                user_like.delete()
@@ -275,9 +273,11 @@ class LikeUnlikeAPIView(APIView):
 # block user related apis
 class BlockUnblockUserAPIView(APIView):
      def put(self, request, *args, **kwargs):
-          from_user = get_object_or_404(User, pk=request.headers.get('UserID', None))
-          to_user = get_object_or_404(User, pk=kwargs.get('pk', None))
+          from_user = request.user
+          to_user = get_object_or_404(User, name=kwargs.get('name', None))
           
+          if to_user == from_user:
+               return Response({"detail": "cannot block oneslef"}, status=status.HTTP_409_CONFLICT)
           if to_user in from_user.blocked_users.all():
                from_user.blocked_users.remove(to_user)
                return Response({"message": "user unblocked"}, status=status.HTTP_204_NO_CONTENT)
@@ -289,8 +289,7 @@ class BlockedUserListAPIView(generics.ListAPIView):
      serializer_class = UserDetailSerializer
      
      def get_queryset(self):
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID', None))
-          return user.blocked_users.all()
+          return self.request.user.blocked_users.all()
      
 # search api
 class UserSearchAPIView(generics.ListAPIView):
@@ -303,12 +302,13 @@ class UserSearchAPIView(generics.ListAPIView):
           if query:
                results = client.perform_search(query)
                pks = set([result['objectID'] for result in results['hits']])
+               user = self.request.user
                
                # exclude user itself and blocked users
-               users = users.exclude(pk=self.user_pk)
-               users = users.exclude(pk__in=self.user.blocked_users.all().values_list('pk', flat=True))
+               pks.discard(user.uid)
+               pks.discard(user.blocked_users.all().values_list('uid', flat=True))
                
-               return User.objects.filter(pk__in=pks)
+               return User.objects.filter(uid__in=pks)
           else:
                return User.objects.all()
      

@@ -43,6 +43,10 @@ class ThirdPartyLoginView(APIView):
           return Response({'custom_token': custom_token}, status=status.HTTP_200_OK)
 
 class ImageRetrieveAPIView(APIView):
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+        
      def get(self, request, *args, **kwargs):
           type = self.request.query_params.get('type', None)
           many = self.request.query_params.get('many', None) == 'true'

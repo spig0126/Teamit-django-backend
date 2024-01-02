@@ -10,15 +10,27 @@ class CityListAPIView(generics.ListAPIView):
      queryset = City.objects.all()
      serializer_class = CityWithProvinceSerializer
 
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+          
 class CityByProvinceListAPIView(generics.ListAPIView):
      queryset = Province.objects.all().order_by('id')
      serializer_class = ProvinceWithCitiesSerializer
      
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+          
 class CityDetailAPIView(generics.RetrieveAPIView):
      queryset = City.objects.all()
      serializer_class = CityWithProvinceSerializer
      lookup_field = 'name'
      
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+          
      def get_object(self):
           queryset = self.filter_queryset(self.get_queryset())
           pk = self.kwargs.get('pk')
@@ -33,6 +45,10 @@ class ProvinceDetailAPIView(generics.RetrieveAPIView):
      serializer_class = ProvinceSerializer
      lookup_field = 'name'
      
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+          
      def get_object(self):
           queryset = self.filter_queryset(self.get_queryset())
           pk = self.kwargs.get('pk')

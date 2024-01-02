@@ -10,6 +10,10 @@ class ActivityDetailAPIView(generics.RetrieveAPIView):
      serializer_class = ActivitySerializer
      lookup_field = 'name'
      
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+          
      def get_object(self):
           queryset = self.filter_queryset(self.get_queryset())
           pk = self.kwargs.get('pk')
@@ -22,3 +26,7 @@ class ActivityDetailAPIView(generics.RetrieveAPIView):
 class ActivityListAPIView(generics.ListAPIView):
      queryset = Activity.objects.all().order_by('id')
      serializer_class = ActivitySerializer
+     
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)

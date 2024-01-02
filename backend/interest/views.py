@@ -10,6 +10,10 @@ class InterestDetailAPIView(generics.RetrieveAPIView):
      serializer_class = InterestSerializer
      lookup_field = 'name'
      
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+          
      def get_object(self):
           print(self.kwargs)
           queryset = self.filter_queryset(self.get_queryset())
@@ -23,3 +27,7 @@ class InterestDetailAPIView(generics.RetrieveAPIView):
 class InterestListAPIView(generics.ListAPIView):
      queryset = Interest.objects.all().order_by('id')
      serializer_class = InterestSerializer
+     
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)

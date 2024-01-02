@@ -51,8 +51,7 @@ class TeamPostSimpleDetailSerializer(serializers.ModelSerializer):
           return obj.comments.count()
      
      def get_viewed(self, instance):
-          request = self.context.get('request')
-          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          user = self.context.get('user')
           if instance.viewed.filter(user=user).exists():
                return True
           return False
@@ -89,8 +88,7 @@ class TeamPostDetailSerializer(serializers.ModelSerializer):
           return obj.comments.count()
      
      def get_viewed(self, instance):
-          request = self.context.get('request')
-          user = get_object_or_404(User, pk=request.headers.get('UserID'))
+          user = self.context.get('user')
           if instance.viewed.filter(user=user).exists():
                return True
           return False

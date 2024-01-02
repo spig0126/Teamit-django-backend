@@ -19,8 +19,7 @@ class ReportUserOrTeamAPIView(generics.CreateAPIView):
      
      @transaction.atomic
      def create(self, request, *args, **kwargs):
-          user_pk = request.headers.get('UserID', None)
-          user = get_object_or_404(User, pk=user_pk)
+          user = request.user
           
           reported_type = request.data.get('reported_type', None)
           block = request.data.pop('block', None)
@@ -36,25 +35,26 @@ class ReportUserOrTeamAPIView(generics.CreateAPIView):
           
                # block team 
                if block:
-                    user.blocked_teams.add(report.reported_team)
+                    user.blocked_teams.add(reported_team)
                
           elif reported_type == 'user':
-               reported_user = request.data.get('reported_user', None)
+               reported_user_pk = request.data.get('reported_user', None)
+               reported_user = get_object_or_404(User, pk=reported_user_pk)
                
                # abort if reported user is reporter
-               if user.pk == reported_user:
+               if user == reported_user:
                     return Response({"detail": "user cannot report oneself"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
                
                # block user
                if block:
-                    user.blocked_users.add(report.reported_user)
+                    user.blocked_users.add(reported_user)
      
           elif reported_type == 'team_post':
                reported_team_post_pk = request.data.get('reported_team_post', None)
                team_post = get_object_or_404(TeamPost, pk=reported_team_post_pk)
                
                # abort if reported writer is reporter
-               if user.pk == reported_team_post.writer.user.pk:
+               if user.pk == team_post.writer.user.pk:
                     return Response({"detail": "user cannot report oneself"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
                
                # block writer(user)
@@ -62,12 +62,11 @@ class ReportUserOrTeamAPIView(generics.CreateAPIView):
                     user.blocked_users.add(team_post.writer.user)
                 
           elif reported_type == 'team_post_comment':
-               print('hello')
                reported_team_post_comment_pk = request.data.get('reported_team_post_comment', None)
                team_post_comment = get_object_or_404(TeamPostComment, pk=reported_team_post_comment_pk)
                
                # abort if reported writer is reporter
-               if user.pk == reported_team_post_comment.writer.user.pk:
+               if user.pk == team_post_comment.writer.user.pk:
                     return Response({"detail": "user cannot report oneself"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
                
                # block writer(user)
@@ -75,7 +74,7 @@ class ReportUserOrTeamAPIView(generics.CreateAPIView):
                     user.blocked_users.add(team_post_comment.writer.user)
           
           # add user instance to request data
-          request.data['reporter'] = user_pk
+          request.data['reporter'] = user.pk
           
           # create report
           serializer = self.get_serializer(data=request.data)

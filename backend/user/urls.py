@@ -3,34 +3,41 @@ from django.urls import path
 from .views import *
 
 urlpatterns = [
-     # user profile
-     path("<str:name>/", UserDetailAPIView.as_view(), name='destroy user'),
-     path("<str:name>/profile/", UserWithProfileRetrieveUpdateAPIView.as_view(), name='update my profile / retrieve user profile'), 
-     path("profiles/", UserWithProfileListAPIView.as_view(), name='create user / retrieve my profile'),
+     # friends
+     path("send-friend-request/<str:name>/", SendFriendRequestAPIView.as_view()),
+     path("unsend-friend-request/<str:name>/", UnsendFriendRequestAPIView.as_view()),
+     path("accept-friend-request/<str:name>/", AcceptFriendRequestAPIView.as_view()),
+     path("decline-friend-request/<str:name>/", DeclineFriendRequestAPIView.as_view()),
+     path("unfriend/<str:name>/", UnfriendUserAPIView.as_view()),
+     path("friends/", UserFriendsListAPIView.as_view()),
      
+     # search
+     path("search/", UserSearchAPIView.as_view()),
+     
+     # likes
+     path("likes/", UserLikesListAPIView.as_view()),
+     
+     # block
+     path("blocked/", BlockedUserListAPIView.as_view()),
+     
+     path("<str:name>/like/", LikeUnlikeAPIView.as_view()),
+     path("<str:name>/profile/", UserWithProfileRetrieveUpdateAPIView.as_view(), name='update my profile / retrieve user profile'), 
+     path("<str:name>/block/", BlockUnblockUserAPIView.as_view()),
+     path("<str:name>/", UserDetailAPIView.as_view(), name='destroy user'),
+     
+     
+     # user profile
+     path("profiles/", UserWithProfileListAPIView.as_view(), name='get all users\' profiles'),
+    
      # user
-     path("", UserWithProfileDetailAPIView.as_view()),
+     path("", UserWithProfileDetailAPIView.as_view(), name='create user / retrieve my profile'),
      path("recommended/", RecommendedUserListAPIView.as_view()),
      path("images/", UserImageUpdateAPIView.as_view()),
      path("name/available/", CheckUserNameAvailability.as_view()),
 
      
-     # friends
-     path("send-friend-request/", SendFriendRequestAPIView.as_view()),
-     path("unsend-friend-request/", UnsendFriendRequestAPIView.as_view()),
-     path("accept-friend-request/", AcceptFriendRequestAPIView.as_view()),
-     path("decline-friend-request/", DeclineFriendRequestAPIView.as_view()),
-     path("unfriend/", UnfriendUserAPIView.as_view()),
-     path("friends/", UserFriendsListAPIView.as_view()),
      
-     # likes
-     path("<int:pk>/like/", LikeUnlikeAPIView.as_view()),
-     path("likes/", UserLikesListAPIView.as_view()),
      
-     # block
-     path("<int:pk>/block/", BlockUnblockUserAPIView.as_view()),
-     path("blocked/", BlockedUserListAPIView.as_view()),
-     
-     # serach
-     path("search/", UserSearchAPIView.as_view()),
+
+     # search
 ]

@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "interest",
     "activity",
     "user",
+    # "user.apps.UserConfig",
     "firebase_auth",
     "team",
     "notification",

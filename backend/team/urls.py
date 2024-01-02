@@ -4,12 +4,12 @@ from .views import *
 
 urlpatterns = [
      # team 
-     path("", TeamListCreateAPIView.as_view()),   #create team, get list by activity, get my team list
-     path("recommended/", RecommendedTeamListAPIView.as_view()), # get recommended team list
-     path("<int:pk>/", TeamDetailAPIView.as_view()),   # update, delete, retrieve team
-     path("<int:pk>/room/", MyTeamRoomDetailAPIView.as_view()),  # get my team room info
-     path("<int:pk>/before/", TeamBeforeUpdateDetailAPIView.as_view()),  
-     path("<int:pk>/positions/", TeamPositionListAPIView.as_view()),
+     path("", TeamListCreateAPIView.as_view(), name='create team, get list by activity, get my team list'), 
+     path("recommended/", RecommendedTeamListAPIView.as_view(), name='get recommended team list'), 
+     path("<int:team_pk>/", TeamDetailAPIView.as_view(), name='update, delete, retrieve team'),  
+     path("<int:team_pk>/room/", MyTeamRoomDetailAPIView.as_view(), name='get my team room info'), 
+     path("<int:team_pk>/before/", TeamBeforeUpdateDetailAPIView.as_view()),  
+     path("<int:team_pk>/positions/", TeamPositionListAPIView.as_view()),
      
      # team member       
      path("<int:team_pk>/members/", TeamMemberListCreateAPIView.as_view()),

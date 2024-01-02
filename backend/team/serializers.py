@@ -73,7 +73,7 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
           creator_data = validated_data.pop('creator', None)
           positions_data = validated_data.pop('positions', [])
           image = validated_data.pop('image', None)
-          user = User.objects.get(pk=int(self.context.get('request').headers.get('UserID')))
+          user = self.context['user']
 
           validated_data['creator'] = user
           team = super().create(validated_data)
@@ -125,7 +125,7 @@ class TeamPositionDetailSerializer(serializers.ModelSerializer):
           fields = [
                'position',
                'pr',
-               'cnt', 
+               'cnt'
           ]
 
 class TeamMemberDetailSerializer(serializers.ModelSerializer):
@@ -197,7 +197,8 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
                return None
      
      def get_has_new_team_notifications(self, instance):
-          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
+          team_members = get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
+          return team_members
      
      def to_representaation(self, instance):
           data = super().to_representaation(instance)
