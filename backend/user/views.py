@@ -312,9 +312,9 @@ class UserSearchAPIView(generics.ListAPIView):
                pks = set([int(result['objectID']) for result in results['hits']])
                user = self.request.user
                
-               # exclude user itself and blocked users
+               # exclude blocked users
                blocked_user_pks = set(user.blocked_users.all().values_list('pk', flat=True))
-               pks = pks - ({user.pk} | blocked_user_pks)
+               pks = pks - blocked_user_pks
                
                users = users.filter(pk__in=pks)
           return users
