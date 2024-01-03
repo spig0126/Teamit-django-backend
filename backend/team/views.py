@@ -361,11 +361,8 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
 
 @permission_classes([IsTeamCreatorPermission])
 class TeamApplicationAcceptAPIView(APIView):
-     def get_object(self):
-          return get_team_by_pk(self.kwargs.get('team_pk'))
-          
      def initial(self, request, *args, **kwargs):
-          self.team = self.get_object()
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
           super().initial(request, *args, **kwargs)
           
      @transaction.atomic
@@ -403,11 +400,8 @@ class TeamApplicationAcceptAPIView(APIView):
 
 @permission_classes([IsTeamCreatorPermission])
 class TeamApplicationDeclineAPIView(APIView):
-     def get_object(self):
-          return get_team_by_pk(self.kwargs.get('team_pk'))
-          
      def initial(self, request, *args, **kwargs):
-          self.team = self.get_object()
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
           super().initial(request, *args, **kwargs)
             
      @transaction.atomic
@@ -462,27 +456,26 @@ class TeamLikeUnlikeAPIView(APIView):
 
 
 # block team related views
+@permission_classes([IsNotTeamMemberPermission])
 class BlockUnblockTeamAPIView(APIView):
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.user = request.user
+          super().initial(request, *args, **kwargs)
+          
      def put(self, request, *args, **kwargs):
-          user = get_object_or_404(User, pk=request.headers.get('UserID', None))
-          team = get_object_or_404(Team, pk=kwargs.get('team_pk', None))
-          
-          if user in team.members.all():
-               raise PermissionDenied("user is not allowed to block this team. user is member of team")
-          
-          if team in user.blocked_teams.all():
-               user.blocked_teams.remove(team)
+          if self.team in self.user.blocked_teams.all():
+               self.user.blocked_teams.remove(self.team)
                return Response({"message": "team unblocked"}, status=status.HTTP_204_NO_CONTENT)
           else:
-               user.blocked_teams.add(team)
+               self.user.blocked_teams.add(self.team)
                return Response({"message": "team blocked"}, status=status.HTTP_201_CREATED) 
 
 class BlockedTeamListAPIView(generics.ListAPIView):
      serializer_class = TeamSimpleDetailSerializer
 
      def get_queryset(self):
-          user = get_object_or_404(User, pk=self.request.headers.get('UserID', None))
-          return user.blocked_teams.all()
+          return self.request.user.blocked_teams.all()
      
 # search api
 class TeamSearchAPIView(generics.ListAPIView):
@@ -492,16 +485,16 @@ class TeamSearchAPIView(generics.ListAPIView):
           # Retrieve the search query from the request
           query = self.request.query_params.get('q')
 
+          teams = Team.objects.all()
           if query:
                results = client.perform_search(query)
-               pks = set([result['objectID'] for result in results['hits']])
+               pks = set([int(result['objectID']) for result in results['hits']])
                
                user = self.request.user
-               
-               # exclude blocked teams
-               pks.discard(user.blocked_teams.all().values_list('id', flat=True))
+
+               # exclude user itself and blocked users
+               blocked_team_pks = set(user.blocked_teams.all().values_list('pk', flat=True))
+               pks = pks - blocked_team_pks
                            
-               return Team.objects.filter(pk__in=pks)
-          else:
-               return Team.objects.all()
-     
+               teams = teams.filter(pk__in=pks)
+          return teams

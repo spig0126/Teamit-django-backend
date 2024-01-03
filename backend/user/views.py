@@ -21,7 +21,7 @@ from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
 
-class UserWithProfileDetailAPIView(generics.GenericAPIView):
+class UserWithProfileDetailAPIView(RetrieveModelMixin, generics.GenericAPIView):
      queryset = UserProfile.objects.all()
 
      def initial(self, request, *args, **kwargs):
@@ -43,7 +43,13 @@ class UserWithProfileDetailAPIView(generics.GenericAPIView):
           if serializer.is_valid(raise_exception=True):
                serializer.save()
                return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
-          
+     
+     def get_object(self):
+          return self.request.user
+     
+     def get(self, request, *args, **kwargs):
+          return self.retrieve(request, *args, **kwargs)
+     
 @permission_classes([CanEditUser])
 class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
      lookup_field = 'name'
@@ -189,8 +195,8 @@ class AcceptFriendRequestAPIView(APIView):
                     friend_request_notification = Notification.objects.get(type="friend_request",related_id=friend_request.pk)
                     friend_request_notification.type = "friend_request_accept"
 
-                    # create notifcation for friend_request_accepted
-                    if to_user not in from_user.blocked_users.all():
+                    # create notifcation for friend_request_accepted (if user is not blocked)
+                    if to_user not in from_user.blocked_users.all(): 
                          Notification.objects.create(
                               type="friend_request_accepted", 
                               to_user=friend_request.from_user, 
@@ -298,18 +304,42 @@ class UserSearchAPIView(generics.ListAPIView):
 
     def get_queryset(self):
           # Retrieve the search query from the request
-          query = self.request.query_params.get('q')
+          query = self.request.query_params.get('q', '')
 
+          users = User.objects.all()
           if query:
                results = client.perform_search(query)
-               pks = set([result['objectID'] for result in results['hits']])
+               pks = set([int(result['objectID']) for result in results['hits']])
                user = self.request.user
                
                # exclude user itself and blocked users
-               pks.discard(user.uid)
-               pks.discard(user.blocked_users.all().values_list('uid', flat=True))
+               blocked_user_pks = set(user.blocked_users.all().values_list('pk', flat=True))
+               pks = pks - ({user.pk} | blocked_user_pks)
                
-               return User.objects.filter(uid__in=pks)
-          else:
-               return User.objects.all()
-     
+               users = users.filter(pk__in=pks)
+          return users
+
+class FriendSearchAPIView(generics.ListAPIView):
+     serializer_class = UserDetailSerializer
+
+     def get_queryset(self):
+          # Retrieve the search query from the request
+          query = self.request.query_params.get('q', '')
+          
+          user = self.request.user
+          friends = user.friends.all()
+          friend_pks = set(friends.values_list('pk', flat=True))
+          
+          if query:
+               results = client.perform_search(query)
+               pks = set([int(result['objectID']) for result in results['hits']])
+               
+               # filter friends
+               filtered_friend_pks = friend_pks & pks
+               
+               # exclude blocked users
+               blocked_user_pks = set(user.blocked_users.all().values_list('pk', flat=True))
+               filtered_friend_pks = filtered_friend_pks - blocked_user_pks
+               
+               friends = friends.filter(pk__in=filtered_friend_pks)
+          return friends

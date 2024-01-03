@@ -16,6 +16,7 @@ def refresh_user_index():
 
     # Push the data to Algolia to update the index
     index.save_objects(records)
+    
 def perform_search(query, **kwargs):
      index = get_index()
      results = index.search(query)

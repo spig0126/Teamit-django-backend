@@ -21,7 +21,6 @@ class IsTeamMemberPermission(permissions.BasePermission):
           else:
                return False
 
-
 class IsNotTeamMemberPermission(permissions.BasePermission):
      message = "permission denied because user is already member of this team"
     
