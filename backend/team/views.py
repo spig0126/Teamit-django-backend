@@ -484,8 +484,8 @@ class TeamSearchAPIView(generics.ListAPIView):
     def get_queryset(self):
           # Retrieve the search query from the request
           query = self.request.query_params.get('q')
+          blocked_team_pks = set(self.request.user.blocked_teams.all().values_list('pk', flat=True))
 
-          teams = Team.objects.all()
           if query:
                results = client.perform_search(query)
                pks = set([int(result['objectID']) for result in results['hits']])
@@ -493,8 +493,9 @@ class TeamSearchAPIView(generics.ListAPIView):
                user = self.request.user
 
                # exclude user itself and blocked users
-               blocked_team_pks = set(user.blocked_teams.all().values_list('pk', flat=True))
                pks = pks - blocked_team_pks
                            
-               teams = teams.filter(pk__in=pks)
+               teams = Team.objects.filter(pk__in=pks)
+          else:
+               teams = Team.objects.exclude(pk__in=blocked_team_pks)
           return teams

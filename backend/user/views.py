@@ -267,7 +267,6 @@ class UserLikesListAPIView(APIView):
 class LikeUnlikeAPIView(APIView):
      def put(self, request, *args, **kwargs):
           from_user = request.user
-          print(kwargs.get('name'))
           to_user = get_object_or_404(User, name=kwargs.get('name'))
           try:
                user_like = UserLikes.objects.get(from_user=from_user, to_user=to_user)
@@ -305,18 +304,19 @@ class UserSearchAPIView(generics.ListAPIView):
     def get_queryset(self):
           # Retrieve the search query from the request
           query = self.request.query_params.get('q', '')
-
-          users = User.objects.all()
+          blocked_user_pks = set(self.request.user.blocked_users.all().values_list('pk', flat=True))
+          
           if query:
                results = client.perform_search(query)
                pks = set([int(result['objectID']) for result in results['hits']])
-               user = self.request.user
                
                # exclude blocked users
-               blocked_user_pks = set(user.blocked_users.all().values_list('pk', flat=True))
-               pks = pks - blocked_user_pks
+               pks -=  blocked_user_pks
                
-               users = users.filter(pk__in=pks)
+               users =  User.objects.filter(pk__in=pks)
+          else:
+               # exclude blocked users
+               users = User.objects.exclude(pk__in=blocked_user_pks)
           return users
 
 class FriendSearchAPIView(generics.ListAPIView):
@@ -328,18 +328,20 @@ class FriendSearchAPIView(generics.ListAPIView):
           
           user = self.request.user
           friends = user.friends.all()
-          friend_pks = set(friends.values_list('pk', flat=True))
-          
+          blocked_user_pks = set(user.blocked_users.all().values_list('pk', flat=True))
+     
           if query:
                results = client.perform_search(query)
                pks = set([int(result['objectID']) for result in results['hits']])
                
                # filter friends
+               friend_pks = set(friends.values_list('pk', flat=True))
                filtered_friend_pks = friend_pks & pks
                
                # exclude blocked users
-               blocked_user_pks = set(user.blocked_users.all().values_list('pk', flat=True))
-               filtered_friend_pks = filtered_friend_pks - blocked_user_pks
+               filtered_friend_pks -= blocked_user_pks
                
                friends = friends.filter(pk__in=filtered_friend_pks)
+          else:
+               friends = friends.exclude(pk__in=blocked_user_pks)
           return friends
