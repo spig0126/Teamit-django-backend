@@ -1,7 +1,13 @@
-# from django.urls import path
+from django.urls import path
 
-# from .views import *
+from .views import *
 
-# urlpatterns = [
-#      path("users/", UserSearchAPIView.as_view()),
-# ]
+urlpatterns = [
+     path("user/record/", UserSearchHistoryRecordAPIView.as_view()),
+     path("user/history/", UserSearchHistoryListAPIView.as_view()),
+     path("user/history/delete/<int:pk>/", DeleteUserSearchHistoryAPIView.as_view()),
+     path("team/record/", TeamSearchHistoryRecordAPIView.as_view()),
+     path("team/history/", TeamSearchHistoryListAPIView.as_view()),
+     path("team/history/delete/<int:pk>/", DeleteUserSearchHistoryAPIView.as_view()),
+     
+]
