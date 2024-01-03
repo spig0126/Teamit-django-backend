@@ -18,4 +18,15 @@ class EventArticleListAPIView(generics.ListCreateAPIView):
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True
           super().initial(request, *args, **kwargs)
+
+class RetrieveLatestEventArticleAPIView(generics.RetrieveAPIView):
+     serializer_class = EventArticleDetailSerializer
+
+     def initial(self, request, *args, **kwargs):
+          request.skip_authentication = True
+          super().initial(request, *args, **kwargs)
+
+     def get_object(self):
+          return EventArticle.objects.latest('created_at')
+     
         
