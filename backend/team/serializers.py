@@ -176,6 +176,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
 class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      last_post = serializers.SerializerMethodField()
+     creator = serializers.StringRelatedField()
      
      class Meta:
           model = Team
@@ -194,13 +195,14 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
           else:
                return None
      
-     def to_representaation(self, instance):
-          data = super().to_representaation(instance)
+     def to_representation(self, instance):
+          data = super().to_representation(instance)
           members = get_team_members_with_creator_first(instance)
           data['members'] = members
           return data
           
 class TeamDetailSerializer(serializers.ModelSerializer):
+     creator = serializers.StringRelatedField()
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
@@ -264,8 +266,8 @@ class TeamDetailSerializer(serializers.ModelSerializer):
                return True
           return False
           
-     def to_representaation(self, instance):
-          data = super().to_representaation(instance)
+     def to_representation(self, instance):
+          data = super().to_representation(instance)
           members = get_team_members_with_creator_first(instance)
           data['members'] = members
           return data
