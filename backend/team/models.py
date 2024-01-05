@@ -6,7 +6,7 @@ from activity.models import *
 from region.models import *
 from position.models import *
 from user.models import *
-
+from fcm_notification.utils import send_fcm_to_team
 
 # Create your models here.
 class Team(models.Model):
@@ -137,6 +137,9 @@ class TeamApplication(models.Model):
                     to_team = self.team,
                     related = self
                )
+               
+               # send fcm notification to team
+               
 
 class TeamLike(models.Model):
      team = models.ForeignKey(Team, related_name="liked_by", on_delete=models.CASCADE)

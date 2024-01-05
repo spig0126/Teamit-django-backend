@@ -20,6 +20,7 @@ from .utils import *
 from activity.models import Activity
 from region.models import Province, City
 from notification.models import Notification
+from fcm_notification.utils import send_fcm_to_user
 
 class UserWithProfileDetailAPIView(RetrieveModelMixin, generics.GenericAPIView):
      queryset = UserProfile.objects.all()
@@ -210,6 +211,16 @@ class AcceptFriendRequestAPIView(APIView):
                     friend_request.save()
                     to_user.friends.add(from_user)
                     friend_request_notification.save()
+                    
+                    # send fcm notification to user
+                    title = '친구 요청 수락'
+                    body = f'{to_user.name} 님이 친구 요청을 수락하였습니다.\n친구 공개 정보를 확인해보세요.'
+                    data = {
+                         "page": "user",
+                         "user_name": to_user.name
+                    }
+                    send_fcm_to_user(from_user, title, body, data)
+                    
                     return Response(serializer.data, status=status.HTTP_200_OK)
           return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
 

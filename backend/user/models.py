@@ -133,6 +133,7 @@ class FriendRequest(models.Model):
           
           if is_new:
                from notification.models import Notification
+               from fcm_notification.utils import send_fcm_to_user
                
                # send notification only if receiver didn't block sender
                if self.from_user not in self.to_user.blocked_users.all():
@@ -141,6 +142,17 @@ class FriendRequest(models.Model):
                          to_user = self.to_user,
                          related_id = self.id,
                     )
+               
+               # send FCM notification
+               title = '친구 요청 도착'
+               body = f'{self.from_user} 님의 친구 요청이 도착했습니다.\n프로필을 확인해보세요.'
+               data = {
+                    "page": "user",
+                    "user_name": self.from_user.name
+               }
+               send_fcm_to_user(self.to_user, title, body, data)
+
+               
           
 class UserLikes(models.Model):
      from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')

@@ -19,5 +19,6 @@ urlpatterns = [
     path("api/articles/", include("article.urls")),
     path("api/reports/", include("report.urls")),
     path("api/search/", include("search.urls")),
+    path("api/devices/", include("fcm_notification.urls")),
     # path("api/", include("home.routers")),
 ]

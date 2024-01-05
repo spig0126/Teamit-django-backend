@@ -4,13 +4,14 @@ from rest_framework.response import Response
 from rest_framework.mixins import UpdateModelMixin, DestroyModelMixin, RetrieveModelMixin
 from rest_framework.views import APIView
 from rest_framework.decorators import permission_classes
-
+from django.db import transaction
 
 from .models import *
 from .serializers import *
 from .permissions import *
 from .exceptions import *
 from team.utils import get_team_by_pk, get_member_by_team_and_user
+from fcm_notification.utils import send_fcm_to_user
 
 @permission_classes([IsTeamMemberPermission])
 class TeamPostListCreateAPIView(generics.ListCreateAPIView):
@@ -92,10 +93,23 @@ class TeamPostCommenCreateAPIView(generics.CreateAPIView):
                raise TeamPostNotFoundInTeam()
           super().initial(request, *args, **kwargs)
           
+     @transaction.atomic
      def post(self, request, *args, **kwargs):
           member = TeamMembers.objects.get(team=self.team, user=self.user)
           request.data['writer'] = member.pk
           request.data['comment_to'] = self.team_post.pk
+          
+          # send fcm notification to post writer if comment writer != post writer
+          if self.team_post.writer != member:
+               title = f'{self.team}팀 게시판'
+               body = f'{member.user.name} 님이 내 글에 댓글을 남겼습니다.'
+               data = {
+                    "page": "team_post",
+                    "team_pk": str(self.team.pk),
+                    "post_pk": str(self.team_post.pk)
+               }
+               send_fcm_to_user(self.team_post.writer.user, title, body, data)
+     
           return self.create(request, *args, **kwargs)
 
 @permission_classes([IsTeamMemberPermission, IsTeamPostCommentWriterPermission])   

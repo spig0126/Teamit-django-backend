@@ -10,7 +10,7 @@ from django.db.models import Count
 from django.db.models import F
 from datetime import date
 from rest_framework.decorators import permission_classes
-
+from django.db import transaction
 
 from .models import *
 from .serializers import *
@@ -21,6 +21,7 @@ from .exceptions import *
 from .utils import *
 from notification.models import *
 from position.models import Position
+from fcm_notification.utils import send_fcm_to_user, send_fcm_to_team
 
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
@@ -219,6 +220,16 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
                to_team=team
           )
           
+          # send fcm to team to original members
+          title = f'{team.name} 지원'
+          body = f'{applicant.name} 님이 {position.name} 포지션 수락에 수락하였습니다.'
+          data = {
+               "page": "team_notification",
+               "team_pk": str(team.pk)
+
+          }
+          send_fcm_to_team(team, title, body, data)
+          
           # add user to team member
           TeamMembers.objects.create(
                team=team,
@@ -226,6 +237,7 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
                position=position,
                background=background
           )
+         
           
           serializer = TeamApplicationDetailSerializer(team_application)
           return Response(serializer.data, status=status.HTTP_200_OK)
@@ -248,6 +260,16 @@ class TeamMemberDeclineAPIView(APIView):
                related=team_application,
                to_team = team_application.team
           )
+          
+          # send fcm to team
+          title = f'{team_application.team.name} 지원'
+          body = f'{team_application.applicant.name} 님이 {team_application.position.name} 포지션 수락에 거절하였습니다.'
+          data = {
+               "page": "team_notification",
+               "team_pk": str(team.pk)
+
+          }
+          send_fcm_to_team(team, title, body, data)
           
           return Response({"message": "team invitation successfully declined"}, status=status.HTTP_200_OK)
      
@@ -355,6 +377,17 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
                          position = position
                     )
                     serializer = TeamApplicationDetailSerializer(team_application)
+                    
+                    # send fcm to team
+                    title = f'{team.name} 지원'
+                    body = f'{applicant.name} 님이 {position.name} 포지션으로 지원하였습니다.'
+                    data = {
+                         "page": "team_notification",
+                         "team_pk": str(team.pk)
+
+                    }
+                    send_fcm_to_team(team, title, body, data)
+          
                     return Response(serializer.data, status=status.HTTP_200_OK)
                return Response({"detail": "this team application already exists"}, status=status.HTTP_208_ALREADY_REPORTED)   
           return Response({"detail": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
@@ -389,6 +422,24 @@ class TeamApplicationAcceptAPIView(APIView):
                          to_user = applicant,
                          related_id = team_application.pk
                     )
+                    
+                    # send fcm notification
+                    title = '지원 결과 도착'
+                    body = f'내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
+                    data = {
+                         "page": "team_result",
+                         "sender_team": {
+                              "id": str(team.pk),
+                              "name": team.name
+                         },
+                         "team_application": {
+                              "id": str(team_application.pk),
+                              "position": team_application.position.name,
+                              "accepted": str(True)
+                         }
+                    }
+                    send_fcm_to_user(self.to_user, title, body, data)
+                    
                     serializer = TeamApplicationDetailSerializer(team_application)
                except:
                     Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
@@ -428,6 +479,24 @@ class TeamApplicationDeclineAPIView(APIView):
                     to_user = applicant,
                     related_id = team_application.pk
                )
+               
+               # send fcm notification
+               title = '지원 결과 도착'
+               body = '내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
+               data = {
+                    "page": "team_result",
+                    "sender_team": {
+                         "id": str(team.pk),
+                         "name": team.name
+                    },
+                    "team_application": {
+                         "id": str(team_application.pk),
+                         "position": team_application.position.name,
+                         "accepted": str(False)
+                    }
+               }
+               send_fcm_to_user(applicant, title, body, data)
+                    
                serializer = TeamApplicationDetailSerializer(team_application)
                return Response(serializer.data, status=status.HTTP_200_OK)
           return Response({"detail": "team didn't receive this application"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
