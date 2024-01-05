@@ -194,13 +194,12 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
                return team_posts.order_by('created_at').first().content
           else:
                return None
-     
+          
      def to_representation(self, instance):
           data = super().to_representation(instance)
-          members = get_team_members_with_creator_first(instance)
-          data['members'] = members
+          data['members'] = get_team_members_with_creator_first(data['members'])
           return data
-          
+     
 class TeamDetailSerializer(serializers.ModelSerializer):
      creator = serializers.StringRelatedField()
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
@@ -268,8 +267,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           
      def to_representation(self, instance):
           data = super().to_representation(instance)
-          members = get_team_members_with_creator_first(instance)
-          data['members'] = members
+          data['members'] = get_team_members_with_creator_first(data['members'])
           return data
 
 class TeamSimpleDetailSerializer(serializers.ModelSerializer):  

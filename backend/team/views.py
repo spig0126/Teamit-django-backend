@@ -400,14 +400,13 @@ class TeamApplicationAcceptAPIView(APIView):
           
      @transaction.atomic
      def put(self, request, *args, **kwargs):
-          team_pk = kwargs.get('team_pk')
-          application_pk = kwargs.get('application_pk')
+          team_pk = int(kwargs.get('team_pk'))
+          application_pk = int(kwargs.get('application_pk'))
           
           team_application = get_object_or_404(TeamApplication, pk=application_pk)
           team_application_notification = get_object_or_404(TeamNotification, related=team_application, type="team_application")
           team = team_application.team
           applicant = team_application.applicant
-
           if team_pk == team.pk:
                try:
                     # update team application accepted status
@@ -435,14 +434,14 @@ class TeamApplicationAcceptAPIView(APIView):
                          "team_application": {
                               "id": str(team_application.pk),
                               "position": team_application.position.name,
-                              "accepted": str(True)
+                              "accepted": 'true'
                          }
                     }
-                    send_fcm_to_user(self.to_user, title, body, data)
+                    send_fcm_to_user(team_application.applicant, title, body, data)
                     
                     serializer = TeamApplicationDetailSerializer(team_application)
                except:
-                    Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
                else:
                     team_application.save()
                     team_application_notification.save()
@@ -492,7 +491,7 @@ class TeamApplicationDeclineAPIView(APIView):
                     "team_application": {
                          "id": str(team_application.pk),
                          "position": team_application.position.name,
-                         "accepted": str(False)
+                         "accepted": 'false'
                     }
                }
                send_fcm_to_user(applicant, title, body, data)

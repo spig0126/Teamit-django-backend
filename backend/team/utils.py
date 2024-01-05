@@ -1,12 +1,8 @@
 from .models import Team, TeamMembers
 from .exceptions import TeamNotFoundWithPk, TeamMemberNotFound
 
-def get_team_members_with_creator_first(team):
-    members = TeamMembers.objects.filter(team=team)
-    creator = members.filter(user=team.creator).values()
-    members = members.exclude(user=team.creator).values()
-
-    return list(creator) + list(members)
+def get_team_members_with_creator_first(members):
+    return sorted(members, key=lambda x: x['id'])
 
 def get_team_by_pk(team_pk):
     try:
