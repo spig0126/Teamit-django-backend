@@ -46,7 +46,7 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
      cities = CitiesField()
      positions = TeamPositionCreateSerializer(many=True)
      creator = TeamMemberCreateSerializer()  # add creator as team member 
-     image = ImageBase64Field(write_only=True, required=False)
+     image = ImageBase64Field(write_only=True, required=False, allow_null=True)
      
      class Meta: 
           model = Team
