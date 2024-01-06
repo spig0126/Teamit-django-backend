@@ -8,6 +8,6 @@ urlpatterns = [
      path("user/history/delete/<int:pk>/", DeleteUserSearchHistoryAPIView.as_view()),
      path("team/record/", TeamSearchHistoryRecordAPIView.as_view()),
      path("team/history/", SearchedTeamHistoryListAPIView.as_view()),
-     path("team/history/delete/<int:pk>/", DeleteUserSearchHistoryAPIView.as_view()),
+     path("team/history/delete/<int:pk>/", DeleteTeamSearchHistoryAPIView.as_view()),
      
 ]
