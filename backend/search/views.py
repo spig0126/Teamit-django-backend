@@ -34,15 +34,14 @@ class UserSearchHistoryListAPIView(generics.ListAPIView):
      
      def get_queryset(self):
           return UserSearchHistory.objects.filter(user=self.request.user).order_by('-timestamp')
-
+ 
+ 
 class SearchedUserHistoryListAPIView(generics.ListAPIView):
-     serializer_class = UserDetailSerializer
+     serializer_class = SearchedUserHistoryDetailSerializer
      
      def get_queryset(self):
-          search_histories = UserSearchHistory.objects.filter(user=self.request.user).order_by('-timestamp')
-          searched_users = [search_history.user for search_history in search_histories]
-          return searched_users
- 
+          return UserSearchHistory.objects.filter(user=self.request.user).order_by('-timestamp')
+     
 class DeleteUserSearchHistoryAPIView(generics.DestroyAPIView):
      def get_queryset(self):
           return UserSearchHistory.objects.filter(user=self.request.user)
@@ -75,12 +74,10 @@ class TeamSearchHistoryListAPIView(generics.ListAPIView):
           return TeamSearchHistory.objects.filter(user=self.request.user).order_by('-timestamp')
 
 class SearchedTeamHistoryListAPIView(generics.ListAPIView):
-     serializer_class = SearchedTeamDetailSerializer
+     serializer_class = SearchedTeamHistoryDetailSerializer
      
      def get_queryset(self):
-          search_histories = TeamSearchHistory.objects.filter(user=self.request.user).order_by('-timestamp')
-          searched_teams = [search_history.searched_team for search_history in search_histories]
-          return searched_teams
+          return TeamSearchHistory.objects.filter(user=self.request.user).order_by('-timestamp')
      
 class DeleteTeamSearchHistoryAPIView(generics.DestroyAPIView):
      def get_queryset(self):
