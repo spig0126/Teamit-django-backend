@@ -6,7 +6,6 @@ from rest_framework.decorators import permission_classes
 from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin
 from rest_framework.exceptions import PermissionDenied
 from django.db import transaction
-from django.core.files.storage import default_storage
 
 from .models import *
 from .serializers import *
