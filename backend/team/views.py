@@ -32,7 +32,6 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def get_queryset(self):
           if self.activity is not None: # list all teams filtered by activity
                queryset = Team.objects.filter(activity=self.activity)\
-                      .exclude(pk__in=self.user.teams.all().values_list('pk', flat=True))\
                       .exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))\
                       .order_by('?')
           else:     # list my teams
@@ -416,7 +415,7 @@ class TeamApplicationAcceptAPIView(APIView):
                     team_application_notification.type = "team_application_accept"
                     
                     # create team_application_accepted notifcation for user
-                    Notification.objects.create(
+                    notification = Notification.objects.create(
                          type="team_application_accepted",
                          to_user = applicant,
                          related_id = team_application.pk
@@ -427,17 +426,14 @@ class TeamApplicationAcceptAPIView(APIView):
                     body = f'내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
                     data = {
                          "page": "team_result",
-                         "sender_team": {
-                              "id": str(team.pk),
-                              "name": team.name
-                         },
-                         "team_application": {
-                              "id": str(team_application.pk),
-                              "position": team_application.position.name,
-                              "accepted": 'true'
-                         }
+                         "team_pk": str(team.pk),
+                         "team_name": team.name,
+                         "applicant_name": applicant.name,
+                         "position": team_application.position.name,
+                         "accepted": 'false',
+                         "notification_pk": str(notification.pk)
                     }
-                    send_fcm_to_user(team_application.applicant, title, body, data)
+                    send_fcm_to_user(applicant, title, body, data)
                     
                     serializer = TeamApplicationDetailSerializer(team_application)
                except:
@@ -473,7 +469,7 @@ class TeamApplicationDeclineAPIView(APIView):
                team_application_notification.delete()
 
                # create team_application_declined notifcation for user
-               Notification.objects.create(
+               notification = Notification.objects.create(
                     type="team_application_declined",
                     to_user = applicant,
                     related_id = team_application.pk
@@ -484,15 +480,12 @@ class TeamApplicationDeclineAPIView(APIView):
                body = '내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
                data = {
                     "page": "team_result",
-                    "sender_team": {
-                         "id": str(team.pk),
-                         "name": team.name
-                    },
-                    "team_application": {
-                         "id": str(team_application.pk),
-                         "position": team_application.position.name,
-                         "accepted": 'false'
-                    }
+                    "team_pk": str(team.pk),
+                    "team_name": team.name,
+                    "applicant_name": applicant.name,
+                    "position": team_application.position.name,
+                    "accepted": 'false',
+                    "notification_pk": str(notification.pk)
                }
                send_fcm_to_user(applicant, title, body, data)
                     
