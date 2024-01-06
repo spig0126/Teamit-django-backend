@@ -39,7 +39,7 @@ def send_fcm_message(device, title, body, data):
 
      try:
           messaging.send(message)
-     except FirebaseError as e:
+     except Exception as e:
           print('error: ', e)
           device.delete()
      
