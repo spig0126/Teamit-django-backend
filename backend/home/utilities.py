@@ -2,8 +2,18 @@ import requests
 from rest_framework import status
 from rest_framework.response import Response
 from firebase_admin import auth
+from django.core.files.storage import default_storage
 
-# get user info from kakao
+def delete_s3_folder(folder_path):
+     try:
+          objects = default_storage.listdir(folder_path)
+          files_to_delete = objects[1]  # List of files in the folder
+          for file_name in files_to_delete:
+               default_storage.delete(f"{folder_path}{file_name}")
+          default_storage.delete(folder_path)
+     except Exception as e:
+          return Response({'detail': f'Failed to delete S3 folder. {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 def fetch_user_info(access_token, login_type):
      api_url, headers, prefix = None, None, None
      
@@ -19,7 +29,6 @@ def fetch_user_info(access_token, login_type):
                "Authorization": f"Bearer {access_token}"
           }
       
-     # fetch user info from login providers using access token
      response = requests.get(api_url, headers=headers)
      user_info = None
      
@@ -29,8 +38,6 @@ def fetch_user_info(access_token, login_type):
      else:
           return None
 
-     
-# generate firebase custom token
 def generate_firebase_custom_token(user_info, login_type):
      uid, email = None, None
      

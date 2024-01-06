@@ -10,6 +10,7 @@ from datetime import date
 from rest_framework.decorators import permission_classes
 from django.db import transaction
 
+
 from .models import *
 from .serializers import *
 from .index import TeamIndex
@@ -20,6 +21,7 @@ from .utils import *
 from notification.models import *
 from position.models import Position
 from fcm_notification.utils import send_fcm_to_user, send_fcm_to_team
+from home.utilities import delete_s3_folder
 
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
@@ -100,7 +102,9 @@ class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin,
      def patch(self, request, *args, **kwargs):
           return self.partial_update(request, *args, **kwargs)
 
+     @transaction.atomic
      def delete(self, request, *args, **kwargs):
+          delete_s3_folder(f'teams/{self.team.pk}/')
           return self.destroy(request, *args, **kwargs)
 
 @permission_classes([IsTeamMemberPermission])
