@@ -37,11 +37,11 @@ def generate_firebase_custom_token(user_info, login_type):
      if login_type == 'kakao':
           id = user_info['id']
           uid = f'kakao:{id}'
-          email = user_info['kakao_account']['email']
+          email = 'KAKAO.' + user_info['kakao_account']['email']
      elif login_type == 'naver':
           id = user_info['response']['id']
           uid = f'naver:{id}'
-          email = user_info['response']['email']
+          email = 'NAVER.' + user_info['response']['email']
      try:
           auth.get_user(uid)
      except auth.UserNotFoundError:
