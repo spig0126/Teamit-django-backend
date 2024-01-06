@@ -52,7 +52,7 @@ class CheckUserWithUID(APIView):
                User.objects.get(uid=request.data.get('uid'))
                return Response({'user_exists': True}, status=status.HTTP_200_OK)
           except User.DoesNotExist:
-               return Response({'user_exists': False}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({'user_exists': False}, status=status.HTTP_200_OK)
                
           
 class ImageRetrieveAPIView(APIView):
