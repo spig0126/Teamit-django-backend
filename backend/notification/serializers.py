@@ -7,7 +7,6 @@ from team.serializers import TeamSenderDetailSerializer, TeamApplicationSimpleDe
 from user.serializers import UserSimpleDetailSerializer
 from user.models import FriendRequest
 
-# detail serializers
 class TeamNotificationDetailSerializer(serializers.ModelSerializer):
      team_application = TeamApplicationSimpleDetailSerializer(source='related')
      sender = UserSimpleDetailSerializer(source='related.applicant')
@@ -36,7 +35,7 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
 
           if data['type'][0] == 'f':    # if related to friend request
                try:
-                    friend_request = FriendRequest.objects.get(pk=self.instance.related_id)
+                    friend_request = FriendRequest.objects.get(pk=instance.related_id)
                     sender = friend_request.from_user
                     data['sender'] = UserSimpleDetailSerializer(sender).data
                     data['accepted'] = friend_request.accepted
@@ -44,7 +43,7 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
                     data['sender'] = None
           else:
                try:
-                    team_application = TeamApplication.objects.get(pk=self.instance.related_id)
+                    team_application = TeamApplication.objects.get(pk=instance.related_id)
                     sender_team = team_application.team
                     data['sender_team'] = TeamSenderDetailSerializer(sender_team).data
                     data['team_application'] = TeamApplicationSimpleDetailSerializer(team_application).data

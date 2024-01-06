@@ -1,4 +1,3 @@
-from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import status, generics
 from rest_framework.views import APIView
@@ -29,15 +28,11 @@ class TeamNotificationListAPIView(generics.ListAPIView):
           
           return self.team.notifications.all().order_by('-created_at')
           
-class NotificationListAPIView(APIView):
-     def get(self, request):
-          notifications = request.user.notifications.all().order_by('-created_at')
-          notifications.update(is_read=True)
-          list_data = []
-          for notification in notifications:
-               notification_data = NotificationDetailSerializer(notification).data
-               list_data.append(notification_data)
-          return Response(list_data, status=status.HTTP_200_OK)
+class NotificationListAPIView(generics.ListAPIView):
+     serializer_class = NotificationDetailSerializer
+     
+     def get_queryset(self):
+          return self.request.user.notifications.all().order_by('-created_at')
 
 class UnreadNotificationsStatusAPIView(APIView):
      def get(self, request):

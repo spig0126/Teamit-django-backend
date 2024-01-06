@@ -10,7 +10,7 @@ from activity.models import Activity
 
 # Choices
 class Visibility(models.TextChoices):
-     PUBLIC = "PU", "전체 공개"  # db에 저장되는 값: "PU", client에게 전달되는 정보: "전체 공개"
+     PUBLIC = "PU", "전체 공개" 
      PRIVATE = "PI", "비공개"
      FOLLOWERS = "FO", "팔로우 공개"
 

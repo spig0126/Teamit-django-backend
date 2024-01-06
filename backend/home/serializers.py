@@ -11,8 +11,6 @@ class ImageBase64Field(serializers.Field):
                     return None
                
                image_data = base64.b64decode(data)
-               
-               # Create an InMemoryUploadedFile from image_data
                image_io = BytesIO(image_data)
                image_file = InMemoryUploadedFile(
                     image_io,

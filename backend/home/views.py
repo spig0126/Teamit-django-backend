@@ -5,6 +5,7 @@ from django.core.files.storage import default_storage
 
 from .utilities import fetch_user_info, generate_firebase_custom_token
 from user.models import User
+
 class ThirdPartyLoginView(APIView):
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True

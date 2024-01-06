@@ -5,8 +5,6 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
-from rest_framework.parsers import MultiPartParser
-from django.db.models import Count
 from django.db.models import F
 from datetime import date
 from rest_framework.decorators import permission_classes
@@ -59,14 +57,13 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
           teams = Team.objects.all()
           user = self.request.user
           
-          # Get the user's teams and blocked team IDs
           my_team_ids = user.teams.values_list('pk', flat=True)
           blocked_team_ids = user.blocked_teams.values_list('pk', flat=True)
 
-          # Filter teams by excluding user's teams and blocked teams
+          # exclude user's teams and blocked teams
           filtered_teams = teams.exclude(pk__in=my_team_ids).exclude(pk__in=blocked_team_ids)
 
-          # filter teams by recruit_enddate and order teams randomly
+          # filter recruit_enddate and order teams randomly
           today_date = date.today().isoformat()
           teams = teams.filter(recruit_enddate__gte=today_date).order_by('?')
           teams = [team for team in teams if len(team.positions.all()) > 0]

@@ -6,8 +6,6 @@ from rest_framework.views import APIView
 from .models import Device
 from .serializers import DeviceSerializer
 from .utils import *
-from user.models import User
-from team.models import Team
 
 class DeviceListCreateView(generics.ListCreateAPIView):
      queryset = Device.objects.all()
@@ -43,30 +41,3 @@ class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
           if device.user != self.request.user:
                raise PermissionDenied('this token does not belong to this user')
           return device
-     
-class TestAPIView(APIView):
-     def get(self, request, *args, **kwargs):
-          # user = User.objects.get(pk=3)
-          # team = Team.objects.get(pk=76)
-          # devices = get_team_members_devices(team)
-          # for device in devices:
-          #      print(device)
-          #      check_device_token_freshness(device)
-               
-          # send fcm notification
-          title = 'test title'
-          body = f'test body'
-          data = {
-               "page": "test",
-               # "sender_team": {
-               #      "id": team.pk,
-               #      "name": team.name
-               # },
-               # "team_application": {
-               #      "id": team_application.pk,
-               #      "position": team_application.position,
-               #      "accepted": True
-               # }
-          }
-          send_fcm_to_user(request.user, title, body, data)
-          return Response(status=status.HTTP_200_OK)

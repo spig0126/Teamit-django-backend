@@ -19,13 +19,8 @@ class Notification(models.Model):
           notifications_count = user_notifications.count()
 
           if notifications_count > 50:
-               # Calculate how many notifications to delete
                notifications_to_delete = notifications_count - 50
-
-               # Get the oldest notifications to delete
                oldest_notifications = user_notifications.order_by("created_at")[:notifications_to_delete]
-
-               # Delete the oldest notifications
                oldest_notifications.delete()
 
 
@@ -39,8 +34,8 @@ class TeamNotification(models.Model):
           is_new = self.pk is None
           super().save(*args, **kwargs)
           
+          # alert team members with new notification 
           if is_new:
-               # alert team members with new notification by updating noti_unread_cnt
                TeamMembers.objects.filter(team=self.to_team).update(noti_unread_cnt=F('noti_unread_cnt') + 1)
           
           # Check if the user has more than 50 notifications
@@ -48,11 +43,6 @@ class TeamNotification(models.Model):
           notifications_count = team_notifications.count()
 
           if notifications_count > 50:
-               # Calculate how many notifications to delete
                notifications_to_delete = notifications_count - 50
-
-               # Get the oldest notifications to delete
                oldest_notifications = team_notifications.order_by("created_at")[:notifications_to_delete]
-
-               # Delete the oldest notifications
                oldest_notifications.delete()

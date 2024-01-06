@@ -1,6 +1,5 @@
 from firebase_admin import auth
 from rest_framework import authentication
-from rest_framework.exceptions import AuthenticationFailed
 
 from .exceptions import *
 from user.models import User

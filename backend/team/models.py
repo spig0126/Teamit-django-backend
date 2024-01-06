@@ -8,7 +8,6 @@ from position.models import *
 from user.models import *
 from fcm_notification.utils import send_fcm_to_team
 
-# Create your models here.
 class Team(models.Model):
      id = models.AutoField(primary_key=True)
      creator = models.ForeignKey(User, on_delete=models.CASCADE, default=54, related_name='created_teams')

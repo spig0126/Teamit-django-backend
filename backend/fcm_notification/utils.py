@@ -1,6 +1,5 @@
 import firebase_admin
 from firebase_admin import messaging
-from firebase_admin.exceptions import FirebaseError
 from datetime import datetime, timedelta, timezone
 
 from .models import *

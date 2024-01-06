@@ -3,9 +3,6 @@ from rest_framework import serializers
 from datetime import *
 from django.db import transaction
 from django.core.files.storage import default_storage
-import base64
-from io import BytesIO
-from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from home.serializers import ImageBase64Field
 from .models import *

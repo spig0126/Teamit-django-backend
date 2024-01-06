@@ -56,7 +56,6 @@ class UserField(serializers.Field):
 class ImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     
-# create serializers
 class UserCreateSerializer(serializers.ModelSerializer):
      avatar = UserAvatarImageField()
      background = UserBackgroundImageField()
@@ -95,21 +94,18 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
      def create(self, validated_data):
           user_data = validated_data.pop('user')
         
-          # Create User instance using the nested UserSerializer
           user_serializer = UserCreateSerializer(data=user_data)
           if user_serializer.is_valid():
                user = user_serializer.save()
           else:
                raise serializers.ValidationError(user_serializer.errors)
 
-          # Create UserProfile linked to the User
           validated_data['user'] = user
           user_profile = super().create(validated_data)
 
           return user_profile
      
 
-# detail serializers
 class UserSimpleDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = User
@@ -235,11 +231,8 @@ class LikedUserDetailSerialzier(serializers.ModelSerializer):
                UserLikes.objects.get(from_user=viewer_user, to_user=viewed_user)
                return True
           except:
-               return False
- 
- 
+               return False 
          
-# update serializers
 class UserImageUpdateSerializer(serializers.ModelSerializer):
      avatar = UserAvatarImageField()
      background = UserBackgroundImageField()
@@ -336,7 +329,6 @@ class UserWithProfileUpdateSerializer(serializers.ModelSerializer):
      def to_representation(self, instance):
           return MyProfileDetailSerializer(instance).data
      
-# list serializers
 class UserLikesListSerializer(serializers.ListSerializer):
      child = LikedUserDetailSerialzier()
      

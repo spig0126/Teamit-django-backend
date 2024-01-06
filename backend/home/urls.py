@@ -1,10 +1,7 @@
-from django.contrib import admin
 from django.urls import path, include
-from . import routers
 from .views import *
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
     path("api/third-party-login/", ThirdPartyLoginView.as_view()),
     path("api/check-user/", CheckUserWithUID.as_view()),
     path("api/images/", ImageRetrieveAPIView.as_view()),
@@ -20,5 +17,4 @@ urlpatterns = [
     path("api/reports/", include("report.urls")),
     path("api/search/", include("search.urls")),
     path("api/devices/", include("fcm_notification.urls")),
-    # path("api/", include("home.routers")),
 ]
