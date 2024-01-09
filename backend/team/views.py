@@ -225,7 +225,8 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
           body = f'{applicant.name} 님이 {position.name} 포지션 수락에 수락하였습니다.'
           data = {
                "page": "team_notification",
-               "team_pk": str(team.pk)
+               "team_pk": str(team.pk),
+               "team_name": team.name
 
           }
           send_fcm_to_team(team, title, body, data)
@@ -266,7 +267,8 @@ class TeamMemberDeclineAPIView(APIView):
           body = f'{team_application.applicant.name} 님이 {team_application.position.name} 포지션 수락에 거절하였습니다.'
           data = {
                "page": "team_notification",
-               "team_pk": str(team.pk)
+               "team_pk": str(team.pk),
+               "team_name": team.name
 
           }
           send_fcm_to_team(team, title, body, data)
@@ -383,8 +385,8 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
                     body = f'{applicant.name} 님이 {position.name} 포지션으로 지원하였습니다.'
                     data = {
                          "page": "team_notification",
-                         "team_pk": str(team.pk)
-
+                         "team_pk": str(team.pk),
+                         "team_name": team.name    
                     }
                     send_fcm_to_team(team, title, body, data)
           

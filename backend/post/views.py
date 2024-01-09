@@ -106,6 +106,7 @@ class TeamPostCommenCreateAPIView(generics.CreateAPIView):
                data = {
                     "page": "team_post",
                     "team_pk": str(self.team.pk),
+                    "team_name": self.team.name,
                     "post_pk": str(self.team_post.pk)
                }
                send_fcm_to_user(self.team_post.writer.user, title, body, data)
