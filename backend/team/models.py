@@ -71,6 +71,8 @@ class Team(models.Model):
                return "모집예정"
           elif (recruit_enddate - today).days < 0 or not recruiting_positions:
                return "모집완료"
+          elif (recruit_enddate - today).days == 0:
+               return "오늘 마감"
           elif (active_enddate - today).days <= 0:
                return "활동종료"
           else:
