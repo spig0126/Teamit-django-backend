@@ -22,7 +22,7 @@ class TeamPostCommentDetailSerializer(serializers.ModelSerializer):
      
      def get_blocked_writer(self, instance):
           user = self.context.get('user')
-          if instance.writer.user in user.blocked_users.all():
+          if instance.writer is not None and instance.writer.user in user.blocked_users.all():
                return True
           return False
 
@@ -58,7 +58,7 @@ class TeamPostSimpleDetailSerializer(serializers.ModelSerializer):
      
      def get_blocked_writer(self, instance):
           user = self.context.get('user')
-          if instance.writer.user in user.blocked_users.all():
+          if instance.writer is not None and instance.writer.user in user.blocked_users.all():
                return True
           return False
 
@@ -95,7 +95,7 @@ class TeamPostDetailSerializer(serializers.ModelSerializer):
      
      def get_blocked_writer(self, instance):
           user = self.context.get('user')
-          if instance.writer.user in user.blocked_users.all():
+          if instance.writer is not None and instance.writer.user in user.blocked_users.all():
                return True
           return False
 
