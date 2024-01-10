@@ -135,22 +135,23 @@ class FriendRequest(models.Model):
                from notification.models import Notification
                from fcm_notification.utils import send_fcm_to_user
                
-               # send notification only if receiver didn't block sender
+               # if receiver didn't block sender
                if self.from_user not in self.to_user.blocked_users.all():
+                    # send notification 
                     Notification.objects.create(
                          type="friend_request",
                          to_user = self.to_user,
                          related_id = self.id,
                     )
-               
-               # send FCM notification
-               title = '친구 요청 도착'
-               body = f'{self.from_user} 님의 친구 요청이 도착했습니다.\n프로필을 확인해보세요.'
-               data = {
-                    "page": "user",
-                    "user_name": self.from_user.name
-               }
-               send_fcm_to_user(self.to_user, title, body, data)
+                    
+                    # send FCM notification
+                    title = '친구 요청 도착'
+                    body = f'{self.from_user} 님의 친구 요청이 도착했습니다.\n프로필을 확인해보세요.'
+                    data = {
+                         "page": "user",
+                         "user_name": self.from_user.name
+                    }
+                    send_fcm_to_user(self.to_user, title, body, data)
 
                
           

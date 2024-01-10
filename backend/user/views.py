@@ -193,30 +193,32 @@ class AcceptFriendRequestAPIView(APIView):
                     friend_request_notification = Notification.objects.get(type="friend_request",related_id=friend_request.pk)
                     friend_request_notification.type = "friend_request_accept"
 
-                    # create notifcation for friend_request_accepted (if user is not blocked)
+                         
+                    serializer = FriendRequestDetailSerializer(friend_request)
+               except Exception as e:
+                    return Response({"error": f'unexpected error - {e}'}, status=status.HTTP_400_BAD_REQUEST)
+               else:
+                    friend_request.save()
+                    to_user.friends.add(from_user)
+                    friend_request_notification.save()
+                    
+                    # if user is not blocked
                     if to_user not in from_user.blocked_users.all(): 
+                         # create notifcation for friend_request_accepted
                          Notification.objects.create(
                               type="friend_request_accepted", 
                               to_user=friend_request.from_user, 
                               related_id= friend_request.pk
                          )
                          
-                    serializer = FriendRequestDetailSerializer(friend_request)
-               except:
-                    return Response({"error": "unexpected error"}, status=status.HTTP_400_BAD_REQUEST)
-               else:
-                    friend_request.save()
-                    to_user.friends.add(from_user)
-                    friend_request_notification.save()
-                    
-                    # send fcm notification to user
-                    title = '친구 요청 수락'
-                    body = f'{to_user.name} 님이 친구 요청을 수락하였습니다.\n친구 공개 정보를 확인해보세요.'
-                    data = {
-                         "page": "user",
-                         "user_name": to_user.name
-                    }
-                    send_fcm_to_user(from_user, title, body, data)
+                         # send fcm notification to user
+                         title = '친구 요청 수락'
+                         body = f'{to_user.name} 님이 친구 요청을 수락하였습니다.\n친구 공개 정보를 확인해보세요.'
+                         data = {
+                              "page": "user",
+                              "user_name": to_user.name
+                         }
+                         send_fcm_to_user(from_user, title, body, data)
                     
                     return Response(serializer.data, status=status.HTTP_200_OK)
           return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
