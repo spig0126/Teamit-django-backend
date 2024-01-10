@@ -14,6 +14,7 @@ from region.serializers import CitiesField
 from interest.serializers import InterestField
 from .utils import get_team_members_with_creator_first
 from user.models import User
+from home.utilities import delete_s3_folder
 
 # create serializers
 class TeamMemberCreateSerializer(serializers.ModelSerializer):
@@ -100,11 +101,17 @@ class TeamCreateUpdateSerializer(serializers.ModelSerializer):
                     instance.positions.clear()
                     for item in value:
                          TeamPositions.objects.create(team=instance, **item)
-               elif attr == 'image':
-                    # uploat image to S3, store image path in db
-                    image_path = f'teams/{instance.pk}/main.png'
-                    default_storage.save(image_path, value)
-                    instance.image = image_path
+               elif attr == 'image':                    
+                    if value == None:
+                         # if image is none, set to default image
+                         if instance.image == f'teams/{instance.pk}/main.png':
+                              delete_s3_folder(f'teams/{instance.pk}/')
+                         instance.image = f'teams/default.png'
+                    else:
+                         # upload image to S3, store image path in db
+                         image_path = f'teams/{instance.pk}/main.png'
+                         default_storage.save(image_path, value)
+                         instance.image = image_path
                else:
                     setattr(instance, attr, value)
           instance.save()
