@@ -248,6 +248,7 @@ class TeamMemberDeclineAPIView(APIView):
      def put(self, request, *args, **kwargs):
           notification = get_object_or_404(Notification, pk=request.data['notification_id'], type="team_application_accepted")
           team_application = get_object_or_404(TeamApplication, pk=notification.related_id)
+          team = team_application.team
           
           if request.user != team_application.applicant:
                raise PermissionDenied("user not allowed to decline member invitation") 
@@ -263,7 +264,7 @@ class TeamMemberDeclineAPIView(APIView):
           )
           
           # send fcm to team
-          title = f'{team_application.team.name} 지원'
+          title = f'{team.name} 지원'
           body = f'{team_application.applicant.name} 님이 {team_application.position.name} 포지션 수락에 거절하였습니다.'
           data = {
                "page": "team_notification",
@@ -433,7 +434,7 @@ class TeamApplicationAcceptAPIView(APIView):
                          "team_name": team.name,
                          "applicant_name": applicant.name,
                          "position": team_application.position.name,
-                         "accepted": 'false',
+                         "accepted": 'true',
                          "notification_pk": str(notification.pk)
                     }
                     send_fcm_to_user(applicant, title, body, data)
