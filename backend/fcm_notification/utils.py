@@ -24,7 +24,6 @@ def check_device_token_freshness(device):
 
 def send_fcm_message(device, title, body, data):
      if not device:
-          print('error: token is not fresh')
           return
      
      message = messaging.Message(
@@ -39,7 +38,6 @@ def send_fcm_message(device, title, body, data):
      try:
           messaging.send(message)
      except Exception as e:
-          print('error: ', e)
           device.delete()
      
 def send_fcm_to_user(user, title, body, data):

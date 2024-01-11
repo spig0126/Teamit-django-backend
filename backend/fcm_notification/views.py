@@ -29,6 +29,8 @@ class DeviceListCreateView(generics.ListCreateAPIView):
                serializer.is_valid(raise_exception=True)
                serializer.save()
                return Response(serializer.data, status=status.HTTP_201_CREATED)
+          except Exception as e:
+               return Respone({'detail': e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
      queryset = Device.objects.all()
