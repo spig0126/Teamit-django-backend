@@ -33,18 +33,10 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
      def to_representation(self, instance):
           data = super().to_representation(instance)
 
-          if data['type'] == 'friend_request_accept':   
+          if match('f', data['type']):  # if related to friends
                try:
                     friend_request = FriendRequest.objects.get(pk=instance.related_id)
                     sender = friend_request.from_user
-                    data['sender'] = UserSimpleDetailSerializer(sender).data
-                    data['accepted'] = friend_request.accepted
-               except FriendRequest.DoesNotExist:
-                    data['sender'] = None
-          elif data['type'] == 'friend_request_accepted': 
-               try:
-                    friend_request = FriendRequest.objects.get(pk=instance.related_id)
-                    sender = friend_request.to_user
                     data['sender'] = UserSimpleDetailSerializer(sender).data
                     data['accepted'] = friend_request.accepted
                except FriendRequest.DoesNotExist:
