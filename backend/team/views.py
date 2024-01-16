@@ -63,7 +63,7 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
           blocked_team_ids = user.blocked_teams.values_list('pk', flat=True)
 
           # exclude user's teams and blocked teams
-          filtered_teams = teams.exclude(pk__in=my_team_ids).exclude(pk__in=blocked_team_ids)
+          teams = teams.exclude(pk__in=my_team_ids).exclude(pk__in=blocked_team_ids)
 
           # filter recruit_enddate and order teams randomly
           today_date = date.today().isoformat()
