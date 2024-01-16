@@ -195,7 +195,7 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
      def get_last_post(self, instance):
           team_posts = instance.posts.all()
           if team_posts:
-               return team_posts.order_by('created_at').first().content
+               return team_posts.order_by('-created_at').first().content
           else:
                return None
           
