@@ -84,6 +84,13 @@ class TeamPostDetailSerializer(serializers.ModelSerializer):
                'viewed',
                'comments'
           ]
+          extra_kwargs = {
+               'comments': {'source': 'get_ordered_comments'}
+          }
+     
+     def get_ordered_comments(self, instance):
+          return instance.comments.all().order_by('id')
+   
      def get_comment_cnt(self, obj):
           return obj.comments.count()
      
@@ -98,6 +105,7 @@ class TeamPostDetailSerializer(serializers.ModelSerializer):
           if instance.writer is not None and instance.writer.user in user.blocked_users.all():
                return True
           return False
+
 
 # create serializer
 class TeamPostCreateUpdateSerializer(serializers.ModelSerializer):
