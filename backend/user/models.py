@@ -79,7 +79,7 @@ class User(models.Model):
 class UserProfile(models.Model):
      user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')
      visibility = models.CharField(
-          max_length=2, choices=Visibility.choices, default=Visibility.PRIVATE
+          max_length=2, choices=Visibility.choices, default=Visibility.PUBLIC
      )
 
      # 필수정보 (아래 항목들 + User의 positions, avatar, interests)
