@@ -26,17 +26,19 @@ from home.utilities import delete_s3_folder
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
         self.user = request.user
-        self.activity = request.query_params.get('activity', None)
+        self.activity = int(request.query_params.get('activity', None))
         super().initial(request, *args, **kwargs)
 
      def get_queryset(self):
           if self.activity is not None: # list all teams filtered by activity
-               queryset = Team.objects.filter(activity=self.activity)\
-                      .exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))\
+               teams = Team.objects.all()
+               if self.activity != 1:   
+                    teams = teams.filter(activity=self.activity)
+               teams = teams.exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))\
                       .order_by('?')
           else:     # list my teams
-               queryset = Team.objects.filter(members=self.user)
-          return queryset
+               teams = Team.objects.filter(members=self.user)
+          return teams
             
      def get_serializer_context(self):
           context = super().get_serializer_context()
