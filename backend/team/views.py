@@ -26,13 +26,13 @@ from home.utilities import delete_s3_folder
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
         self.user = request.user
-        self.activity = int(request.query_params.get('activity', None))
+        self.activity = request.query_params.get('activity', None)
         super().initial(request, *args, **kwargs)
 
      def get_queryset(self):
           if self.activity is not None: # list all teams filtered by activity
                teams = Team.objects.all()
-               if self.activity != 1:   
+               if self.activity != '1':   
                     teams = teams.filter(activity=self.activity)
                teams = teams.exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))\
                       .order_by('?')
