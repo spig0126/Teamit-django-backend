@@ -55,7 +55,7 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
      def get_object(self):
           name = self.kwargs.get(self.lookup_field)
           try:
-               obj = User.objects.get(name=name)
+               obj = User.objects.select_related('profile').get(name=name)
                return obj
           except User.DoesNotExist:
                raise UserNotFoundWithName()
@@ -97,13 +97,14 @@ class RecommendedUserListAPIView(generics.ListAPIView):
         return context
    
      def get_queryset(self):
-          users = User.objects.order_by('?')
-          
           # exclude user itself and blocked users
-          users = users.exclude(pk=self.request.user.pk)
-          users = users.exclude(pk__in=self.request.user.blocked_users.all().values_list('pk', flat=True))
-          
-          return users[:50]
+          queryset = User.objects.exclude(
+                    pk=self.request.user.pk
+               ).exclude(
+                    pk__in=self.request.user.blocked_users.all().values_list('pk', flat=True)
+               )
+
+          return queryset.order_by('?')[:50]
      
      def get_serializer_class(self):
           show_top = self.request.query_params.get('show_top', None) == 'true'

@@ -196,6 +196,7 @@ class RecommendedUserDetailSerializer(serializers.ModelSerializer):
      keywords = serializers.SerializerMethodField()
      short_pr = serializers.SerializerMethodField()
      liked_cnt = serializers.SerializerMethodField()
+     
      class Meta:
           model = User
           fields = ['id', 'name', 'avatar', 'background', 'positions', 'short_pr', 'keywords', 'liked_cnt']

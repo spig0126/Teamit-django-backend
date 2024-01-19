@@ -5,7 +5,7 @@ from .serializers import *
 
 class ArticleListAPIView(generics.ListCreateAPIView):
      serializer_class = ArticleCreateSerializer
-     queryset = Article.objects.all().order_by('-created_at')
+     queryset = Article.objects.all()
      
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True
@@ -13,7 +13,7 @@ class ArticleListAPIView(generics.ListCreateAPIView):
 
 class EventArticleListAPIView(generics.ListCreateAPIView):
      serializer_class = EventArticleCreateSerializer
-     queryset = EventArticle.objects.all().order_by('-created_at')
+     queryset = EventArticle.objects.all()
      
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True
@@ -27,6 +27,6 @@ class RetrieveLatestEventArticleAPIView(generics.RetrieveAPIView):
           super().initial(request, *args, **kwargs)
 
      def get_object(self):
-          return EventArticle.objects.latest('created_at')
+          return EventArticle.objects.latest()
      
         

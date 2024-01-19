@@ -9,6 +9,10 @@ class Article(models.Model):
      link = models.URLField()
      created_at = models.DateTimeField(auto_now_add=True, blank=True)
      
+     class Meta:
+          ordering = ["-created_at"]
+          get_latest_by = 'created_at'
+     
 class EventArticle(models.Model):
      id = models.AutoField(primary_key=True)
      title = models.CharField(max_length=30, default='')
@@ -19,3 +23,7 @@ class EventArticle(models.Model):
      created_at = models.DateTimeField(auto_now_add=True, blank=True)
      start_date = models.DateTimeField()
      end_date = models.DateTimeField()
+     
+     class Meta:
+          ordering = ["-created_at"]
+          get_latest_by = 'created_at'
