@@ -26,13 +26,13 @@ class TeamNotificationListAPIView(generics.ListAPIView):
           member.noti_unread_cnt = 0
           member.save()
           
-          return self.team.notifications.all().order_by('-created_at')
-          
+          return TeamNotification.objects.filter(to_team=self.team)
+     
 class NotificationListAPIView(generics.ListAPIView):
      serializer_class = NotificationDetailSerializer
      
      def get_queryset(self):
-          queryset = self.request.user.notifications.all().order_by('-created_at')
+          queryset = Notification.objects.filter(to_user=self.request.user)
           queryset.update(is_read=True)
           return queryset
 

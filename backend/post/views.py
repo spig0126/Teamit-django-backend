@@ -32,7 +32,8 @@ class TeamPostListCreateAPIView(generics.ListCreateAPIView):
                return TeamPostSimpleDetailSerializer
      
      def get_queryset(self):
-          return self.team.posts.all().order_by('-created_at')
+          return TeamPost.objects.filter(post_to=self.team)
+
 
      def post(self, request, *args, **kwargs):
           member = TeamMembers.objects.get(team=self.team, user=self.user)

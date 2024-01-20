@@ -12,6 +12,9 @@ class TeamPost(models.Model):
           related_name="viewed_posts"
      )
      
+     class Meta:
+          ordering = ['-created_at']
+     
      @property
      def viewed_cnt(self):
           return self.viewed.count()
@@ -22,4 +25,7 @@ class TeamPostComment(models.Model):
      comment_to = models.ForeignKey(TeamPost, related_name='comments', on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True)
      content = models.CharField()
+     
+     class Meta:
+          ordering = ['-created_at']
      

@@ -10,6 +10,9 @@ class UserSearchHistory(models.Model):
      timestamp = models.DateTimeField(auto_now=True)
      searched_user = models.ForeignKey(User, on_delete=models.CASCADE)
      
+     class Meta:
+          ordering = ['-timestamp']
+          
      def save(self, *args, **kwargs):
           super().save(*args, **kwargs)
           # Check if the user has more than 30 search histories
@@ -27,6 +30,9 @@ class TeamSearchHistory(models.Model):
      search_query = models.CharField(max_length=50)
      timestamp = models.DateTimeField(auto_now=True)
      searched_team = models.ForeignKey(Team, on_delete=models.CASCADE)
+     
+     class Meta:
+          ordering = ['-timestamp']
      
      def save(self, *args, **kwargs):
           super().save(*args, **kwargs)

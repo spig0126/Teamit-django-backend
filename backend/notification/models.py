@@ -11,6 +11,10 @@ class Notification(models.Model):
      created_at = models.DateTimeField(auto_now_add=True, blank=True)
      is_read = models.BooleanField(default=False)
      
+     class Meta:
+          ordering = ["-created_at"]
+          
+     
      def save(self, *args, **kwargs):
           super().save(*args, **kwargs)
 
@@ -29,6 +33,9 @@ class TeamNotification(models.Model):
      to_team = models.ForeignKey(Team, related_name="notifications", on_delete=models.CASCADE)
      related = models.ForeignKey(TeamApplication, related_name="notifications", on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True)
+     
+     class Meta:
+          ordering = ["-created_at"]
      
      def save(self, *args, **kwargs):
           is_new = self.pk is None

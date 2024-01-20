@@ -9,9 +9,7 @@ class Article(models.Model):
      link = models.URLField()
      created_at = models.DateTimeField(auto_now_add=True, blank=True)
      
-     class Meta:
-          ordering = ["-created_at"]
-          get_latest_by = 'created_at'
+     
      
 class EventArticle(models.Model):
      id = models.AutoField(primary_key=True)
