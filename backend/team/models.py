@@ -115,6 +115,11 @@ class TeamMembers(models.Model):
      background = models.CharField(default='')
      noti_unread_cnt = models.IntegerField(default=0)
      
+     class Meta:
+          constraints = [
+               models.UniqueConstraint(fields=['user', 'team'], name='unique_user_team')
+          ]
+     
      @property
      def avatar(self):
           return self.user.avatar.url
@@ -138,8 +143,6 @@ class TeamApplication(models.Model):
                     to_team = self.team,
                     related = self
                )
-               
-               # send fcm notification to team
                
 
 class TeamLike(models.Model):

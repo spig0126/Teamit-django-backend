@@ -13,7 +13,10 @@ class Notification(models.Model):
      
      class Meta:
           ordering = ["-created_at"]
-          
+          indexes = [
+               models.Index(fields=['related_id', 'type'], name='related_id_type_idx'),
+          ]
+                    
      
      def save(self, *args, **kwargs):
           super().save(*args, **kwargs)
@@ -36,6 +39,9 @@ class TeamNotification(models.Model):
      
      class Meta:
           ordering = ["-created_at"]
+          indexes = [
+               models.Index(fields=['type'], name='type_idx'),
+          ]
      
      def save(self, *args, **kwargs):
           is_new = self.pk is None

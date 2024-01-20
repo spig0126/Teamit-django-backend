@@ -7,4 +7,8 @@ class Device(models.Model):
      user = models.ForeignKey(User, on_delete=models.CASCADE)
      token = models.CharField()
      timestamp = models.DateTimeField(auto_now=True)
-     
+
+     class Meta:
+          constraints = [
+               models.UniqueConstraint(fields=['user', 'token'], name='unique_user_token')
+          ]
