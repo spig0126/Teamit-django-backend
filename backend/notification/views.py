@@ -32,7 +32,9 @@ class NotificationListAPIView(generics.ListAPIView):
      serializer_class = NotificationDetailSerializer
      
      def get_queryset(self):
-          return self.request.user.notifications.all().order_by('-created_at')
+          queryset = self.request.user.notifications.all().order_by('-created_at')
+          queryset.update(is_read=True)
+          return queryset
 
 class UnreadNotificationsStatusAPIView(APIView):
      def get(self, request):
