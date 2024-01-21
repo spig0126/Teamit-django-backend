@@ -30,11 +30,8 @@ class UserWithProfileDetailAPIView(RetrieveModelMixin, generics.GenericAPIView):
      def get_serializer_class(self):
           if self.request.method == 'GET':
                simple = self.request.query_params.get('simple', None) == 'true'
-               if simple:
-                    return UserSimpleDetailSerializer
-               return MyProfileDetailSerializer
-          else:
-               return UserProfileCreateSerializer
+               return UserSimpleDetailSerializer if simple else MyProfileDetailSerializer
+          return UserProfileCreateSerializer
      
      def post(self, request, *args, **kwargs):    # create user
           serializer = self.get_serializer(data=request.data)
@@ -71,8 +68,7 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
                if self.request.user.name == self.kwargs.get('name'):
                     return MyProfileDetailSerializer
                return UserWithProfileDetailSerializer
-          elif self.request.method in ('PUT', 'PATCH'):
-               return UserWithProfileUpdateSerializer
+          return UserWithProfileUpdateSerializer
 
 @permission_classes([CanEditUser])
 class UserDetailAPIView(generics.DestroyAPIView):
@@ -82,11 +78,7 @@ class UserDetailAPIView(generics.DestroyAPIView):
           
      def get_object(self):
           name = self.kwargs.get(self.lookup_field)
-          try:
-               obj = User.objects.get(name=name)
-               return obj
-          except User.DoesNotExist:
-               raise UserNotFoundWithName()
+          return get_object_or_404(User, name=name)
 
 
 class RecommendedUserListAPIView(generics.ListAPIView):
@@ -103,7 +95,10 @@ class RecommendedUserListAPIView(generics.ListAPIView):
                ).exclude(
                     pk__in=self.request.user.blocked_users.all().values_list('pk', flat=True)
                )
-
+               
+          show_top = self.request.query_params.get('show_top', None) == 'true'
+          if show_top:
+               return queryset.order_by('?')[:10]
           return queryset.order_by('?')[:50]
      
      def get_serializer_class(self):

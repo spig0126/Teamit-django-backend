@@ -158,12 +158,7 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
 
      def get_likes(self, instance):
           viewer_user = self.context.get('viewer_user')
-          viewed_user = instance
-          try:
-               UserLikes.objects.get(from_user=viewer_user, to_user=viewed_user)
-               return True
-          except:
-               return False
+          return UserLikes.objects.filter(from_user=viewer_user, to_user=instance).exists()
      
      def get_friends(self, instance):
           viewer_user = self.context.get('viewer_user')
@@ -178,10 +173,7 @@ class UserWithProfileDetailSerializer(serializers.ModelSerializer):
 
      def get_blocked(self, instance):
           viewer_user = self.context.get('viewer_user')
-          viewed_user = instance
-          if viewer_user.blocked_users.filter(pk=viewed_user.pk).exists():
-               return True
-          return False
+          return viewer_user.blocked_users.filter(pk=instance.pk).exists()
 
 class MyProfileDetailSerializer(serializers.ModelSerializer):
      profile = UserProfileDetailSerializer(read_only=True)
@@ -227,13 +219,8 @@ class LikedUserDetailSerialzier(serializers.ModelSerializer):
           
      def get_likes(self, instance):
           viewer_user = self.context.get('viewer_user')
-          viewed_user = instance
-          try:
-               UserLikes.objects.get(from_user=viewer_user, to_user=viewed_user)
-               return True
-          except:
-               return False 
-         
+          return UserLikes.objects.filter(from_user=viewer_user, to_user=instance).exists()
+     
 class UserImageUpdateSerializer(serializers.ModelSerializer):
      avatar = UserAvatarImageField()
      background = UserBackgroundImageField()
