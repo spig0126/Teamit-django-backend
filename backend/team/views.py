@@ -452,13 +452,7 @@ class TeamApplicationAcceptAPIView(APIView):
                     title = '지원 결과 도착'
                     body = f'내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
                     data = {
-                         "page": "team_result",
-                         "team_pk": str(team.pk),
-                         "team_name": team.name,
-                         "applicant_name": applicant.name,
-                         "position": team_application.position.name,
-                         "accepted": 'true',
-                         "notification_pk": str(notification.pk)
+                         "page": "user_notification"
                     }
                     send_fcm_to_user(applicant, title, body, data)
                     
@@ -506,13 +500,7 @@ class TeamApplicationDeclineAPIView(APIView):
                title = '지원 결과 도착'
                body = '내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
                data = {
-                    "page": "team_result",
-                    "team_pk": str(team.pk),
-                    "team_name": team.name,
-                    "applicant_name": applicant.name,
-                    "position": team_application.position.name,
-                    "accepted": 'false',
-                    "notification_pk": str(notification.pk)
+                    "page": "user_notification"
                }
                send_fcm_to_user(applicant, title, body, data)
                     

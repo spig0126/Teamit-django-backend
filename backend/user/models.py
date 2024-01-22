@@ -148,8 +148,7 @@ class FriendRequest(models.Model):
                     title = '친구 요청 도착'
                     body = f'{self.from_user} 님의 친구 요청이 도착했습니다.\n프로필을 확인해보세요.'
                     data = {
-                         "page": "user",
-                         "user_name": self.from_user.name
+                         "page": "user_notification"
                     }
                     send_fcm_to_user(self.to_user, title, body, data)
 

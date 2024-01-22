@@ -211,8 +211,7 @@ class AcceptFriendRequestAPIView(APIView):
                          title = '친구 요청 수락'
                          body = f'{to_user.name} 님이 친구 요청을 수락하였습니다.\n친구 공개 정보를 확인해보세요.'
                          data = {
-                              "page": "user",
-                              "user_name": to_user.name
+                              "page": "user_notification"
                          }
                          send_fcm_to_user(from_user, title, body, data)
                     
