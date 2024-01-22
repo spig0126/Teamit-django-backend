@@ -27,5 +27,5 @@ class TeamPostComment(models.Model):
      content = models.CharField()
      
      class Meta:
-          ordering = ['-created_at']
+          ordering = ['created_at']
      
