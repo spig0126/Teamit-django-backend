@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
 
 from .models import Device
 from .serializers import DeviceSerializer
@@ -35,11 +36,10 @@ class DeviceListCreateView(generics.ListCreateAPIView):
 class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
      queryset = Device.objects.all()
      serializer_class = DeviceSerializer
-     lookup_field = 'token'
      
      def get_object(self):
-          token = self.kwargs.get(self.lookup_field)
-          device = get_object_or_404(Device, token=token)
+          token = self.request.data.get('token')
+          device = get_object_or_404(Device, user=self.request.user, token=token)
           if device.user != self.request.user:
                raise PermissionDenied('this token does not belong to this user')
           return device
