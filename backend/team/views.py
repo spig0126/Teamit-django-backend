@@ -31,11 +31,32 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
 
      def get_queryset(self):
           if self.activity is not None: # list all teams filtered by activity
-               teams = Team.objects.all()
+               teams = Team.objects
                if self.activity != '1':   
                     teams = teams.filter(activity=self.activity)
                teams = teams.exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))\
                       .order_by('?')
+                      
+               # values_list = [
+               #      'id',
+               #      'name',
+               #      'image',
+               #      # 'activity',
+               #      # 'interest',
+               #      'keywords', 
+               #      # 'positions'
+               # ]
+               # teams = teams.values(
+               #      'id',
+               #      'name',
+               #      'image',
+               #      # 'activity',
+               #      # 'interest',
+               #      'keywords', 
+               #      # 'positions')
+               # ).prefetch_related(
+                    
+               # )
           else:     # list my teams
                teams = Team.objects.filter(members=self.user)
           return teams
