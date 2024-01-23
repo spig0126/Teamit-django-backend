@@ -155,6 +155,8 @@ dmypy.json
 cython_debug/
 
 # custom added
+firebase-credentials.json
+
 # macOS specific files/directories
 .DS_Store
 
