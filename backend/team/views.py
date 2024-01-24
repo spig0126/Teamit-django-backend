@@ -245,7 +245,7 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
           
           # send fcm to team to original members
           title = f'{team.name} 지원'
-          body = f'{applicant.name} 님이 {position.name} 포지션 수락에 수락하였습니다.'
+          body = f'{applicant.name} 님이 {position.name} 포지션을 수락하셨습니다.'
           data = {
                "page": "team_notification",
                "team_pk": str(team.pk),
@@ -288,7 +288,7 @@ class TeamMemberDeclineAPIView(APIView):
           
           # send fcm to team
           title = f'{team.name} 지원'
-          body = f'{team_application.applicant.name} 님이 {team_application.position.name} 포지션 수락에 거절하였습니다.'
+          body = f'{team_application.applicant.name} 님이 {team_application.position.name} 포지션을 거절하셨습니다.'
           data = {
                "page": "team_notification",
                "team_pk": str(team.pk),
