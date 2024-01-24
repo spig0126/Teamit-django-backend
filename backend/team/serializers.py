@@ -3,6 +3,7 @@ from rest_framework import serializers
 from datetime import *
 from django.db import transaction
 from django.core.files.storage import default_storage
+from django.db.models import Q
 
 from home.serializers import ImageBase64Field
 from .models import *
@@ -246,7 +247,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           user = self.context.get('user')
           if user in instance.members.all():
                return True
-          elif TeamApplication.objects.filter(applicant=user, team=instance, accepted=None).exists():
+          elif TeamApplication.objects.filter(applicant=user, team=instance).filter(Q(accepted__isnull=True) | Q(accepted=True)).exists():
                return None
           return False
      
