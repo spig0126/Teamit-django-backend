@@ -20,6 +20,12 @@ class TeamNotificationDetailSerializer(serializers.ModelSerializer):
                'sender',
                'team_application'
           ]
+          
+class TeamNotificationListSerializer(serializers.Serializer):
+     is_creator = serializers.BooleanField()
+     team_notifications = TeamNotificationDetailSerializer(many=True)
+     
+          
      
 class NotificationDetailSerializer(serializers.ModelSerializer):
      class Meta:
