@@ -450,7 +450,7 @@ class TeamApplicationAcceptAPIView(APIView):
                     
                     # send fcm notification
                     title = '지원 결과 도착'
-                    body = f'내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
+                    body = '지원 결과를 확인하세요!'
                     data = {
                          "page": "user_notification"
                     }
@@ -498,7 +498,7 @@ class TeamApplicationDeclineAPIView(APIView):
                
                # send fcm notification
                title = '지원 결과 도착'
-               body = '내가 지원한 활동 결과가 도착했어요.\n초대장을 확인해보세요.'
+               body = '지원 결과를 확인하세요!'
                data = {
                     "page": "user_notification"
                }
