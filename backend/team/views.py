@@ -81,15 +81,15 @@ class RecommendedTeamListAPIView(generics.ListAPIView):
      def get_queryset(self):
           teams = Team.objects.all()
           user = self.request.user
+          today_date = date.today().isoformat()
           
           my_team_ids = user.teams.values_list('pk', flat=True)
           blocked_team_ids = user.blocked_teams.values_list('pk', flat=True)
 
-          # exclude user's teams and blocked teams
-          teams = teams.exclude(pk__in=my_team_ids).exclude(pk__in=blocked_team_ids)
+          # exclude user's teams, blocked teams, and non-active teams
+          teams = teams.exclude(pk__in=my_team_ids).exclude(pk__in=blocked_team_ids).exclude(active_enddate__lt=today_date)
 
           # filter recruit_enddate and order teams randomly
-          today_date = date.today().isoformat()
           teams = teams.filter(recruit_enddate__gte=today_date).order_by('?')
           teams = [team for team in teams if len(team.positions.all()) > 0]
                
