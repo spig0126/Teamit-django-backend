@@ -21,7 +21,8 @@ class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
                return PrivateChatRoomCreateSerializer
      
      def get_queryset(self):
-          return PrivateChatRoom.objects.filter(participants=self.request.user)
+          blocked_users = self.request.user.blocked_users.values('pk')
+          return PrivateChatRoom.objects.filter(participants=self.request.user).exclude(participants__in=blocked_users)
 
      def post(self, request, *args, **kwargs):
           # check if user is in list of paritcipants
