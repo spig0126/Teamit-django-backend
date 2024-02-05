@@ -467,3 +467,9 @@ class TeamLikesListSerializer(serializers.ListSerializer):
      class Meta:
           model = Team
           fields = '__all__'
+          
+class TeamPermissionDetailSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = TeamPermission
+          fields = '__all__'
+     

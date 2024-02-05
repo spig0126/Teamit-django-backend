@@ -25,9 +25,9 @@ from home.utilities import delete_s3_folder
 
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
-        self.user = request.user
-        self.activity = request.query_params.get('activity', None)
-        super().initial(request, *args, **kwargs)
+          self.user = request.user
+          self.activity = request.query_params.get('activity', None)
+          super().initial(request, *args, **kwargs)
 
      def get_queryset(self):
           if self.activity is not None: # list all teams filtered by activity
@@ -35,8 +35,8 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
                if self.activity != '1':   
                     teams = teams.filter(activity=self.activity)
                teams = teams.exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))\
-                      .order_by('?')
-                      
+                         .order_by('?')
+                         
                # values_list = [
                #      'id',
                #      'name',
@@ -60,12 +60,12 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
           else:     # list my teams
                teams = Team.objects.filter(members=self.user)
           return teams
-            
+
      def get_serializer_context(self):
           context = super().get_serializer_context()
           context['user'] = self.user
           return context
-   
+
      def get_serializer_class(self):
           if self.request.method == 'POST':  # create team
                return TeamCreateUpdateSerializer
@@ -108,7 +108,7 @@ class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin,
           context = super().get_serializer_context()
           context['user'] = self.request.user
           return context
-   
+
      def get_serializer_class(self):
           if self.request.method == 'GET':
                type = self.request.query_params.get('type')
@@ -261,8 +261,7 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
                position=position,
                background=background
           )
-         
-          
+
           serializer = TeamApplicationDetailSerializer(team_application)
           return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -470,7 +469,7 @@ class TeamApplicationDeclineAPIView(APIView):
      def initial(self, request, *args, **kwargs):
           self.team = get_team_by_pk(self.kwargs.get('team_pk'))
           super().initial(request, *args, **kwargs)
-            
+
      @transaction.atomic
      def put(self, request, *args, **kwargs):
           team_pk = kwargs.get('team_pk')
@@ -553,11 +552,23 @@ class BlockedTeamListAPIView(generics.ListAPIView):
      def get_queryset(self):
           return self.request.user.blocked_teams.all()
      
+# permission
+@permission_classes([IsTeamCreatorPermission])   
+class TeamPermissionUpdateAPIView(generics.UpdateAPIView):
+     serializer_class = TeamPermissionDetailSerializer
+     lookup_url_kwarg = 'team_pk'
+
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          super().initial(request, *args, **kwargs)
+          
+     def get_object(self):
+          return TeamPermission.objects.get(team=self.team)
 # search api
 class TeamSearchAPIView(generics.ListAPIView):
-    serializer_class = SearchedTeamDetailSerializer
-
-    def get_queryset(self):
+     serializer_class = SearchedTeamDetailSerializer
+               
+     def get_queryset(self):
           # Retrieve the search query from the request
           query = self.request.query_params.get('q')
           blocked_team_pks = set(self.request.user.blocked_teams.all().values_list('pk', flat=True))
