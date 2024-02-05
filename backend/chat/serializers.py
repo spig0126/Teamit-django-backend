@@ -4,6 +4,7 @@ from django.db import transaction
 from .models import *
 from user.serializers import UserSimpleDetailSerializer
 from user.models import User
+from team.serializers import TeamSenderDetailSerializer
 
 
 class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
@@ -63,3 +64,23 @@ class PrivateChatParticipantDetailSerializer(serializers.ModelSerializer):
                serializer = PrivateChatRoomDeatilSerializer(instance.chatroom, context=self.context)
                return serializer.data
           return super().to_representation(instance)
+
+#######################################################
+class InquiryChatRoomCreateSerializer(serializers.ModelSerializer):
+     inquirer = serializers.SlugRelatedField(slug_field='name', queryset=User.objects.all())
+     team = serializers.SlugRelatedField(slug_field='id', queryset=Team.objects.all())
+     
+     class Meta:
+          model = InquiryChatRoom
+          fields = '__all__'
+     
+     def to_representation(self, instance):
+          return InquiryChatRoomDetailSerializer(instance).data
+          
+class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
+     inquirer = UserSimpleDetailSerializer()
+     team = TeamSenderDetailSerializer()
+     
+     class Meta:
+          model = InquiryChatRoom
+          fields = '__all__'
