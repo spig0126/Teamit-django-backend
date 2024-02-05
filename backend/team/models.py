@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import *
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 from activity.models import *
 from region.models import *
@@ -148,3 +150,8 @@ class TeamApplication(models.Model):
 class TeamLike(models.Model):
      team = models.ForeignKey(Team, related_name="liked_by", on_delete=models.CASCADE)
      user = models.ForeignKey(User, related_name="team_likes", on_delete=models.CASCADE)
+     
+class TeamPermission(models.Model):
+     team = models.ForeignKey(Team, related_name="permission", on_delete=models.CASCADE)
+     responder = models.ForeignKey(User, related_name="responder", on_delete=models.SET_NULL, null=True)
+     
