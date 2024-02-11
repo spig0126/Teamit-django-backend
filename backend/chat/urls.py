@@ -4,7 +4,12 @@ from .views import *
 
 urlpatterns = [
      path("private/", PrivateChatRoomDetailAPIView.as_view(), name="create/list private chat room"),
-     path("private/<int:pk>/", PrivateChatRoomNameUpdateAPIView.as_view(), name="update chatroom name"),
+     path("private/<int:pk>/", PrivateChatRoomNameRetrieveUpdateAPIView.as_view(), name="update chatroom name"),
      
-     path("inquiry/", InquiryChatRoomDetailAPIView.as_view(), name="create/list inquiry chat room")
+     path("inquiry/", InquiryChatRoomDetailAPIView.as_view(), name="create/list inquiry chat room"),
+     path("inquiry/<int:pk>/", CheckUserIsInquirerAPIView.as_view(), name="cehck if user is inquirer or team"),
+     
+     path("team/<int:team_pk>/", TeamChatRoomDetailAPIView.as_view(), name="create/list team chat room"),
+     path("team/<int:chatroom_pk>/participants/", TeamChatRoomParticipantListAPIView.as_view(), name="list team chat participants"),
+     
 ]

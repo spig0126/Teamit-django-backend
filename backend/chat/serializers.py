@@ -4,7 +4,8 @@ from django.db import transaction
 from .models import *
 from user.serializers import UserSimpleDetailSerializer
 from user.models import User
-from team.serializers import TeamSenderDetailSerializer
+from team.serializers import TeamSenderDetailSerializer, TeamMemberDetailSerializer
+from team.models import TeamMembers
 
 
 class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
@@ -40,7 +41,6 @@ class PrivateChatRoomDeatilSerializer(serializers.ModelSerializer):
                'id',
                'name',
                'last_msg',
-               'created_at',
                'updated_at',
                'sender'
                ]
@@ -52,6 +52,14 @@ class PrivateChatRoomDeatilSerializer(serializers.ModelSerializer):
      def get_sender(self, instance):
           sender = instance.participants.exclude(id=self.context.get('user').id).first()
           return UserSimpleDetailSerializer(sender).data
+
+class PrivateChatRoomNameSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = PrivateChatParticipant
+          fields = [
+               'chatroom',
+               'chatroom_name'
+               ]
 
 class PrivateChatParticipantDetailSerializer(serializers.ModelSerializer):
      class Meta:
@@ -83,4 +91,63 @@ class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
      
      class Meta:
           model = InquiryChatRoom
+          fields = [
+               'id',
+               'last_msg',
+               'updated_at',
+               'inquirer',
+               'team'
+          ]
+          
+#######################################################
+class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):
+     user = UserSimpleDetailSerializer()
+     member = TeamMemberDetailSerializer()
+     
+     class Meta:
+          model = TeamChatParticipant
+          fields = [
+               'user', 
+               'member'
+          ]
+
+class TeamChatRoomCreateSerializer(serializers.ModelSerializer):
+     participants = serializers.SlugRelatedField(slug_field='pk', many=True, queryset=TeamMembers.objects.all())
+     
+     class Meta:
+          model = TeamChatRoom
           fields = '__all__'
+          
+     def validate_participants(self, value):
+          team_members = TeamMembers.objects.filter(team=self.context.get('team_pk'))
+          for participant in value:
+               if participant not in team_members:
+                    raise serializers.ValidationError(
+                         f"Some are not members of this team"
+                    )
+          return value
+     
+     def create(self, validated_data):
+          participants = validated_data.pop('participants', [])
+          team_chat_room = super().create(validated_data)
+
+          for member in participants:
+               TeamChatParticipant.objects.create(
+                    chatroom=team_chat_room,
+                    user=member.user,
+                    member=member 
+               )
+
+          return team_chat_room
+
+class TeamChatRoomDetailSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = TeamChatRoom
+          fields = [
+               'id',
+               'name',
+               'background',
+               'last_msg',
+               'updated_at'
+          ]
+

@@ -3,10 +3,16 @@ from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, RetrieveM
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from rest_framework.decorators import permission_classes
+from django.db import transaction
 
 from .models import *
 from .serializers import *
+from .permissions import *
 from team.models import TeamPermission
+from team.utils import get_team_by_pk
+from team.permissions import IsTeamMemberPermission
+from team.serializers import TeamMemberDetailSerializer
 
 
 class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.GenericAPIView):
@@ -40,17 +46,13 @@ class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
      def get(self, request, *args, **kwargs):
           return self.list(request, *args, **kwargs)
 
-class PrivateChatRoomNameUpdateAPIView(generics.UpdateAPIView):
-     serializer_class = PrivateChatParticipantDetailSerializer
 
-     def get_serializer_context(self):
-          context = super().get_serializer_context()
-          context['user'] = self.request.user
-          context['request'] = self.request
-          return context
-     
+class PrivateChatRoomNameRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+     serializer_class = PrivateChatRoomNameSerializer
+
      def get_object(self):
           chatroom_pk = self.kwargs.get('pk', '')
+          # 채팅 참여자 아니면 어차피 404 뜸
           return get_object_or_404(PrivateChatParticipant, user=self.request.user, chatroom__pk=chatroom_pk)
 
 #######################################################
@@ -97,3 +99,64 @@ class InquiryChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
      
      def get(self, request, *args, **kwargs):
           return self.list(request, *args, **kwargs)
+
+@permission_classes([IsInquiryChatParticipant])
+class CheckUserIsInquirerAPIView(generics.RetrieveAPIView):
+     queryset = InquiryChatRoom.objects.all()
+     
+     def initial(self, request, *args, **kwargs):
+          self.chatroom = self.get_object()
+          super().initial(request, *args, **kwargs)
+     
+     def get(self, request, *args, **kwargs):
+          user_is_inquirer = False
+          if self.chatroom.inquirer == request.user:
+               user_is_inquirer = True
+          return Response({'user_is_inquirer': user_is_inquirer}, status=status.HTTP_200_OK) 
+     
+#######################################################
+# team chats
+# 채팅방 참여자인 경우 모두 가능하게
+# 팀원 나갔을 경우 메시지 못 보내기
+@permission_classes([IsTeamMemberPermission])
+class TeamChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.GenericAPIView):
+     def initial(self, request, *args, **kwargs):
+          self.team_pk = self.kwargs.get('team_pk')
+          self.team = get_team_by_pk(self.team_pk)
+          super().initial(request, *args, **kwargs)
+          
+     def get_serializer_context(self):
+          context = super().get_serializer_context()
+          context['team'] = get_team_by_pk(self.team_pk)
+          context['team_pk'] = self.team_pk
+          return context
+     
+     def get_serializer_class(self):
+          if self.request.method == 'GET':
+               return TeamChatRoomDetailSerializer
+          elif self.request.method == 'POST':
+               return TeamChatRoomCreateSerializer
+     
+     def get_queryset(self):
+          return TeamChatRoom.objects.filter(team=self.team, participants=self.request.user)
+
+     @transaction.atomic
+     def post(self, request, *args, **kwargs):
+          request.data['team'] = self.team.pk
+          return self.create(request, *args, **kwargs)
+     
+     def get(self, request, *args, **kwargs):
+          return self.list(request, *args, **kwargs)
+     
+@permission_classes([IsTeamChatParticipant])
+class TeamChatRoomParticipantListAPIView(generics.ListAPIView):     
+     serializer_class = TeamMemberDetailSerializer
+     
+     def initial(self, request, *args, **kwargs):
+          self.chatroom = TeamChatRoom.objects.get(pk=kwargs.get('chatroom_pk'))
+          super().initial(request, *args, **kwargs)
+     
+     def get_queryset(self):
+          participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom).select_related('member')
+          members = [participant.member for participant in participants]
+          return members
