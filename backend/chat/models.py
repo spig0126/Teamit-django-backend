@@ -58,31 +58,38 @@ class InquiryMessage(models.Model):
      
      class Meta:
           ordering = ['-timestamp']
-     
-# class TeamChat(models.Model):
-#      id = models.AutoField(primary_key=True)
-#      team = models.ForeignKey(Team, on_delete=models.CASCADE)
-#      name = models.CharField(max_length=50)
-#      last_msg = models.CharField(max_length=255)
-#      created_at = models.DateTimeField(auto_now_add=True)
-#      updated_at = models.DateTimeField(auto_now=True)
-#      participants = models.ManyToManyField(
-#           TeamMembers, 
-#           through="TeamChatParticipant"
-#      )
 
-# class TeamChatParticipant(models.Model):
-#      id = models.AutoField(primary_key=True)
-#      team_chat = models.ForeignKey(TeamChat, blank=True, null=True, on_delete=models.CASCADE)
-#      user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
-#      member = models.ForeignKey(TeamMembers, blank=True, null=True, on_delete=models.SET_NULL)
+# team chats
+class TeamChatRoom(models.Model):
+     id = models.AutoField(primary_key=True)
+     team = models.ForeignKey(Team, on_delete=models.CASCADE)
+     name = models.CharField(max_length=50)
+     background = models.CharField(default='0xff00FFD1', max_length=10)
+     last_msg = models.CharField(max_length=255, default='')
+     created_at = models.DateTimeField(auto_now_add=True)
+     updated_at = models.DateTimeField(auto_now=True)
+     participants = models.ManyToManyField(
+          User, 
+          through="TeamChatParticipant"
+     )
 
-# class TeamMessage(models.Model):
-#      chatroom = models.ForeignKey(TeamChat, blank=True, null=True, on_delete=models.CASCADE)
-#      sender = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
-#      content = models.CharField(max_length=255)
-#      timestamp = models.DateField(auto_now_add=True)
+class TeamChatParticipant(models.Model):
+     id = models.AutoField(primary_key=True)
+     chatroom = models.ForeignKey(TeamChatRoom, blank=True, null=True, on_delete=models.CASCADE)
+     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+     member = models.ForeignKey(TeamMembers, related_name="participants", blank=True, null=True, on_delete=models.SET_NULL)
      
-#      class Meta:
-#           ordering = ['-timestamp']
+     class Meta:
+          constraints = [
+               models.UniqueConstraint(fields=['chatroom', 'user'], name='unique_team_chat_participant')
+          ]
+
+class TeamMessage(models.Model):
+     chatroom = models.ForeignKey(TeamChatRoom, blank=True, null=True, on_delete=models.CASCADE)
+     sender = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
+     content = models.CharField(max_length=255)
+     timestamp = models.DateField(auto_now_add=True)
+     
+     class Meta:
+          ordering = ['-timestamp']
      
