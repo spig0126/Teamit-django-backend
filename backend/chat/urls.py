@@ -10,6 +10,7 @@ urlpatterns = [
      path("inquiry/<int:pk>/", CheckUserIsInquirerAPIView.as_view(), name="cehck if user is inquirer or team"),
      
      path("team/<int:team_pk>/", TeamChatRoomDetailAPIView.as_view(), name="create/list team chat room"),
-     path("team/<int:chatroom_pk>/participants/", TeamChatRoomParticipantListAPIView.as_view(), name="list team chat participants"),
+     path("team/<int:chatroom_pk>/participants/", TeamChatRoomParticipantDetailAPIView.as_view(), name="list/create/destroy chatroom participants"),
+     path("team/<int:chatroom_pk>/non-participants/", TeamChatRoomNonParticipantListAPIView.as_view(), name="list members that are not chatroom participants"),
      
 ]

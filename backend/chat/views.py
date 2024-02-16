@@ -2,9 +2,9 @@ from rest_framework import generics, status
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, RetrieveModelMixin, ListModelMixin
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from django.db.models import Case, When, Value, IntegerField
 from rest_framework.decorators import permission_classes
-from django.db import transaction
+from django.db import transaction, IntegrityError
 
 from .models import *
 from .serializers import *
@@ -124,9 +124,10 @@ class TeamChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Gener
           self.team_pk = self.kwargs.get('team_pk')
           self.team = get_team_by_pk(self.team_pk)
           super().initial(request, *args, **kwargs)
-          
+
      def get_serializer_context(self):
           context = super().get_serializer_context()
+          context['user'] = self.request.user
           context['team'] = get_team_by_pk(self.team_pk)
           context['team_pk'] = self.team_pk
           return context
@@ -149,7 +150,64 @@ class TeamChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Gener
           return self.list(request, *args, **kwargs)
      
 @permission_classes([IsTeamChatParticipant])
-class TeamChatRoomParticipantListAPIView(generics.ListAPIView):     
+class TeamChatRoomParticipantDetailAPIView(DestroyModelMixin, ListModelMixin, generics.GenericAPIView):     
+     def initial(self, request, *args, **kwargs):
+          self.chatroom = TeamChatRoom.objects.get(pk=kwargs.get('chatroom_pk'))
+          super().initial(request, *args, **kwargs)
+               
+     def get_serializer_class(self):
+          if self.request.method == 'GET':
+               return TeamMemberDetailSerializer
+          elif self.request.method == 'POST':
+               return TeamChatParticipantCreateSerializer
+     
+     def get_object(self):
+          return TeamChatParticipant.objects.get(chatroom=self.chatroom, user=self.request.user)
+     
+     def get_queryset(self):
+          participants = (
+               TeamChatParticipant.objects
+               .filter(chatroom=self.chatroom, member__isnull=False)
+               .select_related('member', 'user')
+               .annotate(
+                    user_is_this_user=Case(
+                         When(user=self.request.user, then=Value(0)),
+                         default=Value(1),
+                         output_field=IntegerField(),
+                    )
+               )
+               .order_by('user_is_this_user', 'user__name')
+          )
+          members = [participant.member for participant in participants]
+          return members
+     
+     def get(self, request, *args, **kwargs):
+          return self.list(request, *args, **kwargs)
+     
+     def delete(self, request, *args, **kwargs):
+          return self.destroy(request, *args, **kwargs)
+          
+     def post(self, request, *args, **kwargs):
+          member_pks = request.data.get('members')
+          serializer_class = self.get_serializer_class()
+          team_members = TeamMembers.objects.filter(team=self.chatroom.team)
+          members = TeamMembers.objects.filter(pk__in=member_pks)
+
+          try:
+               for member in members:
+                    if member not in team_members:
+                         raise serializers.ValidationError(
+                              f"Some are not members of this team"
+                         )
+                    serializer = serializer_class(data={'chatroom': self.chatroom.pk, 'user': member.user.pk, 'member': member.pk})
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+               return Response(status=status.HTTP_201_CREATED)
+          except IntegrityError as e:
+               return Response({'detail': 'user is already chatroom participant'}, status=status.HTTP_409_CONFLICT)
+
+@permission_classes([IsTeamChatParticipant])
+class TeamChatRoomNonParticipantListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      
      def initial(self, request, *args, **kwargs):
@@ -157,6 +215,6 @@ class TeamChatRoomParticipantListAPIView(generics.ListAPIView):
           super().initial(request, *args, **kwargs)
      
      def get_queryset(self):
-          participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom).select_related('member')
-          members = [participant.member for participant in participants]
-          return members
+          participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom, member__isnull=False).values_list('member', flat=True)
+          non_participants = TeamMembers.objects.filter(team=self.chatroom.team).exclude(id__in=participants)
+          return non_participants
