@@ -29,7 +29,7 @@ class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
           return chatroom
      
      def to_representation(self, instance):
-          return PrivateChatRoomDeatilSerializer(instance, context=self.context).data
+          return {'chatroom_id': instance.id}
 
 class PrivateChatRoomDeatilSerializer(serializers.ModelSerializer):
      sender = serializers.SerializerMethodField()
@@ -53,6 +53,24 @@ class PrivateChatRoomDeatilSerializer(serializers.ModelSerializer):
           sender = instance.participants.exclude(id=self.context.get('user').id).first()
           return UserSimpleDetailSerializer(sender).data
 
+class MyPrivateChatRoomDetailSerializer(serializers.ModelSerializer):
+     id = serializers.PrimaryKeyRelatedField(source='chatroom', read_only=True)
+     name = serializers.CharField(source='chatroom_name')
+     updated_at = serializers.DateTimeField(source='chatroom.updated_at')
+     
+     class Meta:
+          model = PrivateChatParticipant
+          fields = [
+               'id',
+               'name',
+               'avatar',
+               'background',
+               'last_msg',
+               'unread_cnt',
+               'updated_at',
+               'alarm_on'
+               ]
+          
 class PrivateChatRoomNameSerializer(serializers.ModelSerializer):
      class Meta:
           model = PrivateChatParticipant
@@ -83,22 +101,65 @@ class InquiryChatRoomCreateSerializer(serializers.ModelSerializer):
           fields = '__all__'
      
      def to_representation(self, instance):
-          return InquiryChatRoomDetailSerializer(instance).data
+          return {'chatroom_id': instance.id}
           
 class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
-     inquirer = UserSimpleDetailSerializer()
-     team = TeamSenderDetailSerializer()
+     type = serializers.SerializerMethodField()
+     unread_cnt = serializers.SerializerMethodField()
+     avatar = serializers.SerializerMethodField()
+     background = serializers.SerializerMethodField()
+     name = serializers.SerializerMethodField()
+     alarm_on = serializers.SerializerMethodField()
      
      class Meta:
           model = InquiryChatRoom
           fields = [
                'id',
+               'type',
+               'name',
+               'avatar',
+               'background',
                'last_msg',
+               'unread_cnt',
                'updated_at',
-               'inquirer',
-               'team'
+               'alarm_on'
           ]
           
+     def get_type(self, instance):
+          return self.context['type']
+     
+     def get_unread_cnt(self, instance):
+          if self.context['type'] == 'inquirer':
+               return instance.inquirer_unread_cnt
+          else:
+               return instance.responder_unread_cnt
+          
+     def get_avatar(self, instance):
+          if self.context['type'] == 'inquirer':
+               return instance.inquirer.avatar.url
+          else:
+               return instance.team.image.url
+     
+     def get_background(self, instance):
+          if self.context['type'] == 'inquirer':
+               return instance.inquirer.background.url
+          else:
+               return ''
+     
+     def get_name(self, instance):
+          team_name = instance.team.name
+          inquirer_name = instance.inquirer.name
+          
+          if self.context['type'] == 'inquirer':
+               return team_name
+          else:
+               return f'{team_name} > {inquirer_name}'
+     
+     def get_alarm_on(self, instance):
+          if self.context['type'] == 'inquirer':
+               return instance.inquirer_alarm_on
+          else:
+               return instance.responder_alarm_on
 #######################################################
 class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):
      user = UserSimpleDetailSerializer()
@@ -113,6 +174,7 @@ class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):
 
 class TeamChatRoomCreateSerializer(serializers.ModelSerializer):
      participants = serializers.SlugRelatedField(slug_field='pk', many=True, queryset=TeamMembers.objects.all())
+     last_msg = serializers.CharField(read_only=True)
      
      class Meta:
           model = TeamChatRoom
@@ -140,14 +202,85 @@ class TeamChatRoomCreateSerializer(serializers.ModelSerializer):
 
           return team_chat_room
 
+     def to_representation(self, instance):
+          return {'chatroom_id': instance.id}
+
 class TeamChatRoomDetailSerializer(serializers.ModelSerializer):
+     avatar = serializers.SerializerMethodField()
+     unread_cnt = serializers.SerializerMethodField()
+     alarm_on = serializers.SerializerMethodField()
+     
      class Meta:
           model = TeamChatRoom
           fields = [
                'id',
                'name',
+               'avatar',
                'background',
+               'unread_cnt',
                'last_msg',
-               'updated_at'
+               'updated_at',
+               'alarm_on'
+          ]
+     
+     def get_avatar(self, instance):
+          return ''
+     
+     def get_unread_cnt(self, instance):
+          participant = TeamChatParticipant.objects.filter(user=self.context.get('user'), chatroom=instance.id).values('unread_cnt').first()
+          return participant['unread_cnt']
+
+     def get_alarm_on(self, instance):
+          participant = TeamChatParticipant.objects.filter(user=self.context.get('user'),chatroom=instance.id).values('alarm_on').first()
+          return participant['alarm_on']
+     
+class TeamMessageCreateSerialzier(serializers.ModelSerializer):
+     chatroom = serializers.SlugRelatedField(slug_field='pk', queryset=TeamChatRoom.objects.all())
+     user = serializers.SlugRelatedField(slug_field='pk', required=False, queryset=User.objects.all())
+     member = serializers.SlugRelatedField(slug_field='pk', required=False, queryset=TeamMembers.objects.all())
+     is_msg = serializers.BooleanField(default=True, required=False)
+     
+     class Meta:
+          model = TeamMessage
+          fields = [
+               'chatroom',
+               'user',
+               'member',
+               'content',
+               'is_msg'
           ]
 
+class TeamMessageSerializer(serializers.ModelSerializer):
+     unread_cnt = serializers.SerializerMethodField(read_only=True)
+     
+     class Meta:
+          model = TeamMessage
+          fields = [
+               'id',
+               'content',
+               'timestamp',
+               'name',
+               'avatar',
+               'position',
+               'background',
+               'unread_cnt',
+               'is_msg'
+          ]
+          
+     def get_unread_cnt(self, instance):
+          try:
+               return self.context['unread_cnt']
+          except KeyError:
+               return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
+     
+class TeamChatParticipantCreateSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = TeamChatParticipant
+          fields = [
+               'chatroom',
+               'user',
+               'member'
+          ]
+
+     # def to_representation(self, instance):
+     #      return {'id': instance.pk}
