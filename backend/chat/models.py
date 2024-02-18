@@ -45,7 +45,7 @@ class PrivateChatParticipant(models.Model):
           return self.chatroom.last_msg
 
 class PrivateMessage(models.Model):
-     chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE)
+     chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE, related_name='messages')
      sender = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
      content = models.CharField(max_length=255)
      timestamp = models.DateField(auto_now_add=True)
@@ -87,7 +87,7 @@ class InquiryChatRoom(models.Model):
      created_at = models.DateTimeField(auto_now_add=True)
      updated_at = models.DateTimeField(auto_now=True)
      inquirer = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL, related_name='inquiry_chat_rooms')
-     team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.CASCADE, related_name='inquiry_chat_rooms')
+     team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.SET_NULL, related_name='inquiry_chat_rooms')
      inquirer_unread_cnt = models.PositiveIntegerField(default=0)
      responder_unread_cnt = models.PositiveIntegerField(default=0)
      inquirer_alarm_on = models.BooleanField(default=True)
