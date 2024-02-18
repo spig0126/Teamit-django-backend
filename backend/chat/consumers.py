@@ -4,9 +4,10 @@ from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Sum, F
 from channels.db import database_sync_to_async
-from django.utils import timezone
+from datetime import datetime
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
+from django.utils import timezone
 
 from .models import *
 from team.models import TeamPermission
@@ -15,10 +16,36 @@ from .serializers import*
 class PrivateChatConsumer(AsyncWebsocketConsumer):
      async def connect(self):
           self.user = self.scope.get('user')
-          self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-          self.room_name = f"private_chat_{self.room_id}"
+          self.chatroom_id = self.scope["url_route"]["kwargs"]["chatroom_id"]
+          self.chatroom_name = f"private_chat_{self.chatroom_id}"
+          self.chatroom = await self.get_chatroom()
+          self.participant = await self.get_participant()
+          self.last_read_time = await self.get_last_read_time()
+          self.loaded_cnt = 0
           
-          if self.user and self.user_is_participant():
+          if self.participant:
+               # if user offline -> online, update former messages' unread_cnt 
+               await self.get_offline_participants()
+               if self.user.pk in self.offline_participants:
+                    await self.channel_layer.group_send(
+                         self.chatroom_name,
+                         {
+                              'type': 'online',
+                              'message': {
+                                   'user': self.user.pk,
+                                   'last_read_time': self.last_read_time
+                              }
+                         }
+                    )
+               await self.update_user_as_online()
+               
+               # join/connect chatroom
+               await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
+               await self.accept()
+               
+               # send history
+               await self.send_last_30_messages()
+
                # Join room group
                await self.channel_layer.group_add(self.room_name, self.channel_name)
                await self.accept()
@@ -52,22 +79,338 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           # Send message to WebSocket
           await self.send(text_data=json.dumps({"message": message}))
      
-     @sync_to_async
-     def user_is_participant(self):
+     #----------------EVENT RELATED------------------------------------
+     async def online(self, event):
+          online_user_pk = event['messages']['user']
+          last_read_time = event['messages']['last_read_time']
+          self.offline_participants.discard(online_user_pk)
+          await self.send_message(event['type'], last_read_time)
+          
+     async def offline(self, event):
+          offline_user_pk = event['messages']['user']
+          last_read_time = event['messages']['last_read_time']
+          self.offline_participants.discard(offline_user_pk)
+          await self.send_message(event['type'], last_read_time)
+          
+          
+     #----------------UTILITY FUNCTIONS---------------------------------
+     async def send_message(self, type, message):
+          await self.send(text_data=json.dumps({
+               'type': type,
+               'message': message
+          }))
+          
+     async def send_last_30_messages(self):
+          message = await self.get_last_30_messages()
+          await self.send_message('history', message)
+          
+     #----------------DATABASE RELATED------------------------------------
+     @database_sync_to_async
+     def get_last_30_messages(self):
+          offline_users_last_read_time = (PrivateChatParticipant.objects
+                                             .filter(chatroom=self.chatrrom_id, is_online=False)
+                                             .values_list('last_read_time', flat=True))
+          messages = self.chatroom.messages.all()[self.loaded_cnt: self.loaded_cnt + 30]
+          self.loaded_cnt += 30
+          return PrivateMessageSerializer(messages, many=True, context={'offline_users_last_read_time': offline_users_last_read_time}).data
+     
+     @database_sync_to_async
+     def get_offline_participants(self):
+          self.offline_participants = set(self.chatroom.participants.filter(is_online=False).values_list('pk', flat=True))
+          
+     @database_sync_to_async
+     @transaction.atomic
+     def update_user_as_online(self):
+          self.participant.is_online = True
+          self.participant.unread_cnt = 0
+          self.last_unread_time = datetime.now()
+          self.participant.save()
+          self.offline_participants.discard(self.user.pk)
+     
+     @database_sync_to_async
+     def get_last_read_time(self):
+          return self.participant.last_read_time.isoformat()
+     
+     @database_sync_to_async
+     def get_participant(self):
           try:
-               chatroom = PrivateChatRoom.objects.prefetch_related('participants').get(id=self.room_id)
-               if chatroom.participants.filter(id=self.user.id).exists():
-                    return True
+               return PrivateChatParticipant.objects.get(chatroom=self.chatroom, user=self.user)
+          except PrivateChatParticipant.DoesNotExist:
+               return None
+     
+     @database_sync_to_async
+     def get_chatroom(self):
+          try:
+               return PrivateChatRoom.objects.get(id=self.chatroom_id)
+          except PrivateChatRoom.DoesNotExist:
+               return None
+
+
+
+################################################
+class TeamChatConsumer2(AsyncWebsocketConsumer):
+     async def connect(self):
+          self.user = self.scope.get('user')
+          self.chatroom_id = self.scope["url_route"]["kwargs"]["chatroom_id"]
+          self.chatroom_name = f"team_chat_{self.chatroom_id}"
+          self.last_read_time = None
+          self.loaded_cnt = 0
+          
+          is_valid = await self.get_chatroom_and_participants_info()
+          if not is_valid:
+               await self.close(code=4001)
+               return
+          
+          was_offline = await self.this_participant_was_offline()
+          if was_offline:
+               await self.mark_as_online()
+          
+          await self.join_chatroom()
+
+     async def disconnect(self, close_code):
+          await self.mark_as_offline()
+          await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
+     
+     async def receive(self, text_data):
+          data = json.loads(text_data)
+          type = data["type"]
+          message = data.get('message', None)
+
+          if type == 'msg':
+               await self.handle_message(message)
+          elif type == 'history':
+               await self.send_last_30_messages()
+          elif type == 'enter':
+               await self.handle_enter(message)
+          elif type == 'exit':
+               await self.handle_exit(message)
+     
+     #------------------handle related----------------------
+     async def handle_message(self, message):
+          msg_details = {
+               'chatroom': self.chatroom_id,
+               'user': self.user.pk,
+               'member': self.member_pk,
+               'content': message['content']
+          }
+          message = await self.create_message(msg_details)
+          self.chatroom.last_msg = message['content']
+          self.update_chatroom()
+          
+          await self.send_group_message('msg', message)
+          await self.send_user_status_message(message)
+          await self.update_offline_participant_unread_cnt()
+     
+     async def handle_enter(self, message):
+          announcement = {
+               'chatroom': self.chatroom_id,
+               'content': f'{message["name"]} / {message["position"]} 님이 입장했습니다',
+               'is_msg': False
+          }
+          message = await self.create_message(announcement)
+          await self.send_group_message('enter', message)
+     
+     async def handle_exit(self, message):
+          await self.remove_this_participant_from_chatroom()
+          await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
+          
+          announcement = {
+               'chatroom': self.chatroom_id,
+               'content': f'{message["name"]} / {message["position"]} 님이 퇴장했습니다',
+               'is_msg': False
+          }
+          message = await self.create_message(announcement)
+          await self.send_group_message('exit', message)
+          await self.close(code=1000)
+          
+          
+     #------------------event related-----------------------
+     async def online(self, event):
+          user = event['message'].get('user', None)
+          self.online_participants.append(user)
+          print('online', self.user, user)
+          print(self.online_participants)
+          await self.send_message(event['type'], event['message'])
+
+
+     async def offline(self, event):
+          # remove user from online_participants
+          user = event['message'].get('user', None)
+          try:
+               self.online_participants.remove(user)
+          except ValueError:
+               pass
+          print('exit', self.user, user)
+          print(self.online_participants)
+
+     async def enter(self, event):
+          await self.send_message('msg', event['message'])
+          await self.update_participant_info()
+     
+     async def exit(self, event):
+          await self.send_message('msg', event['message'])
+          await self.update_participant_info()
+     
+     async def msg(self, event):
+          await self.send_message(event['type'], event['message'])
+          
+     #------------------utility related-----------------------
+     async def mark_as_online(self):
+          '''
+          Alerts the frontend of 'online' status and updates participant info.
+          '''
+          print(self.last_read_time)
+          data = {
+               'user': self.user.pk,
+               'last_read_time': self.last_read_time.isoformat()
+          }
+          await self.update_this_participant_online()
+          await self.send_group_message('online', data)
+     
+     async def mark_as_offline(self):
+          '''
+          Alerts others of the disconnect and updates participant info as offline.
+          '''
+          await self.send_group_message('offline', {'user': self.user.pk})
+          await self.update_this_participant_offline()
+               
+     async def join_chatroom(self):
+          '''
+          Joins the chatroom group, accept connection, and sends the last 30 messages
+          '''
+          await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
+          await self.accept()
+          await self.send_last_30_messages()
+          
+     async def send_message(self, type, message):
+          await self.send(text_data=json.dumps({
+               'type': type,
+               'message': message
+          }))
+     
+     async def send_group_message(self, type, message):
+          await self.channel_layer.group_send(
+                    self.chatroom_name, {"type": type, "message": message}
+               )
+     
+     async def send_last_30_messages(self):
+          message = await self.get_last_30_messages()
+          await self.send_message('history', message)
+     
+     async def send_user_status_message(self, message):
+          status_message = {
+               'id': self.chatroom_id,
+               'name': self.chatroom.name,
+               'avatar': '',
+               'background': self.chatroom.background,
+               'last_msg': message['content'],
+               'updated_at': message['timestamp'],
+               'alarm_on': self.this_participant.alarm_on
+          }
+          
+          for user in self.participants:
+               status_message['update_unread_cnt'] = (user not in self.online_participants)
+               await self.channel_layer.group_send(
+                    f'status_{user}',
+                    {
+                         "type": "msg", 
+                         "chat_type": "team", 
+                         "tead_id": self.team_pk,
+                         "message": status_message}
+               )
+               
+               
+     #------------------DB related-----------------------
+     @database_sync_to_async
+     @transaction.atomic
+     def remove_this_participant_from_chatroom(self):
+          TeamChatParticipant.objects.get(user=self.user, chatroom=self.chatroom_id).delete()
+     
+     @database_sync_to_async
+     @transaction.atomic
+     def update_offline_participant_unread_cnt(self):
+          TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).update(unread_cnt=F('unread_cnt')+1)
+     
+     @database_sync_to_async
+     def update_participant_info(self):
+          participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom)
+          self.participant_cnt = participants.count()
+          self.participants = list(participants.values_list('user', flat=True))
+          self.online_participants = list(participants.filter(is_online=True).values_list('user', flat=True))
+          
+     @database_sync_to_async
+     @transaction.atomic
+     def create_message(self, data):
+          try:
+               serializer = TeamMessageCreateSerialzier(data=data)
+               serializer.is_valid(raise_exception=True)
+               
+               instance = serializer.save()
+               unread_cnt = 0 if not instance.is_msg else self.participant_cnt - len(set(self.online_participants))
+               return TeamMessageSerializer(instance, context={'unread_cnt': unread_cnt}).data
+          except ValidationError as e:
+               self.send_message('error', e.detail)
+     
+     @database_sync_to_async
+     def get_chatroom_and_participants_info(self):
+          '''
+          - get's chatroom and its participant info from DB
+          - checks if user is particpant of this chatroom
+          '''
+          try:
+               self.chatroom = TeamChatRoom.objects.get(id=self.chatroom_id)
+               self.team_pk = self.chatroom.team.pk
+               participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom)
+               self.participant_cnt = participants.count()
+               self.participants = list(participants.values_list('user', flat=True))
+               self.online_participants = list(participants.filter(is_online=True).values_list('user', flat=True))
+               self.this_participant = participants.get(user=self.user)
+               self.member_pk = self.this_participant.member.pk
+               self.last_read_time = self.this_participant.last_read_time.astimezone(timezone.get_current_timezone())
+               return True
           except:
                return False
      
-     @sync_to_async
-     def get_room(self, room_id):
+     @database_sync_to_async
+     def this_participant_was_offline(self):
+          return not self.this_participant.is_online
+     
+     @database_sync_to_async
+     @transaction.atomic
+     def update_this_participant_online(self):
+          self.this_participant.unread_cnt = 0
+          self.this_participant.is_online = True
+          self.this_participant.save()
+          
+          self.last_read_time = self.this_participant.last_read_time
+          
+          self.online_participants.append(self.user.pk)
+          print('update_this_participant_online')
+     
+     @database_sync_to_async
+     def update_this_participant_offline(self):
           try:
-               return PrivateChatRoom.objects.get(id=room_id)
-          except PrivateChatRoom.DoesNotExist:
+               self.online_participants.remove(self.user.pk)
+          except ValueError:
                pass
-
+          try:
+               if self.user not in self.online_participants:
+                    self.this_participant.is_online = False
+                    self.this_participant.save()
+          except:
+               pass
+          
+     @database_sync_to_async
+     def get_last_30_messages(self):
+          last_read_time_list = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).values_list('last_read_time', flat=True)
+          messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt+30]
+          self.loaded_cnt += 30
+          return TeamMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
+     
+     @database_sync_to_async
+     def update_chatroom(self):
+          return self.chatroom.save()
+     
 ################################################################
 class TeamChatConsumer(AsyncWebsocketConsumer):
      async def connect(self):
@@ -83,6 +426,15 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           self.last_read_time = None
           
           if self.participant is not None:
+               if not self.participant.is_online:
+                    # update former messages' unread_cnt
+                    await self.channel_layer.group_send(
+                         self.chatroom_name, {
+                              'type': 'online', 
+                              'message': {
+                                   'user': self.user.pk,
+                                   'last_read_time': self.last_read_time.isoformat()
+                              }})
                # update user's unread, is_online status
                self.participant.unread_cnt = 0
                self.participant.is_online = True
@@ -93,14 +445,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                self.offline_participants = await self.get_offline_participants()
                print(self.offline_participants)
 
-               # update former messages' unread_cnt
-               await self.channel_layer.group_send(
-                    self.chatroom_name, {
-                         'type': 'online', 
-                         'message': {
-                              'user': self.user.pk,
-                              'last_read_time': self.last_read_time.isoformat()
-                         }})
+               
                
                # Join room group
                await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
@@ -255,13 +600,19 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           try:
                serializer = TeamMessageCreateSerialzier(data=data)
                serializer.is_valid(raise_exception=True)
-               print(serializer)
                
                instance = serializer.save()
                return TeamMessageSerializer(instance, context={'unread_cnt': len(set(self.offline_participants))}).data
           except ValidationError as e:
                self.send_message('error', e.detail)
-               
+     
+     @database_sync_to_async
+     def get_participants_info(self):
+          participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id)
+          self.participant_cnt = participants.count()
+          self.online_participant_list = list(participants.filter(is_online=True).values_list('user', flat=True))
+          self.participant_list = list(participants.values_list('user', flat=True))
+
      @database_sync_to_async
      def get_chatroom_participants(self):
           return list(TeamChatParticipant.objects.filter(chatroom=self.chatroom_id).values('pk', 'user'))
