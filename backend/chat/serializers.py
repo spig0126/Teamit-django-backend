@@ -13,7 +13,7 @@ class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
      
      class Meta:
           model = PrivateChatRoom
-          fields = '__all__'
+          fields = ['participants']
 
      @transaction.atomic
      def create(self, validated_data):
@@ -91,6 +91,44 @@ class PrivateChatParticipantDetailSerializer(serializers.ModelSerializer):
                return serializer.data
           return super().to_representation(instance)
 
+class PrivateMessageCreateSerializer(serializers.ModelSerializer):
+     chatroom = serializers.SlugRelatedField(slug_field='pk', queryset=PrivateChatRoom.objects.all())
+     sender = serializers.SlugRelatedField(slug_field='pk', required=False, queryset=User.objects.all())
+     is_msg = serializers.BooleanField(default=True, required=False)
+     
+     class Meta:
+          model = PrivateMessage
+          fields = [
+               'chatroom',
+               'content',
+               'sender',
+               'is_msg'
+          ]
+class PrivateMessageSerializer(serializers.ModelSerializer):
+     unread_cnt = serializers.SerializerMethodField(read_only=True)
+     
+     class Meta:
+          model = PrivateMessage
+          fields = [
+               'id',
+               'content',
+               'timestamp',
+               'name',
+               'avatar',
+               'background',
+               'unread_cnt',
+               'is_msg'
+          ]
+          
+     def get_unread_cnt(self, instance):
+          try:
+               return self.context['unread_cnt']
+          except KeyError:
+               if instance.is_msg:
+                    return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
+               else:
+                    return 0
+               
 #######################################################
 class InquiryChatRoomCreateSerializer(serializers.ModelSerializer):
      inquirer = serializers.SlugRelatedField(slug_field='name', queryset=User.objects.all())
@@ -160,6 +198,32 @@ class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
                return instance.inquirer_alarm_on
           else:
                return instance.responder_alarm_on
+          
+class InquiryMessageSerializer(serializers.ModelSerializer):
+     unread_cnt = serializers.SerializerMethodField(read_only=True)
+     
+     class Meta:
+          model = InquiryMessage
+          fields = [
+               'id',
+               'content',
+               'timestamp',
+               'name',
+               'avatar',
+               'background',
+               'unread_cnt',
+               'is_msg'
+          ]
+          
+     def get_unread_cnt(self, instance):
+          try:
+               return self.context['unread_cnt']
+          except KeyError:
+               if instance.is_msg:
+                    return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
+               else:
+                    return 0
+               
 #######################################################
 class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):
      user = UserSimpleDetailSerializer()
@@ -233,7 +297,12 @@ class TeamChatRoomDetailSerializer(serializers.ModelSerializer):
      def get_alarm_on(self, instance):
           participant = TeamChatParticipant.objects.filter(user=self.context.get('user'),chatroom=instance.id).values('alarm_on').first()
           return participant['alarm_on']
-     
+
+class TeamChatRoomUpdateSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = TeamChatRoom
+          fields = ['name', 'background']
+          
 class TeamMessageCreateSerialzier(serializers.ModelSerializer):
      chatroom = serializers.SlugRelatedField(slug_field='pk', queryset=TeamChatRoom.objects.all())
      user = serializers.SlugRelatedField(slug_field='pk', required=False, queryset=User.objects.all())
@@ -271,7 +340,10 @@ class TeamMessageSerializer(serializers.ModelSerializer):
           try:
                return self.context['unread_cnt']
           except KeyError:
-               return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
+               if instance.is_msg:
+                    return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
+               else:
+                    return 0
      
 class TeamChatParticipantCreateSerializer(serializers.ModelSerializer):
      class Meta:

@@ -22,7 +22,7 @@ class PrivateChatRoom(models.Model):
 class PrivateChatParticipant(models.Model):
      chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE)
      chatroom_name = models.CharField(max_length=50)
-     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
+     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
      unread_cnt = models.PositiveIntegerField(default=0)
      alarm_on = models.BooleanField(default=True)
      is_online = models.BooleanField(default=False)
@@ -48,26 +48,32 @@ class PrivateMessage(models.Model):
      chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE, related_name='messages')
      sender = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
      content = models.CharField(max_length=255)
-     timestamp = models.DateField(auto_now_add=True)
+     timestamp = models.DateTimeField(auto_now_add=True)
      is_msg = models.BooleanField(default=True)
      
      @property
      def name(self):
-          if self.sender is None:
+          if not self.is_msg:
+               return ''
+          elif self.sender is None:
                return '(알 수 없음)'
           else:
                return self.sender.name
      
      @property
      def avatar(self):
-          if self.sender is None:
+          if not self.is_msg:
+               return ''
+          elif self.sender is None:
                return 'avatars/default.png'
           else:
                return self.sender.avatar.url
      
      @property
      def background(self):
-          if self.sender is None:
+          if not self.is_msg:
+               return ''
+          elif self.sender is None:
                return ''
           else:
                return self.sender.background.url
@@ -77,7 +83,7 @@ class PrivateMessage(models.Model):
      
      
 # inquiry chats
-class InquiryMessagaeType(models.TextChoices):
+class InquiryRoleType(models.TextChoices):
      TEAM = "T", "team"
      INQUIRER = "I", "inquirer"
      
@@ -92,16 +98,56 @@ class InquiryChatRoom(models.Model):
      responder_unread_cnt = models.PositiveIntegerField(default=0)
      inquirer_alarm_on = models.BooleanField(default=True)
      responder_alarm_on = models.BooleanField(default=True)
+     inquirer_is_online = models.BooleanField(default=False)
+     responder_is_online = models.BooleanField(default=False)
+     inquirer_last_read_time = models.DateTimeField(auto_now_add=True)
+     responder_last_read_time = models.DateTimeField(auto_now_add=True)
      
+     @property
+     def responder(self, instance):
+          if instance.team is None:
+               return None
+          return instance.team.permission.responder
      class Meta:
           ordering = ['-updated_at']
-     
+
 class InquiryMessage(models.Model):
-     chatroom = models.ForeignKey(InquiryChatRoom, on_delete=models.CASCADE)
-     type = models.CharField(max_length=1, choices=InquiryMessagaeType.choices)
+     chatroom = models.ForeignKey(InquiryChatRoom, on_delete=models.CASCADE, related_name="messages")
+     sender = models.CharField(max_length=1, choices=InquiryRoleType.choices)
      content = models.CharField(max_length=255)
      timestamp = models.DateField(auto_now_add=True)
      
+     @property
+     def name(self, instance):
+          if instance.sender == InquiryRoleType.TEAM:
+               if instance.chatroom.team is None:
+                    return '(알 수 없음)'
+               return instance.chatroom.team.name
+          else:
+               if instance.chatroom.inquirer is None:
+                    return '(알 수 없음)'
+               return instance.chatroom.inquirer.name
+          
+     @property
+     def avatar(self, instance):
+          if instance.sender == InquiryRoleType.TEAM:
+               if instance.chatroom.team is None:
+                    return 'teams/default.png'
+               return instance.chatroom.team.image.url
+          else:
+               if instance.chatroom.inquirer is None:
+                    return 'avatars/default.png'
+               return instance.chatroom.inquirer.avatar.url
+     
+     @property
+     def background(self, instance):
+          if instance.sender == InquiryRoleType.TEAM:
+               return ''
+          else:
+               if instance.chatroom.inquirer is None:
+                    return ''
+               return instance.chatroom.inquirer.background.url
+          
      class Meta:
           ordering = ['-timestamp']
 
