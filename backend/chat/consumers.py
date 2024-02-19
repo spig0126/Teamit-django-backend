@@ -74,7 +74,6 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      # Receive message from room group (channel -> frontend)
      async def private_chat_message(self, event):
           message = event["message"]
-          print(event)
 
           # Send message to WebSocket
           await self.send(text_data=json.dumps({"message": message}))
@@ -315,16 +314,16 @@ class TeamChatConsumer2(AsyncWebsocketConsumer):
                     {
                          "type": "msg", 
                          "chat_type": "team", 
-                         "tead_id": self.team_pk,
+                         "team_id": self.team_pk,
                          "message": status_message}
                )
                
                
      #------------------DB related-----------------------
      @database_sync_to_async
-     @transaction.atomic
      def remove_this_participant_from_chatroom(self):
-          TeamChatParticipant.objects.get(user=self.user, chatroom=self.chatroom_id).delete()
+          self.this_participant.delete()
+          print(TeamChatParticipant.objects.filter(user=self.user.pk, chatroom=self.chatroom_id))
      
      @database_sync_to_async
      @transaction.atomic
@@ -714,29 +713,35 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           instance.save()
      
      @database_sync_to_async
-     def get_total_unread_cnt(self):
+     def get_unread_cnt(self):
           private_unread_cnt = PrivateChatParticipant.objects.filter(user=self.user).aggregate(private_unread_cnt=Sum('unread_cnt'))['private_unread_cnt'] or 0
           team_unread_cnt = TeamChatParticipant.objects.filter(user=self.user, member__isnull=False).aggregate(team_unread_cnt=Sum('unread_cnt'))['team_unread_cnt'] or 0
           inquirer_unread_cnt = InquiryChatRoom.objects.filter(inquirer=self.user).aggregate(inquirer_unread_cnt=Sum('inquirer_unread_cnt'))['inquirer_unread_cnt'] or 0
           responder_unread_cnt = InquiryChatRoom.objects.filter(team__permission__responder=self.user).aggregate(responder_unread_cnt=Sum('responder_unread_cnt'))['responder_unread_cnt'] or 0
           
-          return private_unread_cnt + team_unread_cnt + inquirer_unread_cnt + responder_unread_cnt
+          unread_cnt = {
+               'all': private_unread_cnt + team_unread_cnt + inquirer_unread_cnt + responder_unread_cnt,
+               'private': private_unread_cnt,
+               'team': team_unread_cnt,
+               'inquiry': inquirer_unread_cnt + responder_unread_cnt
+          }
+          return unread_cnt
      
      @database_sync_to_async
      @transaction.atomic
-     def remove_user_from_chatroom(self, chatroom_type, chatroom_id):
-          if chatroom_type == 'private':
+     def remove_user_from_chatroom(self, chat_type, chatroom_id):
+          if chat_type == 'private':
                participant = PrivateChatParticipant.objects.get(user=self.user, chatroom=chatroom_id)
                participant_name = participant.name
                participant.delete()
                return participant_name, None
-          if chatroom_type == 'team':
+          if chat_type == 'team':
                participant = TeamChatParticipant.objects.get(user=self.user, chatroom=chatroom_id)
                participant_name = participant.name
                participant_position = participant.position
                participant.delete()
                return participant_name, participant_position
-          if chatroom_type == 'inquiry':
+          if chat_type == 'inquiry':
                chatroom = InquiryChatRoom.objects.get(chatroom=chatroom_id)
                participant_name = ''
                if chatroom.inquirer == self.user:
@@ -750,10 +755,10 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           
      @database_sync_to_async
      @transaction.atomic
-     def create_message(self, chatroom_type, data):
-          if chatroom_type == 'private':
+     def create_message(self, chat_type, data):
+          if chat_type == 'private':
                pass
-          if chatroom_type == 'team':
+          if chat_type == 'team':
                try:
                     serializer = TeamMessageCreateSerialzier(data=data)
                     serializer.is_valid(raise_exception=True)
@@ -761,7 +766,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
                     return TeamMessageSerializer(instance, context={'unread_cnt': None}).data
                except ValidationError as e:
                     self.send_message('error', e.detail)
-          if chatroom_type == 'inquiry':
+          if chat_type == 'inquiry':
                pass
      
      commands = {
@@ -772,32 +777,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           'update_inquiry_chatroom_alarm': update_inquiry_chatroom_alarm,
           'update_team_chatroom_alarm': update_team_chatroom_alarm,
      }
-     
-     async def send_chatroom_list(self, chatroom_type):
-          type = f'{chatroom_type}_chatroom_list'
-          message = await self.commands[f'fetch_{chatroom_type}_chatrooms'](self)
-          await self.send_message(type, message)
 
-     async def send_total_unread_cnt(self):
-          type = 'total_unread_cnt'
-          message = await self.get_total_unread_cnt()
-          await self.send_message(type, message)
-
-     async def exit(self, chatroom_type, chatroom_id):
-          # create exit message
-          name, position = await self.remove_user_from_chatroom(chatroom_type, chatroom_id)
-          data = {
-               'chatroom': chatroom_id,
-               'content': f'{name} / {position} 님이 퇴장했습니다' if position else f'{name} 님이 퇴장했습니다',
-               'is_msg': False
-          }
-          message = await self.create_message(chatroom_type, data)
-          
-          # send message to group
-          chatroom_name = f'{chatroom_type}_chat_{chatroom_id}'
-          await self.channel_layer.group_send(
-               chatroom_name, {"type": "msg", "message": message}
-          )
 
      async def connect(self):
           self.user = self.scope.get('user')
@@ -806,8 +786,8 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           self.chat_type = 'all'
           self.team_id = 0
           self.filter = 'all'
-          self.total_unread_cnt = 0
-          
+          self.unread_cnt = await self.get_unread_cnt()
+
           await self.channel_layer.group_add(self.name, self.channel_name)
           await self.accept()
           
@@ -816,38 +796,85 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           await self.close(code=close_code)
 
      async def receive(self, text_data):
-          data = json.loads(text_data)
-          type = data["type"]
-          if type == 'change':
-               self.chat_type = data.get("chat_type", self.chat_type)
-               self.team_id = data.get("team_id", self.team_id)
-               self.filter = data.get("filter", self.team_id)
-               if self.chat_type == 'all':
-                    self.total_unread_cnt = await self.get_total_unread_cnt()
-                    await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
-               else:
-                    await self.send_chatroom_list(self.chat_type)
-          elif type == 'udpate_alarm_status':
-               await self.commands[f'update_{data["chat_type"]}_chatroom_alarm'](self, data["chatroom_id"])
-          elif type == 'get_total_unread_cnt':
-               await self.send_total_unread_cnt()
-          elif type == 'exit':
-               await self.exit(data['chat_type'], data['chatroom_id'])
+          try:
+               data = json.loads(text_data)
+          except json.JSONDecodeError:
+               await self.close()
+          
+          msg_type = data.get("type")
+          
+          if msg_type == 'change':
+               await self.handle_change(data)
+          elif msg_type == 'udpate_alarm_status':
+               await self.handl_update_alarm_status(data)
+          elif msg_type == 'exit':
+               await self.handle_exit(data)
      
+     #-------------------handle reltaed--------------------------
+     async def handle_change(self, data):
+          self.chat_type = data.get("chat_type", self.chat_type)
+          self.team_id = data.get("team_id", self.team_id)
+          self.filter = data.get("filter", self.team_id)
+          
+          if self.chat_type == 'all':
+               await self.send_message('update_total_unread_cnt', {'cnt': self.unread_cnt['all']})
+          else:
+               await self.send_chatroom_list(self.chat_type)
+
+     async def handl_update_alarm_status(self, data):
+          chat_type = data.get('chat_type')
+          chatroom_id = data.get('chatroom_id')
+          if chat_type and chatroom_id:
+               await self.commands[f'update_{chat_type}_chatroom_alarm'](self, chatroom_id)
+     
+     async def handle_exit(self, data):
+          chat_type = data.get('chat_type')
+          chatroom_id = data.get('chatroom_id')
+          if chat_type and chatroom_id:
+               # create exit message
+               name, position = await self.remove_user_from_chatroom(chat_type, chatroom_id)
+               data = {
+                    'chatroom': chatroom_id,
+                    'content': f'{name} / {position} 님이 퇴장했습니다' if position else f'{name} 님이 퇴장했습니다',
+                    'is_msg': False
+               }
+               message = await self.create_message(chat_type, data)
+               
+               # send message to group
+               chatroom_name = f'{chat_type}_chat_{chatroom_id}'
+               await self.channel_layer.group_send(
+                    chatroom_name, {"type": "msg", "message": message}
+               )
+               await self.close()
+     
+     #-------------------event related----------------------------
      async def msg(self, event):
           chat_type = event['chat_type']
           message = event['message']
-          self.total_unread_cnt += 1
+          team_id = event.get('team_id', self.team_id)
+          filter = event.get('filter', self.filter)
+          
+          await self.update_unread_cnt(chat_type)
      
           if self.chat_type == 'all':
-               await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
-          elif self.chat_type == chat_type:
-               # team_id, filter 에 대해서 더하기
+               await self.send_message('update_total_unread_cnt', {'cnt': self.unread_cnt['all']})
+          elif self.chat_type == chat_type and self.team_id == team_id and self.filter == filter:
                await self.send_message('update_chatroom', message)
                
+     #--------------------utiity related---------------------------------       
      async def send_message(self, type, message):
           await self.send(text_data=json.dumps({
                'type': type,
                'message': message
           }))
      
+     async def send_chatroom_list(self, chat_type):
+          type = f'{chat_type}_chatroom_list'
+          message = await self.commands[f'fetch_{chat_type}_chatrooms'](self)
+          await self.send_message(type, message)
+     
+     async def update_unread_cnt(self, chat_type):
+          self.unread_cnt['all'] += 1
+          self.unread_cnt[chat_type] += 1
+          if self.chat_type != 'all':
+               await self.send_message(f'update_{chat_type}_unread_cnt', {'cnt': self.unread_cnt[chat_type]})
