@@ -104,6 +104,7 @@ class PrivateMessageCreateSerializer(serializers.ModelSerializer):
                'sender',
                'is_msg'
           ]
+          
 class PrivateMessageSerializer(serializers.ModelSerializer):
      unread_cnt = serializers.SerializerMethodField(read_only=True)
      
@@ -199,6 +200,55 @@ class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
           else:
                return instance.responder_alarm_on
           
+class InquiryChatRoomDetailForTeamSerializer(serializers.ModelSerializer):
+     avatar = serializers.SerializerMethodField()
+     background = serializers.SerializerMethodField()
+     name = serializers.SerializerMethodField()
+     
+     class Meta:
+          model = InquiryChatRoom
+          fields = [
+               'id',
+               'name',
+               'avatar',
+               'background',
+               'last_msg',
+               'updated_at',
+          ]
+     
+     def get_name(self, instance):
+          if instance.inquirer is None:
+               return '(알 수 없음)'
+          return instance.inquirer.name
+     
+     def get_avatar(self, instance):
+          if instance.inquirer is None:
+               return ''
+          return instance.inquirer.avatar.url
+     
+     def get_background(self, instance):
+          if instance.inquirer is None:
+               return ''
+          return instance.inquirer.background.url
+     
+class InquiryMessageCreateSeriazlier(serializers.ModelSerializer):
+     chatroom = serializers.SlugRelatedField(slug_field='pk', queryset=InquiryChatRoom.objects.all())
+     is_msg = serializers.BooleanField(default=True, required=False)
+     sender = serializers.CharField(required=False)
+     user = serializers.SlugRelatedField(slug_field='pk', required=False, allow_null=True, queryset=User.objects.all())
+     team = serializers.SlugRelatedField(slug_field='pk', required=False, allow_null=True, queryset=Team.objects.all())
+     
+     class Meta:
+          model = InquiryMessage
+          fields = [
+               'chatroom',
+               'content',
+               'sender',
+               'user',
+               'team',
+               'is_msg'
+          ]
+          
 class InquiryMessageSerializer(serializers.ModelSerializer):
      unread_cnt = serializers.SerializerMethodField(read_only=True)
      
@@ -206,6 +256,7 @@ class InquiryMessageSerializer(serializers.ModelSerializer):
           model = InquiryMessage
           fields = [
                'id',
+               'sender',
                'content',
                'timestamp',
                'name',
