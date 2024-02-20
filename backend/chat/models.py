@@ -123,7 +123,7 @@ class InquiryMessage(models.Model):
      user = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
      team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.SET_NULL)
      content = models.CharField(max_length=255)
-     timestamp = models.DateField(auto_now_add=True)
+     timestamp = models.DateTimeField(auto_now_add=True)
      is_msg = models.BooleanField(default=True)
      
      @property
@@ -173,6 +173,9 @@ class TeamChatRoom(models.Model):
           User, 
           through="TeamChatParticipant"
      )
+     
+     class Meta:
+          ordering = ['-updated_at']
 
 class TeamChatParticipant(models.Model):
      id = models.AutoField(primary_key=True)
