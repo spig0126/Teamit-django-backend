@@ -301,6 +301,21 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):
      def get_date_status(self, obj):
           return obj.date_status
 
+class TeamBasicDetailForChatSerializer(serializers.ModelSerializer):
+     avatar = serializers.ImageField(source='image')
+     background = serializers.SerializerMethodField()
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'avatar',
+               'background'
+          ]
+     
+     def get_background(self, obj):
+          return ''
+     
 class SearchedTeamDetailSerializer(serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()

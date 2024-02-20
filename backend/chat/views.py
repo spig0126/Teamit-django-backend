@@ -1,5 +1,5 @@
 from rest_framework import generics, status
-from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, RetrieveModelMixin, ListModelMixin
+from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, UpdateModelMixin, ListModelMixin
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Case, When, Value, IntegerField
@@ -148,6 +148,20 @@ class TeamChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Gener
      
      def get(self, request, *args, **kwargs):
           return self.list(request, *args, **kwargs)
+
+@permission_classes([IsTeamMemberPermission])
+class TeamChatRoomUpdateAPIView(generics.UpdateAPIView):
+     queryset = TeamChatRoom.objects.all()
+     serializer_class = TeamChatRoomUpdateSerializer
+     
+     def initial(self, request, *args, **kwargs):
+          self.team_pk = self.kwargs.get('team_pk')
+          self.team = get_team_by_pk(self.team_pk)
+          super().initial(request, *args, **kwargs)
+     
+     def get_object(self):
+          pk = self.kwargs.get('chatroom_pk')
+          return TeamChatRoom.objects.get(pk=pk)
      
 @permission_classes([IsTeamChatParticipant])
 class TeamChatRoomParticipantDetailAPIView(DestroyModelMixin, ListModelMixin, generics.GenericAPIView):     
