@@ -7,10 +7,11 @@ from channels.db import database_sync_to_async
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
+from django.db.models import Case, When, Value, IntegerField
 
 from .models import *
 from .serializers import*
-from team.serializers import TeamBasicDetailForChatSerializer
+from team.serializers import TeamBasicDetailForChatSerializer, TeamMemberDetailSerializer
 from user.serializers import UserSimpleDetailSerializer
 
 class InquiryChatConsumer(AsyncWebsocketConsumer):
@@ -639,6 +640,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
 
      async def disconnect(self, close_code):
           await self.mark_as_offline()
+          await self.send_user_status_reset_message()
           await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
           await self.close()
      
@@ -655,6 +657,10 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                await self.handle_enter(message)
           elif type == 'exit':
                await self.handle_exit(message)
+          elif type == 'settings':
+               await self.handle_settings()
+          elif type == 'update_alarm_status':
+               await self.update_alarm_status()
      
      #------------------handle related----------------------
      async def handle_message(self, message):
@@ -694,7 +700,17 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                message = await self.create_message(announcement)
                await self.send_group_message('exit', message)
           await self.close()
-          
+     
+     async def handle_settings(self):
+          background, name, participant_list, alarm_on = await self.get_settings_info()
+          type = 'settings'
+          message = {
+               'background': background,
+               'name': name,
+               'participant_list': participant_list,
+               'alarm_on': alarm_on
+          }
+          await self.send_message(type, message)
           
      #------------------event related-----------------------
      async def online(self, event):
@@ -793,8 +809,55 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                          "message": status_message}
                )
                
-               
+     async def send_user_status_reset_message(self):
+          status_message = {
+               'id': self.chatroom_id,
+               'name': self.chatroom.name,
+               'avatar': '',
+               'background': self.chatroom.background,
+               'last_msg': '',
+               'updated_at': '',
+               'update_unread_cnt': None
+          }
+
+          await self.channel_layer.group_send(
+               f'status_{self.user.pk}',
+               {
+                    "type": "msg", 
+                    "chat_type": "team", 
+                    "team_id": self.team_pk,
+                    "message": status_message}
+          )
+          
      #------------------DB related-----------------------
+     @database_sync_to_async
+     def update_alarm_status(self):
+          self.this_participant.alarm_on = not self.this_participant.alarm_on 
+          self.this_participant.save()
+          
+     @database_sync_to_async
+     def get_settings_info(self):
+          participants = (
+               TeamChatParticipant.objects
+               .filter(chatroom=self.chatroom, member__isnull=False)
+               .select_related('member', 'user')
+               .annotate(
+                    user_is_this_user=Case(
+                         When(user=self.user, then=Value(0)),
+                         default=Value(1),
+                         output_field=IntegerField(),
+                    )
+               )
+               .order_by('user_is_this_user', 'user__name')
+          )
+          members = [participant.member for participant in participants]
+          participant_list = TeamMemberDetailSerializer(members, many=True).data
+          name = self.chatroom.name
+          background = self.chatroom.background
+          alarm_on = self.this_participant.alarm_on
+          
+          return background, name, participant_list, alarm_on
+     
      @database_sync_to_async
      def remove_this_participant_from_chatroom(self):
           self.chatroom = None
@@ -908,7 +971,8 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
                ).exclude(
                     chatroom__participants__in=blocked_users
                ).distinct()
-          return MyPrivateChatRoomDetailSerializer(private_chatrooms, many=True).data
+          room_list = MyPrivateChatRoomDetailSerializer(private_chatrooms, many=True).data
+          return sorted(room_list, key=lambda x: x['updated_at'], reverse=True)
 
      @database_sync_to_async
      def fetch_inquiry_chatrooms(self):
@@ -920,8 +984,9 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
                return responder_room_list
           elif self.filter == 'inquirer':
                return inquirer_room_list
-          return responder_room_list + inquirer_room_list
-
+          room_list = responder_room_list + inquirer_room_list
+          return sorted(room_list, key=lambda x: x['updated_at'], reverse=True)
+     
      @database_sync_to_async
      def fetch_team_chatrooms(self):
           team_chatrooms = TeamChatRoom.objects.filter(team__pk=self.team_id, participants=self.user)
