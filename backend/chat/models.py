@@ -30,11 +30,17 @@ class PrivateChatParticipant(models.Model):
      
      @property
      def avatar(self):
-          return self.chatroom.participants.exclude(user=self.user).values('avatar').first().get('avatar', 'avatars/default.png')
+          other_user = self.chatroom.participants.exclude(user=self.user).first()
+          if other_user is None:
+               return 'avatars/default.png'
+          return other_user.avatar.url
      
      @property
      def background(self):
-          return self.chatroom.participants.exclude(user=self.user).values('background').first().get('background', '')
+          other_user = self.chatroom.participants.exclude(user=self.user).first()
+          if other_user is None:
+               return ''
+          return other_user.background.url
      
      @property
      def updated_at(self):
@@ -104,49 +110,52 @@ class InquiryChatRoom(models.Model):
      responder_last_read_time = models.DateTimeField(auto_now_add=True)
      
      @property
-     def responder(self, instance):
-          if instance.team is None:
+     def responder(self):
+          if self.team is None:
                return None
-          return instance.team.permission.responder
+          return self.team.responder
      class Meta:
           ordering = ['-updated_at']
 
 class InquiryMessage(models.Model):
      chatroom = models.ForeignKey(InquiryChatRoom, on_delete=models.CASCADE, related_name="messages")
-     sender = models.CharField(max_length=1, choices=InquiryRoleType.choices)
+     sender = models.CharField(max_length=1, choices=InquiryRoleType.choices, blank=True, null=True)
+     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
+     team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.SET_NULL)
      content = models.CharField(max_length=255)
      timestamp = models.DateField(auto_now_add=True)
+     is_msg = models.BooleanField(default=True)
      
      @property
-     def name(self, instance):
-          if instance.sender == InquiryRoleType.TEAM:
-               if instance.chatroom.team is None:
+     def name(self):
+          if self.sender == InquiryRoleType.TEAM:
+               if self.team is None:
                     return '(알 수 없음)'
-               return instance.chatroom.team.name
+               return self.team.name
           else:
-               if instance.chatroom.inquirer is None:
+               if self.user is None:
                     return '(알 수 없음)'
-               return instance.chatroom.inquirer.name
+               return self.user.name
           
      @property
-     def avatar(self, instance):
-          if instance.sender == InquiryRoleType.TEAM:
-               if instance.chatroom.team is None:
+     def avatar(self):
+          if self.sender == InquiryRoleType.TEAM:
+               if self.team is None:
                     return 'teams/default.png'
-               return instance.chatroom.team.image.url
+               return self.team.image.url
           else:
-               if instance.chatroom.inquirer is None:
+               if self.user is None:
                     return 'avatars/default.png'
-               return instance.chatroom.inquirer.avatar.url
+               return self.user.avatar.url
      
      @property
-     def background(self, instance):
-          if instance.sender == InquiryRoleType.TEAM:
+     def background(self):
+          if self.sender == InquiryRoleType.TEAM:
                return ''
           else:
-               if instance.chatroom.inquirer is None:
+               if self.user is None:
                     return ''
-               return instance.chatroom.inquirer.background.url
+               return self.user.background.url
           
      class Meta:
           ordering = ['-timestamp']

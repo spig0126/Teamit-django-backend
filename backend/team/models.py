@@ -58,6 +58,10 @@ class Team(models.Model):
           return self.name
      
      @property
+     def responder(self):
+          return self.permission.responder
+     
+     @property
      def member_cnt(self):
           return self.members.count()
           
@@ -152,6 +156,6 @@ class TeamLike(models.Model):
      user = models.ForeignKey(User, related_name="team_likes", on_delete=models.CASCADE)
      
 class TeamPermission(models.Model):
-     team = models.ForeignKey(Team, related_name="permission", on_delete=models.CASCADE)
+     team = models.OneToOneField(Team, related_name="permission", primary_key=True, on_delete=models.CASCADE)
      responder = models.ForeignKey(User, related_name="responder", on_delete=models.SET_NULL, null=True)
      
