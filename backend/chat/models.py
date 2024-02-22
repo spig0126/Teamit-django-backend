@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.files.storage import default_storage
 
 from user.models import User
 from team.models import Team, TeamMembers
@@ -21,7 +22,7 @@ class PrivateChatRoom(models.Model):
      
 class PrivateChatParticipant(models.Model):
      chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE)
-     chatroom_name = models.CharField(max_length=50)
+     custom_name = models.CharField(max_length=50, null=True, blank=True)
      user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
      unread_cnt = models.PositiveIntegerField(default=0)
      alarm_on = models.BooleanField(default=True)
@@ -29,10 +30,19 @@ class PrivateChatParticipant(models.Model):
      last_read_time = models.DateTimeField(auto_now=True)
      
      @property
+     def chatroom_name(self):
+          if self.custom_name is None:
+               other_user = self.chatroom.participants.exclude(user=self.user).first()
+               if other_user is None:
+                    return '(알 수 없음)'
+               return other_user.name
+          return self.custom_name
+     
+     @property
      def avatar(self):
           other_user = self.chatroom.participants.exclude(user=self.user).first()
           if other_user is None:
-               return 'avatars/default.png'
+               return default_storage.url('avatars/default.png')
           return other_user.avatar.url
      
      @property
@@ -71,7 +81,7 @@ class PrivateMessage(models.Model):
           if not self.is_msg:
                return ''
           elif self.sender is None:
-               return 'avatars/default.png'
+               return default_storage.url('avatars/default.png')
           else:
                return self.sender.avatar.url
      
@@ -106,8 +116,8 @@ class InquiryChatRoom(models.Model):
      responder_alarm_on = models.BooleanField(default=True)
      inquirer_is_online = models.BooleanField(default=False)
      responder_is_online = models.BooleanField(default=False)
-     inquirer_last_read_time = models.DateTimeField(auto_now_add=True)
-     responder_last_read_time = models.DateTimeField(auto_now_add=True)
+     # inquirer_last_read_time = models.DateTimeField(auto_now_add=True)
+     # responder_last_read_time = models.DateTimeField(auto_now_add=True)
      
      @property
      def responder(self):
@@ -141,11 +151,11 @@ class InquiryMessage(models.Model):
      def avatar(self):
           if self.sender == InquiryRoleType.TEAM:
                if self.team is None:
-                    return 'teams/default.png'
+                    return default_storage.url('teams/default.png')
                return self.team.image.url
           else:
                if self.user is None:
-                    return 'avatars/default.png'
+                    return default_storage.url('avatars/default.png')
                return self.user.avatar.url
      
      @property
@@ -225,7 +235,7 @@ class TeamMessage(models.Model):
           if not self.is_msg:
                return ''
           elif self.user is None:
-               return 'avatars/default.png'
+               return default_storage.url('avatars/default.png')
           return self.user.avatar.url
      
      @property
