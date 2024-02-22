@@ -4,8 +4,9 @@ from django.db import transaction
 from .models import *
 from user.serializers import UserSimpleDetailSerializer
 from user.models import User
-from team.serializers import TeamSenderDetailSerializer, TeamMemberDetailSerializer
+from team.serializers import TeamMemberDetailSerializer
 from team.models import TeamMembers
+from django.core.files.storage import default_storage
 
 
 class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
@@ -175,15 +176,21 @@ class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
           
      def get_avatar(self, instance):
           if self.context['type'] == 'inquirer':
-               return instance.inquirer.avatar.url
-          else:
+               if instance.team is None:
+                    return default_storage.url('teams/default.png')
                return instance.team.image.url
+          else:
+               if instance.inquirer is None:
+                    return default_storage.url('avatars/default.png')
+               return instance.inquirer.avatar.url
      
      def get_background(self, instance):
           if self.context['type'] == 'inquirer':
-               return instance.inquirer.background.url
-          else:
                return ''
+          else:
+               if instance.inquirer is None:
+                    return ''
+               return instance.inquirer.background.url
      
      def get_name(self, instance):
           team_name = instance.team.name
@@ -250,8 +257,6 @@ class InquiryMessageCreateSeriazlier(serializers.ModelSerializer):
           ]
           
 class InquiryMessageSerializer(serializers.ModelSerializer):
-     unread_cnt = serializers.SerializerMethodField(read_only=True)
-     
      class Meta:
           model = InquiryMessage
           fields = [
@@ -262,19 +267,9 @@ class InquiryMessageSerializer(serializers.ModelSerializer):
                'name',
                'avatar',
                'background',
-               'unread_cnt',
                'is_msg'
           ]
           
-     def get_unread_cnt(self, instance):
-          try:
-               return self.context['unread_cnt']
-          except KeyError:
-               if instance.is_msg:
-                    return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
-               else:
-                    return 0
-               
 #######################################################
 class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):
      user = UserSimpleDetailSerializer()
