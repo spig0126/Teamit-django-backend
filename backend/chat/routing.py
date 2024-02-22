@@ -1,6 +1,9 @@
 from django.urls import path
 
-from .consumers import *
+from .status_consumers import *
+from .private_consumers import *
+from .team_consumers import *
+from .inquiry_consumers import *
 
 websocket_urlpatterns = [
      path("ws/private-chat/<str:chatroom_id>/", PrivateChatConsumer.as_asgi()),
