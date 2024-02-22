@@ -25,8 +25,9 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           
           was_offline = await self.user_was_offline()
           if was_offline:
-               await self.mark_as_online()
+               await self.update_user_online()
           
+          await self.update_online_participants()
           await self.join_chatroom()
      
      async def disconnect(self, close_code):
@@ -98,9 +99,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      #---------------event related----------------------
      async def online(self, event):
           user = event['message'].get('user', None)
-          self.online_participants.append(user)
           print('online', self.user, user)
-          print(self.online_participants)
+          print('before', self.online_participants)
+          self.online_participants.append(user)
+          print('after', self.online_participants)
           
      async def offline(self, event):
           user = event['message'].get('user', None)
@@ -196,12 +198,6 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           await self.send_user_roles()
           await self.send_last_30_messages()
           
-     async def mark_as_online(self):
-          data = {
-               'user': self.user.pk,
-          }
-          await self.update_user_online()
-          await self.send_group_message('online', data)
      
      async def mark_as_offline(self):
           if self.chatroom is not None:
@@ -223,6 +219,11 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           }
           await self.send_message(type, message)
      
+     async def update_online_participants(self):
+          if self.is_responder or self.is_inquirer:
+               self.online_participants.append(self.user.pk)
+               await self.send_group_message('online', {'user': self.user.pk})
+          
      
      #----------------DB related------------------------
      @database_sync_to_async
@@ -302,11 +303,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           if self.is_responder:
                self.chatroom.responder_is_online = True
                self.chatroom.responder_unread_cnt = 0
-          else:
+          elif self.is_inquirer:
                self.chatroom.inquirer_is_online = True
                self.chatroom.inquirer_unread_cnt = 0
           self.chatroom.save()
-          self.online_participants.append(self.user.pk)
      
      @database_sync_to_async
      def update_user_offline(self):
@@ -319,7 +319,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                     if self.is_responder:
                          self.chatroom.responder_is_online = False
                          self.chatroom.responder_unread_cnt = 0
-                    else:
+                    elif self.is_inquirer:
                          self.chatroom.inquirer_is_online = False
                          self.chatroom.inquirer_unread_cnt = 0
                     self.chatroom.save()
@@ -341,10 +341,11 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           self.is_member = self.chatroom.team.members.filter(pk=self.user.pk).exists()
           
           self.online_participants = []
-          if self.chatroom.inquirer_is_online:
-               self.online_participants.append(self.inquirer.pk)
-          elif self.chatroom.responder_is_online:
-               self.online_participants.append(self.responder.pk)
+          if self.is_responder or self.is_inquirer:
+               if self.chatroom.inquirer_is_online:
+                    self.online_participants.append(self.inquirer.pk)
+               elif self.chatroom.responder_is_online:
+                    self.online_participants.append(self.responder.pk)
           return self.is_inquirer, self.is_responder, self.is_member
      
      @database_sync_to_async
