@@ -64,19 +64,13 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           instance.save()
      
      @database_sync_to_async
-     def get_unread_cnt(self):
+     def get_total_unread_cnt(self):
           private_unread_cnt = PrivateChatParticipant.objects.filter(user=self.user).aggregate(private_unread_cnt=Sum('unread_cnt'))['private_unread_cnt'] or 0
           team_unread_cnt = TeamChatParticipant.objects.filter(user=self.user, member__isnull=False).aggregate(team_unread_cnt=Sum('unread_cnt'))['team_unread_cnt'] or 0
           inquirer_unread_cnt = InquiryChatRoom.objects.filter(inquirer=self.user).aggregate(inquirer_unread_cnt=Sum('inquirer_unread_cnt'))['inquirer_unread_cnt'] or 0
           responder_unread_cnt = InquiryChatRoom.objects.filter(team__permission__responder=self.user).aggregate(responder_unread_cnt=Sum('responder_unread_cnt'))['responder_unread_cnt'] or 0
           
-          unread_cnt = {
-               'all': private_unread_cnt + team_unread_cnt + inquirer_unread_cnt + responder_unread_cnt,
-               'private': private_unread_cnt,
-               'team': team_unread_cnt,
-               'inquiry': inquirer_unread_cnt + responder_unread_cnt
-          }
-          return unread_cnt
+          return private_unread_cnt + team_unread_cnt + inquirer_unread_cnt + responder_unread_cnt
      
      @database_sync_to_async
      @transaction.atomic
@@ -137,7 +131,8 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           self.chat_type = 'all'
           self.team_id = 0
           self.filter = 'all'
-          self.unread_cnt = await self.get_unread_cnt()
+          # self.unread_cnt = await self.get_unread_cnt()
+          self.total_unread_cnt = await self.get_total_unread_cnt()
 
           await self.channel_layer.group_add(self.name, self.channel_name)
           await self.accept()
@@ -168,7 +163,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           self.filter = data.get("filter", self.team_id)
           
           if self.chat_type == 'all':
-               await self.send_message('update_total_unread_cnt', {'cnt': self.unread_cnt['all']})
+               await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
           else:
                await self.send_chatroom_list(self.chat_type)
 
@@ -207,10 +202,10 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           filter = event.get('filter', self.filter)
           
           if update_unread_cnt:
-               await self.update_unread_cnt(chat_type)
+               self.total_unread_cnt += 1
      
           if self.chat_type == 'all':
-               await self.send_message('update_total_unread_cnt', {'cnt': self.unread_cnt['all']})
+               await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
           elif self.chat_type == chat_type and self.team_id == team_id and (self.filter in (filter, 'all')):
                await self.send_message('update_chatroom', message)
                
@@ -226,12 +221,6 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
           message = await self.commands[f'fetch_{chat_type}_chatrooms'](self)
           await self.send_message(type, message)
      
-     async def update_unread_cnt(self, chat_type):
-          self.unread_cnt['all'] += 1
-          self.unread_cnt[chat_type] += 1
-          if self.chat_type != 'all':
-               await self.send_message(f'update_{chat_type}_unread_cnt', {'cnt': self.unread_cnt[chat_type]})
-               
 ######################################################################
 class TeamInquiryStatusConsumer(AsyncWebsocketConsumer):
      async def connect(self):
