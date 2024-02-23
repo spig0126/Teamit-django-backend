@@ -7,7 +7,7 @@ from asgiref.sync import async_to_sync
 from .models import TeamPermission, TeamMembers, Team
 from chat.models import TeamChatRoom, TeamChatParticipant, InquiryChatRoom
 from user.models import User
-from chat.serializers import TeamMessageCreateSerialzier, TeamMessageSerializer, InquiryMessageCreateSeriazlier, InquiryMessageSerializer
+from chat.serializers import InquiryMessageCreateSeriazlier, InquiryMessageSerializer
 
 
 @receiver(pre_delete, sender=User)
@@ -85,26 +85,6 @@ def add_new_member_to_all_chatroom(sender, instance, created, **kwargs):
                          member=instance
                     )
                
-               # 팀장이 아닌 새로운 멤버가 채팅방에 들어올 경우
-               if chatroom.participants.count() > 1:
-                    channel_layer = get_channel_layer()
-                    chatroom_name = f"team_chat_{chatroom.id}"
-                    announcement = {
-                         'chatroom': chatroom.id,
-                         'content': f'{instance.user} / {instance.position} 님이 입장했습니다',
-                         'is_msg': False
-                    }
-                    serializer = TeamMessageCreateSerialzier(data=announcement)
-                    serializer.is_valid(raise_exception=True)
-                    message_instance = serializer.save()
-                    message = TeamMessageSerializer(message_instance, context={'unread_cnt': 0}).data
-                    async_to_sync(channel_layer.group_send)(
-                         chatroom_name,
-                         {
-                              "type": "msg",
-                              "message": message
-                         }
-                    )
                     
 ################ utilities ############################
 def send_inquiry_chatroom_announcement(chatroom, content):
