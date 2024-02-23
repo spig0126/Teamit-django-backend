@@ -157,5 +157,5 @@ class TeamLike(models.Model):
      
 class TeamPermission(models.Model):
      team = models.OneToOneField(Team, related_name="permission", primary_key=True, on_delete=models.CASCADE)
-     responder = models.ForeignKey(User, related_name="responder", on_delete=models.SET_NULL, null=True)
+     responder = models.ForeignKey(User, related_name="responder", on_delete=models.CASCADE, null=True)
      

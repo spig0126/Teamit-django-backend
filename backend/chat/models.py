@@ -178,7 +178,7 @@ class TeamChatRoom(models.Model):
      background = models.CharField(default='0xff00FFD1', max_length=10)
      created_at = models.DateTimeField(auto_now_add=True)
      updated_at = models.DateTimeField(auto_now=True)
-     last_msg = models.CharField(max_length=255)
+     last_msg = models.CharField(max_length=255, default='')
      participants = models.ManyToManyField(
           User, 
           through="TeamChatParticipant"
