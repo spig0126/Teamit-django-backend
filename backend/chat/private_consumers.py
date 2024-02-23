@@ -5,6 +5,7 @@ from channels.db import database_sync_to_async
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
+from django.db.models import F
 
 from .models import *
 from .serializers import*
@@ -30,8 +31,8 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           await self.join_chatroom()
 
      async def disconnect(self, close_code):
+          await self.send_user_status_reset_message()
           await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
-          await self.send_user_status_reset_message(self)
           await self.mark_as_offline()
           await self.close()
           
@@ -52,7 +53,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           elif type == 'settings':
                await self.handle_settings()
           elif type == 'update_chatroom_name':
-               await self.handle_udpate_chatroom_name(message)
+               await self.handle_update_chatroom_name(message)
           
      #---------------------handle related---------------
      async def handle_message(self, message):
@@ -94,12 +95,27 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                'alarm_on': alarm_on
           }
           await self.send_message(type, message)
+          
+     async def handle_update_chatroom_name(self, new_chatroom_name):
+          await self.update_chatroom_name(new_chatroom_name)
+          status_message = await self.create_status_message({
+               'name': new_chatroom_name,
+               'update_unread_cnt': False
+          })
+          message_info = {
+               'type': 'msg', 
+               'chat_type': 'private',
+               'message': status_message
+          }
+          
+          for user in self.participants:
+               await self.channel_layer.group_send(
+                    f'status_{user}', 
+                    message_info
+               ) 
+          
+          
 
-     async def handle_udpate_chatroom_name(self, message):
-          await self.update_chatroom_name(message)
-          
-          
-          
      #----------------EVENT RELATED------------------------------------
      async def online(self, event):
           user = event['message'].get('user', None)
@@ -164,14 +180,10 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                await self.update_this_participant_offline()
           
      async def send_user_status_message(self, message):
-          status_message = {
-               'id': self.chatroom_id,
-               'name': '',
-               'avatar': '',
-               'background': '',
+          status_message = await self.create_status_message({
                'last_msg': message.get('content'),
                'updated_at': message.get('timestamp'),
-          }
+          })
           message_info = {
                'type': 'msg', 
                'chat_type': 'private',
@@ -187,7 +199,18 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                )
                
      async def send_user_status_reset_message(self):
-          status_message = {
+          status_message = await self.create_status_message({})
+          await self.channel_layer.group_send(
+               f'status_{self.user.pk}',
+               {
+                    "type": "msg", 
+                    "chat_type": "private", 
+                    "message": status_message}
+          )
+     
+          
+     async def create_status_message(self, updates):
+          base = {
                'id': self.chatroom_id,
                'name': '',
                'avatar': '',
@@ -196,18 +219,12 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                'updated_at': '',
                'update_unread_cnt': None
           }
-
-          await self.channel_layer.group_send(
-               f'status_{self.user.pk}',
-               {
-                    "type": "msg", 
-                    "chat_type": "private", 
-                    "message": status_message}
-          )
+          status_mesage = {key: updates.get(key, base.get(key)) for key in base}
+          return status_mesage
           
      #----------------DATABASE RELATED------------------------------------
      @database_sync_to_async
-     def udpate_chatroom_name(self, chatroom_name):
+     def update_chatroom_name(self, chatroom_name):
           self.this_participant.custom_name = chatroom_name
           self.this_participant.save()
      
@@ -247,8 +264,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      def update_offline_participant_unread_cnt(self):
           if not self.other_participant.is_online:
-               self.other_participant.unread_cnt += 1
-               self.other_participant.save()
+               PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).exclude(user=self.user).update(unread_cnt=F('unread_cnt')+1)
      
      @database_sync_to_async
      @transaction.atomic
@@ -315,4 +331,3 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt+30]
           self.loaded_cnt += 30
           return PrivateMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
-   
