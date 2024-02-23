@@ -54,6 +54,14 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                await self.handle_settings()
           elif type == 'update_alarm_status':
                await self.update_alarm_status()
+          elif type == 'update_chatroom_background':
+               await self.handle_update_chatroom_background(message)
+          elif type == 'update_chatroom_name':
+               await self.handle_update_chatroom_name(message)
+          elif type == "fetch_non_participants":
+               await self.handle_fetch_non_participants()
+          elif type == 'invite_members':
+               await self.handle_invite_members(message)
      
      #------------------handle related----------------------
      async def handle_message(self, message):
@@ -66,9 +74,9 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           message = await self.create_message(msg_details)
           await self.update_chatroom_last_msg(message['content'])
           await self.send_group_message('msg', message)
-          await self.send_user_status_message(message)
-          await self.update_send_user_status_message_participant_unread_cnt()
-     
+          await self.send_user_status_new_message(message)
+          await self.update_offline_participant_unread_cnt()
+          
      async def handle_enter(self, message):
           announcement = {
                'chatroom': self.chatroom_id,
@@ -104,6 +112,20 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                'alarm_on': alarm_on
           }
           await self.send_message(type, message)
+          
+     async def handle_update_chatroom_background(self, new_background):
+          await self.update_chatroom_background(new_background)
+          status_message = await self.create_status_message({'background': new_background})
+          await self.send_user_status_this_message(status_message)
+          
+     async def handle_update_chatroom_name(self, new_name):
+          await self.update_chatroom_name(new_name)
+          status_message = await self.create_status_message({'name': new_name})
+          await self.send_user_status_this_message(status_message)
+     
+     async def handle_fetch_non_participants(self):
+          non_participants = await self.get_non_participants()
+          await self.send_message('non_participant_list', non_participants)
           
      #------------------event related-----------------------
      async def online(self, event):
@@ -179,16 +201,24 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           message = await self.get_last_30_messages()
           await self.send_message('history', message)
      
-     async def send_user_status_message(self, message):
-          status_message = {
-               'id': self.chatroom_id,
-               'name': '',
-               'avatar': '',
-               'background': '',
+     async def send_user_status_this_message(self, status_message):
+          for user in self.participants:
+               await self.channel_layer.group_send(
+                    f'status_{user}',
+                    {
+                         "type": "msg", 
+                         "chat_type": "team", 
+                         "team_id": self.team_pk,
+                         "message": status_message
+                    }
+               )
+               
+     async def send_user_status_new_message(self, message):
+          status_message = await self.create_status_message({
                'last_msg': message['content'],
-               'updated_at': message['timestamp'],
-          }
-          
+               'updated_at': message['timestamp']
+          })
+
           for user in self.participants:
                status_message['update_unread_cnt'] = (user not in self.online_participants)
                await self.channel_layer.group_send(
@@ -201,15 +231,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                )
                
      async def send_user_status_reset_message(self):
-          status_message = {
-               'id': self.chatroom_id,
-               'name': self.chatroom.name,
-               'avatar': '',
-               'background': self.chatroom.background,
-               'last_msg': '',
-               'updated_at': '',
-               'update_unread_cnt': None
-          }
+          status_message = await self.create_status_message({})
 
           await self.channel_layer.group_send(
                f'status_{self.user.pk}',
@@ -219,8 +241,38 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                     "team_id": self.team_pk,
                     "message": status_message}
           )
+     
+     async def create_status_message(self, updates):
+          base = {
+               'id': self.chatroom_id,
+               'name': '',
+               'avatar': '',
+               'background': '',
+               'last_msg': '',
+               'updated_at': '',
+               'update_unread_cnt': None
+          }
+          status_mesage = {key: updates.get(key, base.get(key)) for key in base}
+          return status_mesage
           
-     #------------------DB related-----------------------
+          
+     #------------------DB related-----------------------\
+     @database_sync_to_async
+     def get_non_participants(self):
+          participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, member__isnull=False).values_list('member', flat=True)
+          non_participants = TeamMembers.objects.filter(team=self.team_pk).exclude(id__in=participants).order_by('user__name')
+          return TeamMemberDetailSerializer(non_participants, many=True).data
+
+     @database_sync_to_async
+     def update_chatroom_background(self, new_background):
+          self.chatroom.background = new_background
+          self.chatroom.save()
+          
+     @database_sync_to_async
+     def update_chatroom_name(self, new_name):
+          self.chatroom.name = new_name
+          self.chatroom.save()
+          
      @database_sync_to_async
      def update_alarm_status(self):
           self.this_participant.alarm_on = not self.this_participant.alarm_on 
@@ -266,7 +318,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      @transaction.atomic
      def update_offline_participant_unread_cnt(self):
-          TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).update(unread_cnt=F('unread_cnt')+1)
+          TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).exclude(user=self.user).update(unread_cnt=F('unread_cnt')+1)
      
      @database_sync_to_async
      def update_participant_info(self):
