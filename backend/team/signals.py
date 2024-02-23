@@ -5,16 +5,27 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 from .models import TeamPermission, TeamMembers, Team
-from chat.models import TeamChatRoom, TeamChatParticipant
+from chat.models import TeamChatRoom, TeamChatParticipant, InquiryChatRoom
 from user.models import User
-from chat.serializers import TeamMessageCreateSerialzier, TeamMessageSerializer
+from chat.serializers import TeamMessageCreateSerialzier, TeamMessageSerializer, InquiryMessageCreateSeriazlier, InquiryMessageSerializer
+
 
 @receiver(pre_delete, sender=User)
 def handle_user_pre_delete(sender, instance, **kwargs):
      change_team_creator_when_user(instance)
-     update_team_permissions(instance)
      instance.delete()
 
+@receiver(pre_delete, sender=TeamMembers)
+def handle_team_member_pre_delete(sender, instance, **kwargs):
+     update_team_permissions_for_member(instance)
+
+@receiver(post_save, sender=Team)
+def handle_team_create(sender, instance, created, **kwargs):
+     if created:
+          create_team_permission(instance)
+          create_team_all_chatroom(instance)
+
+################## team permissions related #################################
 
 def change_team_creator_when_user(user):
      '''
@@ -28,29 +39,38 @@ def change_team_creator_when_user(user):
                     team.creator = other_member_user
                     team.save()
 
-
-def update_team_permissions(user):
+def update_team_permissions_for_member(member):
      '''
-     탈퇴한 사용자가 responder일 경우 -> responder를 팀장으로 바꾸기
+     탈퇴한 멤버가 responder일 경우 -> responder를 팀장으로 바꾸기
      '''
-     with transaction.atomic():
-          permissions = TeamPermission.objects.filter(responder=user)
-          for permission in permissions:
-               permission.responder = permission.team.creator
-               permission.save()
+     team = member.team
+     permission = team.permission
+     if permission.responder == member.user:
+          permission.responder = team.creator
+          permission.save()
 
-################################################################
-
-@receiver(post_save, sender=Team)
-def create_team_all_chatroom(sender, instance, created, **kwargs):
-     if created:
+@receiver(post_save, sender=TeamPermission)
+def alert_responder_change(sender, instance, created, **kwargs):
+     if not created:
           with transaction.atomic():
-               TeamChatRoom.objects.create(
-                    team=instance, 
-                    name='전체방', 
-                    background='0xff00FFD1'
-               )
-               
+               chatrooms = InquiryChatRoom.objects.filter(team=instance.team)
+               for chatroom in chatrooms:
+                    send_inquiry_chatroom_announcement(chatroom, '문의자가 변경되었습니다')
+                    
+def create_team_permission(team):
+     TeamPermission.objects.create(team=team, responder=team.creator)
+          
+############### default team chatroom related ########################
+
+
+def create_team_all_chatroom(team):
+     with transaction.atomic():
+          TeamChatRoom.objects.create(
+               team=team, 
+               name='전체방', 
+               background='0xff00FFD1'
+          )
+          
 @receiver(post_save, sender=TeamMembers)
 def add_new_member_to_all_chatroom(sender, instance, created, **kwargs):
      if created:
@@ -59,11 +79,11 @@ def add_new_member_to_all_chatroom(sender, instance, created, **kwargs):
                
                # 새로운 멤버가 채팅방에 들어올 경ㅇ
                if not chatroom.participants.filter(pk=instance.user.pk).exists():
-                    print(TeamChatParticipant.objects.create(
+                    TeamChatParticipant.objects.create(
                          chatroom=chatroom,
                          user=instance.user,
                          member=instance
-                    ))
+                    )
                
                # 팀장이 아닌 새로운 멤버가 채팅방에 들어올 경우
                if chatroom.participants.count() > 1:
@@ -85,3 +105,25 @@ def add_new_member_to_all_chatroom(sender, instance, created, **kwargs):
                               "message": message
                          }
                     )
+                    
+################ utilities ############################
+def send_inquiry_chatroom_announcement(chatroom, content):
+     with transaction.atomic():
+          channel_layer = get_channel_layer()
+          chatroom_name = f"inquiry_chat_{chatroom.id}"
+          announcement = {
+               'chatroom': chatroom.id,
+               'content': content,
+               'is_msg': False
+          }
+          serializer = InquiryMessageCreateSeriazlier(data=announcement)
+          serializer.is_valid(raise_exception=True)
+          message_instance = serializer.save()
+          message =  InquiryMessageSerializer(message_instance).data
+          async_to_sync(channel_layer.group_send)(
+               chatroom_name,
+               {
+                    "type": "msg",
+                    "message": message
+               }
+          )
