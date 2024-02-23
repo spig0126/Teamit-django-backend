@@ -32,7 +32,7 @@ class PrivateChatParticipant(models.Model):
      @property
      def chatroom_name(self):
           if self.custom_name is None:
-               other_user = self.chatroom.participants.exclude(user=self.user).first()
+               other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
                if other_user is None:
                     return '(알 수 없음)'
                return other_user.name
