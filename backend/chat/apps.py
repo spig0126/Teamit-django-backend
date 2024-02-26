@@ -1,8 +1,9 @@
 from django.apps import AppConfig
 
-class TeamConfig(AppConfig):
+
+class ChatConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "team"
+    name = "chat"
     
     def ready(self):
         from . import signals

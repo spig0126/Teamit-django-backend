@@ -7,15 +7,14 @@ import os
 TEAM_MODEL = 'team.Team'
 
 # Initialize Firebase Admin SDK
-CONFIG_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-firebase_credentials_path = os.path.join(CONFIG_BASE_DIR, 'firebase-credentials.json')
+CONFIG_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+firebase_credentials_path = os.path.join(CONFIG_BASE_DIR, '.config', 'firebase-credentials.json')
 
 cred = credentials.Certificate(firebase_credentials_path)
 firebase_admin.initialize_app(cred)
 
 # Load variables from .env file
-ENV_FILE_PATH = os.path.join(CONFIG_BASE_DIR, '.config', '.env') 
+ENV_FILE_PATH = os.path.join(CONFIG_BASE_DIR, '.env') 
 config = AutoConfig(search_path=ENV_FILE_PATH)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +27,7 @@ CORS_ALLOW_CREDENTIALS = True
 # Application definition
 INSTALLED_APPS = [
     "rest_framework",
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     "report",
     "search",
     "corsheaders",
+    "chat",
+    "badge",
 ]
 
 MIDDLEWARE = [
@@ -88,14 +90,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "home.wsgi.application"
 
+ASGI_APPLICATION = "home.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        }
+    }
+}
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("RDS_NAME"),
-        "USER": config("RDS_USER"),
-        "PASSWORD": config("RDS_PASSWORD"),
-        "HOST": config("RDS_HOST"),
+        "NAME": "teamhapso_db",
+        "USER": "teamhapso",
+        "PASSWORD": "teamhapso_pwd",
+        "HOST": "localhost",
         "PORT": "5432",
+        # "NAME": config("RDS_NAME"),
+        # "USER": config("RDS_USER"),
+        # "PASSWORD": config("RDS_PASSWORD"),
+        # "HOST": config("RDS_HOST"),
+        # "PORT": "5432",
     }
 }
 
@@ -143,3 +160,7 @@ ALGOLIA = {
     'API_KEY': config('API_KEY')
 }
 
+# Celery Settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

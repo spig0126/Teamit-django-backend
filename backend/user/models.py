@@ -24,6 +24,7 @@ class User(models.Model):
      id = models.AutoField(primary_key=True)
      uid = models.CharField(max_length=128, default='')
      name = models.CharField(max_length=20, unique=True)
+     last_login_time = models.DateTimeField(auto_now=True)
      interests = models.ManyToManyField(
           Interest,
           related_name="users"
