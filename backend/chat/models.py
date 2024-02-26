@@ -40,14 +40,14 @@ class PrivateChatParticipant(models.Model):
      
      @property
      def avatar(self):
-          other_user = self.chatroom.participants.exclude(user=self.user).first()
+          other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
           if other_user is None:
                return default_storage.url('avatars/default.png')
           return other_user.avatar.url
      
      @property
      def background(self):
-          other_user = self.chatroom.participants.exclude(user=self.user).first()
+          other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
           if other_user is None:
                return ''
           return other_user.background.url
