@@ -11,6 +11,7 @@ from django.db.models import Case, When, Value, IntegerField
 from .models import *
 from .serializers import*
 from team.serializers import TeamMemberDetailSerializer
+from fcm_notification.tasks import send_fcm_to_user_task
 
 class TeamChatConsumer(AsyncWebsocketConsumer):
      async def connect(self):
@@ -75,6 +76,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           await self.update_chatroom_last_msg(message['content'])
           await self.send_group_message('msg', message)
           await self.send_user_status_new_message(message)
+          await self.send_offline_participants_fcm(message)
           await self.update_offline_participant_unread_cnt()
           
      async def handle_enter(self, message):
@@ -87,19 +89,10 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           await self.send_group_message('enter', message)
      
      async def handle_exit(self, message):
+          await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
           chatroom_active = await self.remove_this_participant_from_chatroom()
           if not chatroom_active:
                await self.delete_chatroom()
-          else:
-               await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
-               
-               announcement = {
-                    'chatroom': self.chatroom_id,
-                    'content': f'{message["name"]} / {message["position"]} 님이 퇴장했습니다',
-                    'is_msg': False
-               }
-               message = await self.create_message(announcement)
-               await self.send_group_message('exit', message)
           await self.close()
      
      async def handle_settings(self):
@@ -158,6 +151,20 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           await self.send_message(event['type'], event['message'])
           
      #------------------utility related-----------------------
+     async def send_offline_participants_fcm(self, message):
+          title = self.chatroom.name
+          body = message['content']
+          data = {
+               'page': 'chat',
+               'chatroom_name': title,
+               'chatroom_id': str(self.chatroom_id),
+               'chat_type': 'team'
+          }
+          
+          offline_participants = set(self.participants) - set(self.online_participants)
+          for op in offline_participants:
+               send_fcm_to_user_task.delay(op, title, body, data)
+     
      async def mark_as_online(self):
           '''
           Alerts the frontend of 'online' status and updates participant info.

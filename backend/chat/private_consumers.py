@@ -10,6 +10,7 @@ from django.db.models import F
 from .models import *
 from .serializers import*
 from user.serializers import UserSimpleDetailSerializer
+from fcm_notification.tasks import send_fcm_to_user_task
 
 class PrivateChatConsumer(AsyncWebsocketConsumer):
      async def connect(self):
@@ -67,6 +68,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           await self.send_group_message('msg', message)
           await self.send_user_status_message(message)
           await self.update_offline_participant_unread_cnt()
+          await self.send_offline_participants_fcm(message)
           
      async def handle_exit(self):
           chatroom_active = await self.remove_this_participant_from_chatroom()
@@ -139,6 +141,19 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           await self.update_participant_info()
           
      #----------------UTILITY FUNCTIONS---------------------------------
+     async def send_offline_participants_fcm(self, message):
+          if await self.other_participant_was_offline():
+               chatroom_name, user_pk = await self.get_other_participant_info()
+               title = chatroom_name
+               body = message['content']
+               data = {
+                    'page': 'chat',
+                    'chatroom_name': title,
+                    'chatroom_id': str(self.chatroom_id),
+                    'chat_type': 'private'
+               }
+               send_fcm_to_user_task.delay(user_pk, title, body, data)
+               
      async def send_message(self, type, message):
           await self.send(text_data=json.dumps({
                'type': type,
@@ -309,6 +324,14 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      def this_participant_was_offline(self):
           return not self.this_participant.is_online
+     
+     @database_sync_to_async
+     def other_participant_was_offline(self):
+          return not self.other_participant.is_online
+     
+     @database_sync_to_async
+     def get_other_participant_info(self):
+          return self.other_participant.chatroom_name, self.other_participant.user.pk
      
      @database_sync_to_async
      def get_chatroom_and_participants_info(self):

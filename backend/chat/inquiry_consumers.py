@@ -9,6 +9,7 @@ from .models import *
 from .serializers import*
 from team.serializers import TeamBasicDetailForChatSerializer
 from user.serializers import UserSimpleDetailSerializer
+from fcm_notification.tasks import send_fcm_to_user_task
 
 class InquiryChatConsumer(AsyncWebsocketConsumer):
      async def connect(self):
@@ -66,6 +67,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           await self.update_chatroom_last_msg(message['content'])
           await self.send_group_message('msg', message)
           await self.send_status_message(message)
+          await self.send_offline_participants_fcm(message)
           await self.update_unread_cnt()
      
      async def handle_exit(self):
@@ -119,6 +121,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      async def exit(self, event):
           await self.send_message('msg', event['message'])
           await self.update_participant_info()
+     
+     async def enter(self, event):
+          await self.send_message('msg', event['message'])
+          await self.update_participant_info()
           
      #----------------utility related-------------------
      async def send_status_message(self, message):
@@ -139,7 +145,6 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           }
           
           for user in [self.inquirer, self.responder]:
-               print(self.online_participants)
                status_message['update_unread_cnt'] = (user.pk not in self.online_participants)
                channel_name = f'status_{user.pk}'
                await self.channel_layer.group_send(
@@ -226,6 +231,21 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           
      
      #----------------DB related------------------------
+     @database_sync_to_async
+     def send_offline_participants_fcm(self, message):
+          title = self.team_name if self.is_inquirer else f'{self.team_name} > {self.inquirer.name}'
+          body = message['content']
+          data = {
+               'page': 'chat',
+               'chatroom_name': title,
+               'chatroom_id': str(self.chatroom_id),
+               'chat_type': 'inquiry'
+          }
+          if self.is_responder and not self.chatroom.inquirer_is_online:
+               send_fcm_to_user_task.delay(self.inquirer.pk, title, body, data)
+          elif self.is_inquirer and not self.chatroom.responder_is_online:
+               send_fcm_to_user_task.delay(self.responder.pk, title, body, data)
+     
      @database_sync_to_async
      def update_alarm_status(self):
           if self.is_responder:
@@ -330,6 +350,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      def get_chatroom_and_participants_info(self):
           self.chatroom = InquiryChatRoom.objects.get(pk=self.chatroom_id)
           self.team_pk = self.chatroom.team.pk
+          self.team_name = self.chatroom.team.name
           
           self.inquirer = self.chatroom.inquirer
           self.responder = self.chatroom.team.responder
