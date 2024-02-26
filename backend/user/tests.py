@@ -8,7 +8,24 @@ from rest_framework import status
 
 class FirebaseTokenGenerationTestCase(TestCase):
      def test_custom_token_authentication(self):
-          uid = "OpEcOs2Z64R8tNnYUFmiGMJK3Yv1"
+          # 게더어스 운영진
+          # uid = "g9qugqRFCogETrmpy7POSoluqIC2"
+          # 부루정
+          uid = "NecKBhN131PSsPuRfCVg1vDKjW03"
+          # 그레기
+          # uid = "JzlLAqlqOvPLAS2rwjKGrnCxE572"
+          # 래빗
+          # uid = "PsnFOUnlyJMFrd1uIX28EXdVA8g1"
+          # 여니여니
+          # uid = "oL9UK4B2wVQ7OYhTXdk3kwFP7Q02"
+          # 티미_065
+          # uid = "8jTawiVplrR1yGlqS4xTKPWEbuC2"
+          # 개발자
+          # uid = "kakao:3228496673"
+          # 루루사탕
+          # uid = "naver:NGf1vHub8F_xZ7LCJWnjIJWNPhAx0onfkb9qZ7s74KM"
+          # 하이롱
+          # uid = "kakao:3288498763"
 
           api_key = 'AIzaSyBVWm8Frug_qriTsokbIt3Ca2pVz7bkXe0'
           # Generate a custom ID token for the specified user
