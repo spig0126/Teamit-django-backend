@@ -28,7 +28,7 @@ def fetch_user_info(access_token, login_type):
           headers = {
                "Authorization": f"Bearer {access_token}"
           }
-      
+
      response = requests.get(api_url, headers=headers)
      user_info = None
      
