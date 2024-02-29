@@ -51,7 +51,7 @@ class BadeDetailSerializer(serializers.ModelSerializer):
                if field_name == 'user':
                     result[field_name] = value
                     continue
-               badge_name = field_name.split('_')[0]
+               badge_name = '_'.join(field_name.split('_')[:-1])
                result[badge_name] = {
                     'title': BADGE_TITLES[badge_name],
                     'subtitle': BADGE_SUBTITLES[badge_name],
