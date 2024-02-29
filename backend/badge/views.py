@@ -20,7 +20,10 @@ class UpdateUserLastLoginTimeAPIView(APIView):
           now = timezone.now()
           
           if badge.attendance_level < 3:
-               if user.last_login.date() < now.date():
+               if (now - user.last_login).days > 1:
+                    badge.attendance_cnt = 0
+                    badge.save()
+               elif (now - user.last_login).days == 1:
                     badge.attendance_cnt += 1
                     badge.save()
                # badge가 몇개면 fcm 보내기 
