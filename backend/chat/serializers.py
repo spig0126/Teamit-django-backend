@@ -142,8 +142,59 @@ class InquiryChatRoomCreateSerializer(serializers.ModelSerializer):
      
      def to_representation(self, instance):
           return {'chatroom_id': instance.id}
-          
+
 class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
+     unread_cnt = serializers.SerializerMethodField()
+     avatar = serializers.SerializerMethodField()
+     background = serializers.SerializerMethodField()
+     name = serializers.SerializerMethodField()
+     alarm_on = serializers.SerializerMethodField()
+     
+     class Meta:
+          model = InquiryChatRoom
+          fields = [
+               'id',
+               'name',
+               'avatar',
+               'background',
+               'last_msg',
+               'unread_cnt',
+               'updated_at',
+               'alarm_on'
+          ]
+     
+     def get_unread_cnt(self, instance):
+          if self.context['user'] == instance.inquirer:
+               return instance.inquirer_unread_cnt
+          else:
+               return instance.responder_unread_cnt
+          
+     def get_avatar(self, instance):
+          if self.context['user'] == instance.inquirer:
+               return instance.team.image.url or default_storage.url('teams/default.png')
+          return instance.inquirer.avatar.url or default_storage.url('avatars/default.png')
+     
+     def get_background(self, instance):
+          if self.context['user'] == instance.inquirer:
+               return ''
+          return instance.inquirer.background.url or ''
+     
+     def get_name(self, instance):
+          team_name = instance.team.name
+          inquirer_name = instance.inquirer.name
+          
+          if self.context['user'] == instance.inquirer:
+               return team_name
+          else:
+               return f'{team_name} > {inquirer_name}'
+     
+     def get_alarm_on(self, instance):
+          if self.context['user'] == instance.inquirer:
+               return instance.inquirer_alarm_on
+          else:
+               return instance.responder_alarm_on
+          
+class InquiryChatRoomWithTypeDetailSerializer(serializers.ModelSerializer):
      type = serializers.SerializerMethodField()
      unread_cnt = serializers.SerializerMethodField()
      avatar = serializers.SerializerMethodField()
@@ -176,21 +227,15 @@ class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
           
      def get_avatar(self, instance):
           if self.context['type'] == 'inquirer':
-               if instance.team is None:
-                    return default_storage.url('teams/default.png')
-               return instance.team.image.url
+               return instance.team.image.url or default_storage.url('teams/default.png')
           else:
-               if instance.inquirer is None:
-                    return default_storage.url('avatars/default.png')
-               return instance.inquirer.avatar.url
+               return instance.inquirer.avatar.url or default_storage.url('avatars/default.png')
      
      def get_background(self, instance):
           if self.context['type'] == 'inquirer':
                return ''
           else:
-               if instance.inquirer is None:
-                    return ''
-               return instance.inquirer.background.url
+               return instance.inquirer.background.url or ''
      
      def get_name(self, instance):
           team_name = instance.team.name

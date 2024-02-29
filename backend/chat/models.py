@@ -16,6 +16,11 @@ class PrivateChatRoom(models.Model):
           through="PrivateChatParticipant",
           related_name="private_chat_rooms"
      )
+     
+     @property
+     def participant_names(self):
+          return ', '.join([str(user) for user in self.participants.all()])
+     
      class Meta:
           ordering = ['-updated_at']
           
@@ -29,28 +34,47 @@ class PrivateChatParticipant(models.Model):
      is_online = models.BooleanField(default=False)
      last_read_time = models.DateTimeField(auto_now=True)
      
-     @property
-     def chatroom_name(self):
-          if self.custom_name is None:
-               other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
-               if other_user is None:
-                    return '(알 수 없음)'
-               return other_user.name
-          return self.custom_name
+     def __init__(self, *args, **kwargs):
+          super().__init__(*args, **kwargs)
+          self._other_user = None
+     
+     def _get_other_user(self):
+          if self._other_user is None:
+               self._other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
+          return self._other_user
      
      @property
+     def user_pk(self):
+          return self.user.pk
+     
+     @property
+     def chatroom_pk(self):
+          return self.chatroom.pk
+     
+     @property
+     def other_user_pk(self):
+          other_user = self._get_other_user()
+          return other_user.pk
+     
+     @property
+     def other_user_name(self):
+          other_user = self._get_other_user()
+          return other_user.name or '(알 수 없음)'
+     
+     @property
+     def chatroom_name(self):
+          return self.custom_name or self.other_user_name
+
+     @property
      def avatar(self):
-          other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
-          if other_user is None:
-               return default_storage.url('avatars/default.png')
-          return other_user.avatar.url
+          other_user = self._get_other_user()
+          return other_user.avatar.url or default_storage.url('avatars/default.png')
      
      @property
      def background(self):
-          other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
-          if other_user is None:
-               return ''
-          return other_user.background.url
+          other_user = self._get_other_user()
+
+          return other_user.background.url or ''
      
      @property
      def updated_at(self):
@@ -120,10 +144,50 @@ class InquiryChatRoom(models.Model):
      # responder_last_read_time = models.DateTimeField(auto_now_add=True)
      
      @property
+     def inquirer_chatroom_name(self):
+          return self.team.name
+     
+     @property
+     def responder_chatroom_name(self):
+          return self.team.name + ' > ' + self.inquirer.name
+     
+     @property
+     def inquirer_avatar(self):
+          return self.inquirer.avatar.url
+     
+     @property
+     def team_image(self):
+          return self.team.image.url
+     
+     @property
+     def team_background(self):
+          return ''
+     
+     @property
+     def inquirer_background(self):
+          return self.inquirer.background.url
+
+     @property
      def responder(self):
-          if self.team is None:
-               return None
-          return self.team.responder
+          return self.team.responder or None
+     
+     @property
+     def inquirer_name(self):
+          return self.inquirer.name
+     
+     @property
+     def responder_pk(self):
+          return self.team.responder.pk
+     
+     @property
+     def inquirer_pk(self):
+          return self.inquirer.pk
+     
+     @property
+     def team_name(self):
+          return self.team.name
+     
+     
      class Meta:
           ordering = ['-updated_at']
 
@@ -184,6 +248,10 @@ class TeamChatRoom(models.Model):
           through="TeamChatParticipant"
      )
      
+     @property
+     def participant_names(self):
+          return ', '.join([str(user) for user in self.participants.all()])
+     
      class Meta:
           ordering = ['-updated_at']
 
@@ -196,6 +264,42 @@ class TeamChatParticipant(models.Model):
      last_read_time = models.DateTimeField(auto_now=True)
      unread_cnt = models.PositiveIntegerField(default=0)
      alarm_on = models.BooleanField(default=True)
+     
+     @property
+     def chatroom_pk(self):
+          return self.chatroom.pk
+     
+     @property
+     def chatroom_name(self):
+          return self.chatroom.name
+     
+     @property
+     def chatroom_avatar(self):
+          return ''
+     
+     @property
+     def chatroom_last_msg(self):
+          return self.chatroom.last_msg
+     
+     @property
+     def chatroom_updated_at(self):
+          return self.chatroom.updated_at
+     
+     @property
+     def chatroom_background(self):
+          return self.chatroom.background
+     
+     @property
+     def other_participant_names(self):
+          return self.chatroom.participant_names
+     
+     @property
+     def user_pk(self):
+          return self.user.pk
+     
+     @property
+     def team_name(self):
+          return self.chatroom.team.name
      
      @property
      def name(self):
