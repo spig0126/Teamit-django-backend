@@ -22,6 +22,7 @@ from notification.models import *
 from position.models import Position
 from fcm_notification.utils import send_fcm_to_user, send_fcm_to_team
 from home.utilities import delete_s3_folder
+from user.utils import get_user_by_name
 
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
@@ -564,6 +565,22 @@ class TeamPermissionUpdateAPIView(generics.UpdateAPIView):
           
      def get_object(self):
           return TeamPermission.objects.get(team=self.team)
+     
+@permission_classes([IsTeamCreatorPermission])
+class UpdateTeamCreatorAPIView(APIView):
+     def initial(self, request, *args, **kwargs):
+          self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          super().initial(request, *args, **kwargs)
+     
+     def patch(self, request, *args, **kwargs):
+          member = get_member_by_pk(kwargs.get('member_pk'))
+          user = member.user
+          if not self.team.members.filter(pk=user.pk).exists():
+               return Response({'detail': 'only team member can be team creator'}, status=status.HTTP_403_FORBIDDEN)
+          self.team.creator = user
+          self.team.save()
+          return Response(status=status.HTTP_200_OK)
+     
 # search api
 class TeamSearchAPIView(generics.ListAPIView):
      serializer_class = SearchedTeamDetailSerializer

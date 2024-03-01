@@ -15,3 +15,9 @@ def get_member_by_team_and_user(team, user):
         return TeamMembers.objects.get(team=team, user=user)
     except TeamMembers.DoesNotExist:
         raise TeamMemberNotFound()
+
+def get_member_by_pk(pk):
+    try:
+        return TeamMembers.objects.get(pk=pk)
+    except TeamMembers.DoesNotExist:
+        raise TeamMemberNotFound()
