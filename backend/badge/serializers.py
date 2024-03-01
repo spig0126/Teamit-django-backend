@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.core.files.storage import default_storage
 
 from .models import *
 
@@ -32,7 +33,7 @@ class BadeDetailSerializer(serializers.ModelSerializer):
           model = Badge
           fields = [
                'user',
-               'attendatnce_level', 
+               'attendance_level', 
                'friendship_level',
                'team_participance_level',
                'team_post_level',
@@ -51,10 +52,19 @@ class BadeDetailSerializer(serializers.ModelSerializer):
                if field_name == 'user':
                     result[field_name] = value
                     continue
+          
+               img = {}
+               if type(value) is bool:
+                    img[1] = default_storage.url(f'{field_name}.svg')
+               else:
+                    for i in range(1, 4):
+                         img[i] = default_storage.url(f'{field_name}/{i}.svg')
+
                badge_name = '_'.join(field_name.split('_')[:-1])
                result[badge_name] = {
                     'title': BADGE_TITLES[badge_name],
                     'subtitle': BADGE_SUBTITLES[badge_name],
-                    'level': value
+                    'level': value,
+                    'img': img
                }
           return result

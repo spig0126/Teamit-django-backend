@@ -22,12 +22,12 @@ class Badge(models.Model):
      shared_profile_cnt = models.PositiveIntegerField(default=0)
      
      @property
-     def attendatnce_level(self):
-          if self.attendance_count >= 25:
+     def attendance_level(self):
+          if self.attendance_cnt >= 25:
                return BadgeLevels.LEVEL_THREE
-          elif self.attendance_count >= 14:
+          elif self.attendance_cnt >= 14:
                return BadgeLevels.LEVEL_TWO
-          elif self.attendance_count >= 5:
+          elif self.attendance_cnt >= 5:
                return BadgeLevels.LEVEL_ONE
           else:
                return BadgeLevels.LEVEL_DEFAULT
