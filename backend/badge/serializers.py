@@ -13,7 +13,8 @@ BADGE_TITLES = {
      'team_refusal': '강철 심장',
      'user_profile': '위대한 첫걸음', 
      'team_leader': '팀 리더', 
-     'shared_profile': 'shared profile title'
+     'shared_profile': 'shared profile title',
+     'review': '리뷰 남기기'
 }
 
 BADGE_SUBTITLES = {
@@ -26,13 +27,13 @@ BADGE_SUBTITLES = {
      'team_refusal': '실패하면 어때, 다시 해보면 되지!',
      'user_profile': '게더어스에 도착했어요', 
      'team_leader': '내가 리더가 될 상인가?', 
-     'shared_profile': 'shared profile subtitle'
+     'shared_profile': 'shared profile subtitle',
+     'review': '앱스토어에 리뷰 남기기'
 }
 class BadeDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = Badge
           fields = [
-               'user',
                'attendance_level', 
                'friendship_level',
                'team_participance_level',
@@ -42,29 +43,7 @@ class BadeDetailSerializer(serializers.ModelSerializer):
                'team_refusal_status',
                'user_profile_status',
                'team_leader_status',
-               'shared_profile_level'
+               'shared_profile_level',
+               'review_status'
           ]
           
-     def to_representation(self, instance):
-          data =  super().to_representation(instance)
-          result = {}
-          for field_name, value in data.items():
-               if field_name == 'user':
-                    result[field_name] = value
-                    continue
-          
-               img = {}
-               if type(value) is bool:
-                    img[1] = default_storage.url(f'{field_name}.svg')
-               else:
-                    for i in range(1, 4):
-                         img[i] = default_storage.url(f'{field_name}/{i}.svg')
-
-               badge_name = '_'.join(field_name.split('_')[:-1])
-               result[badge_name] = {
-                    'title': BADGE_TITLES[badge_name],
-                    'subtitle': BADGE_SUBTITLES[badge_name],
-                    'level': value,
-                    'img': img
-               }
-          return result

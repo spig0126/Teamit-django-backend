@@ -20,6 +20,7 @@ class Badge(models.Model):
      user_profile_status = models.BooleanField(default=False)
      team_leader_status =  models.BooleanField(default=False)
      shared_profile_cnt = models.PositiveIntegerField(default=0)
+     review_status = models.BooleanField(default=False)
      
      @property
      def attendance_level(self):
