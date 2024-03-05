@@ -146,7 +146,6 @@ class MyTeamRoomDetailAPIView(generics.RetrieveAPIView):
           context['user'] = self.request.user
           return context
 
-
 @permission_classes([IsTeamMemberPermission])
 class HasUnreadTeamNotifications(APIView):
      def initial(self, request, *args, **kwargs):
@@ -171,7 +170,6 @@ class TeamBeforeUpdateDetailAPIView(generics.RetrieveAPIView):
           self.team = get_team_by_pk(self.kwargs.get('team_pk'))
           super().initial(request, *args, **kwargs)
 
-     
 class TeamMemberListAPIView(generics.ListAPIView):
      serializer_class = TeamMemberDetailSerializer
      
@@ -354,13 +352,13 @@ class TeamMemberDropAPIView(generics.DestroyAPIView):
                return Response(status=status.HTTP_204_NO_CONTENT)
           return Response({'detail': "member is not this team's member"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
 
-@permission_classes([IsTeamCreatorPermission])       
-class TeamMemberChangePositionAPIView(generics.UpdateAPIView):
-     serializer_class = TeamMemberDetailSerializer
+class TeamMemberUpdateAPIView(generics.UpdateAPIView):
+     serializer_class = MyTeamMemberDetailSerialzier
      lookup_field = 'member_pk'
-
+     
      def initial(self, request, *args, **kwargs):
           self.team = get_team_by_pk(self.kwargs.get('team_pk'))
+          self.member_pk = self.kwargs.get('member_pk', None)
           super().initial(request, *args, **kwargs)
           
      def get_object(self):
@@ -370,6 +368,15 @@ class TeamMemberChangePositionAPIView(generics.UpdateAPIView):
           teammember_pk = self.kwargs.get('member_pk')
           return TeamMembers.objects.filter(pk=teammember_pk)
      
+     def get_permissions(self):
+          field = self.request.query_params.get('field', None)
+          if field == 'position':
+               print('hello')
+               return [IsTeamCreatorPermission()]
+          elif field == 'name':
+               return [IsTeamMemberPermission(), IsThisTeamMemberPermission()]
+          return super().get_permissions()
+
      
 # team application related views
 class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):

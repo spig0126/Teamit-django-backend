@@ -17,7 +17,6 @@ class Team(models.Model):
      short_pr = models.CharField(max_length=50)
      keywords = models.CharField(default='')
      image = models.ImageField(upload_to='teams/', default='teams/default.png', null=True)
-     
      activity = models.ForeignKey(Activity, 
                                    on_delete=models.CASCADE, 
                                    related_name='team',
@@ -120,6 +119,7 @@ class TeamMembers(models.Model):
      position = models.ForeignKey(Position, on_delete=models.CASCADE, default=1)
      background = models.CharField(default='')
      noti_unread_cnt = models.IntegerField(default=0)
+     custom_name = models.CharField(max_length=20, default='')
      
      class Meta:
           constraints = [
@@ -130,6 +130,10 @@ class TeamMembers(models.Model):
      def avatar(self):
           return self.user.avatar.url
 
+     @property
+     def name(self):
+          return self.custom_name or self.user.name
+     
 class TeamApplication(models.Model):
      team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='applications')
      applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications') 

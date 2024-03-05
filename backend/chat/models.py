@@ -330,17 +330,13 @@ class TeamMessage(models.Model):
      def name(self):
           if not self.is_msg:
                return ''
-          elif self.user is None:
-               return '(알 수 없음)'
-          return self.user.name
+          return self.member.name or '(알 수 없음)'
      
      @property
      def avatar(self):
           if not self.is_msg:
                return ''
-          elif self.user is None:
-               return default_storage.url('avatars/default.png')
-          return self.user.avatar.url
+          return self.user.avatar.url or default_storage.url('avatars/default.png')
      
      @property
      def background(self):

@@ -1,6 +1,6 @@
 from rest_framework import permissions
 
-from .models import Team
+from .models import TeamMembers
 
 class IsTeamCreatorPermission(permissions.BasePermission):
     message = "permission denied because user is not team creator"
@@ -13,7 +13,7 @@ class IsTeamCreatorPermission(permissions.BasePermission):
 
 class IsTeamMemberPermission(permissions.BasePermission):
      message = "permission denied because user is not member of this team"
-    
+
      def has_permission(self, request, view):
           team = view.team
           if request.user in team.members.all():
@@ -21,9 +21,18 @@ class IsTeamMemberPermission(permissions.BasePermission):
           else:
                return False
 
+class IsThisTeamMemberPermission(permissions.BasePermission):
+     message = "permission denied because user is not this member"
+     
+     def has_permission(self, request, view):
+          member_pk = view.member_pk
+          member = TeamMembers.objects.filter(pk=member_pk).first()
+          if member.user == request.user:
+               return True
+          return False
 class IsNotTeamMemberPermission(permissions.BasePermission):
      message = "permission denied because user is already member of this team"
-    
+
      def has_permission(self, request, view):
           if request.method == 'POST':
                team = view.team
