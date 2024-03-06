@@ -15,7 +15,7 @@ urlpatterns = [
      # team member       
      path("<int:team_pk>/members/", TeamMemberListCreateAPIView.as_view()),
      path("<int:team_pk>/members/decline/", TeamMemberDeclineAPIView.as_view()),
-     path("<int:team_pk>/members/<int:member_pk>/", TeamMemberChangePositionAPIView.as_view()),
+     path("<int:team_pk>/members/<int:member_pk>/", TeamMemberUpdateAPIView.as_view()),
      path("<int:team_pk>/members/<int:member_pk>/leave/", TeamMemberDestroyAPIView.as_view()),
      path("<int:team_pk>/members/<int:member_pk>/drop/", TeamMemberDropAPIView.as_view()),
      
@@ -34,6 +34,7 @@ urlpatterns = [
      
      # permission
      path("<int:team_pk>/permission/", TeamPermissionUpdateAPIView.as_view(), name="permission_update"),
+     path("<int:team_pk>/creator/<int:member_pk>/", UpdateTeamCreatorAPIView.as_view(), name="creator_update"),
      
      # search
      path("search/", TeamSearchAPIView.as_view())

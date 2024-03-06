@@ -10,7 +10,7 @@ from django.db.models import Case, When, Value, IntegerField
 
 from .models import *
 from .serializers import*
-from team.serializers import TeamMemberDetailSerializer
+from team.serializers import MyTeamMemberDetailSerialzier
 from fcm_notification.tasks import send_fcm_to_user_task
 
 class TeamChatConsumer(AsyncWebsocketConsumer):
@@ -268,7 +268,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      def get_non_participants(self):
           participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, member__isnull=False).values_list('member', flat=True)
           non_participants = TeamMembers.objects.filter(team=self.team_pk).exclude(id__in=participants).order_by('user__name')
-          return TeamMemberDetailSerializer(non_participants, many=True).data
+          return MyTeamMemberDetailSerialzier(non_participants, many=True).data
 
      @database_sync_to_async
      def update_chatroom_background(self, new_background):
@@ -301,7 +301,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                .order_by('user_is_this_user', 'user__name')
           )
           members = [participant.member for participant in participants]
-          participant_list = TeamMemberDetailSerializer(members, many=True).data
+          participant_list = MyTeamMemberDetailSerialzier(members, many=True).data
           name = self.chatroom.name
           background = self.chatroom.background
           alarm_on = self.this_participant.alarm_on

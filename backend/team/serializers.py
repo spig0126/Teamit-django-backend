@@ -147,10 +147,25 @@ class TeamMemberDetailSerializer(serializers.ModelSerializer):
                'avatar',
                'team'
           ]
+          
+class MyTeamMemberDetailSerialzier(serializers.ModelSerializer):
+     position = PositionField()
+     custom_name = serializers.CharField(write_only=True, required=False)
+     
+     class Meta:
+          model = TeamMembers
+          fields = [
+               'id',
+               'name', 
+               'custom_name',
+               'position',
+               'background',
+               'avatar'
+          ]
 
 class MyTeamDetailSerializer(serializers.ModelSerializer):
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
-     members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
+     members = MyTeamMemberDetailSerialzier(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
@@ -179,7 +194,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
           ]  
 
 class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
-     members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
+     members = MyTeamMemberDetailSerialzier(many=True, source='teammembers_set')
      last_post = serializers.SerializerMethodField()
      creator = serializers.StringRelatedField()
      

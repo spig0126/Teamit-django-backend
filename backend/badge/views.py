@@ -12,7 +12,32 @@ class BadgeRetrieveAPIView(generics.RetrieveAPIView):
      def get_object(self):
           user = self.request.user
           return Badge.objects.get(user=user)
+     
+     def retrieve(self, request, *args, **kwargs):
+          instance = self.get_object()
+          serializer = self.get_serializer(instance)
+          data = serializer.data
+          result = self.transform_badge_data(data)
+          return Response(result)
 
+     def transform_badge_data(self, data):
+          result = []
+          for field_name, value in data.items():
+               badge_name = '_'.join(field_name.split('_')[:-1])
+               img = []
+               if type(value) is bool:
+                    img.append(default_storage.url(f'badges/{badge_name}.png'))
+               else:
+                    for i in range(1, 4):
+                         img.append(default_storage.url(f'badges/{badge_name}/{i}.png'))
+
+               result.append({
+                    'title': BADGE_TITLES[badge_name],
+                    'subtitle': BADGE_SUBTITLES[badge_name],
+                    'level': value,
+                    'img': img
+               })
+          return result
 class UpdateUserLastLoginTimeAPIView(APIView):
      def put(self, request, *args, **kwargs):
           user = request.user
@@ -20,7 +45,10 @@ class UpdateUserLastLoginTimeAPIView(APIView):
           now = timezone.now()
           
           if badge.attendance_level < 3:
-               if user.last_login.date() < now.date():
+               if (now - user.last_login_time).days > 1:
+                    badge.attendance_cnt = 0
+                    badge.save()
+               elif (now - user.last_login_time).days == 1:
                     badge.attendance_cnt += 1
                     badge.save()
                # badge가 몇개면 fcm 보내기 
