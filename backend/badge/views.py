@@ -34,10 +34,13 @@ class BadgeRetrieveAPIView(generics.RetrieveAPIView):
                result.append({
                     'title': BADGE_TITLES[badge_name],
                     'subtitle': BADGE_SUBTITLES[badge_name],
+                    'name': BADGE_NAME[badge_name],
                     'level': value,
-                    'img': img
+                    'img': img,
+                    'level_description': BADGE_LEVEL_DESCRIPTION[badge_name]
                })
           return result
+     
 class UpdateUserLastLoginTimeAPIView(APIView):
      def put(self, request, *args, **kwargs):
           user = request.user
