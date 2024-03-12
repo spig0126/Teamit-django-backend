@@ -78,7 +78,7 @@ class PrivateChatParticipant(models.Model):
      
      @property
      def updated_at(self):
-          return self.chatroom.updated_at
+          return self.chatroom.updated_at.isoformat()
      
      @property
      def last_msg(self):
@@ -250,7 +250,7 @@ class TeamChatRoom(models.Model):
      
      @property
      def participant_names(self):
-          return ', '.join([str(user) for user in self.participants.all()])
+          return ', '.join([f'{str(p.user)}, {p.name}' for p in TeamChatParticipant.objects.filter(chatroom=self)])
      
      class Meta:
           ordering = ['-updated_at']
@@ -283,7 +283,7 @@ class TeamChatParticipant(models.Model):
      
      @property
      def chatroom_updated_at(self):
-          return self.chatroom.updated_at
+          return self.chatroom.updated_at.isoformat()
      
      @property
      def chatroom_background(self):
@@ -305,7 +305,7 @@ class TeamChatParticipant(models.Model):
      def name(self):
           if self.user is None:
                return '(알 수 없음)'
-          return self.user.name
+          return self.member.name or self.user.name
      
      @property 
      def position(self):

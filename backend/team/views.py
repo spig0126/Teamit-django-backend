@@ -353,7 +353,7 @@ class TeamMemberDropAPIView(generics.DestroyAPIView):
           return Response({'detail': "member is not this team's member"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
 
 class TeamMemberUpdateAPIView(generics.UpdateAPIView):
-     serializer_class = MyTeamMemberDetailSerialzier
+     serializer_class = MyTeamMemberDetailSerializer
      lookup_field = 'member_pk'
      
      def initial(self, request, *args, **kwargs):
@@ -371,7 +371,6 @@ class TeamMemberUpdateAPIView(generics.UpdateAPIView):
      def get_permissions(self):
           field = self.request.query_params.get('field', None)
           if field == 'position':
-               print('hello')
                return [IsTeamCreatorPermission()]
           elif field == 'name':
                return [IsTeamMemberPermission(), IsThisTeamMemberPermission()]
@@ -385,7 +384,7 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
      def initial(self, request, *args, **kwargs):
           self.team = get_team_by_pk(self.kwargs.get('team_pk'))
           super().initial(request, *args, **kwargs)
-            
+
      def get_permissions(self):
           if self.request.method == 'GET':
                permission_classes = [IsTeamMemberPermission]

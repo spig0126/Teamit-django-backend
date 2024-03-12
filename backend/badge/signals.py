@@ -36,13 +36,7 @@ def update_team_participance_level(sender, instance, created, **kwargs):
           user = instance.user
           badge = user.badge
           if badge.team_participance_level < 3:
-               team_participance_cnt = TeamMembers.filter(user=user).count()
-               if team_participance_cnt >= 5:
-                    badge.team_participance_level = 3
-               elif team_participance_cnt >= 3:
-                    badge.team_participance_level = 2
-               elif team_participance_cnt >= 1:
-                    badge.team_participance_level = 1
+               badge.team_participance_cnt += 1
                badge.save()
                
 @receiver(post_save, sender=TeamPost)
@@ -66,16 +60,7 @@ def update_recruit_level(sender, instance, created, **kwargs):
           creator = instance.team.creator
           badge = creator.badge
           if badge.recruit_level < 3:
-               result = Team.objects.filter(creator=creator)\
-                    .annotoate(member_cnt=Count('members'))\
-                    .aggregate(total_member_cnt=Sum('member_cnt'))
-               total_member_cnt = result.get('total_member') or 0
-               if total_member_cnt >= 30:
-                    badge.recruit_level = 3
-               elif total_member_cnt >= 15:
-                    badge.recruit_level = 2
-               elif total_member_cnt >= 5:
-                    badge.recruit_level = 1
+               badge.recruit_cnt += 1
                badge.save()
 
 @receiver(post_save, sender=UserLikes)

@@ -12,15 +12,37 @@ class Badge(models.Model):
      user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='badge')
      attendance_cnt = models.PositiveIntegerField(default=0)
      friendship_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
-     team_participance_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
+     team_participance_cnt = models.PositiveIntegerField(default=0)
      team_post_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
      liked_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
-     recruit_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
+     recruit_cnt = models.PositiveIntegerField(default=0)
      team_refusal_status = models.BooleanField(default=False)
      user_profile_status = models.BooleanField(default=False)
      team_leader_status =  models.BooleanField(default=False)
-     shared_profile_cnt = models.PositiveIntegerField(default=0)
+     shared_profile_status = models.BooleanField(default=False)
      review_status = models.BooleanField(default=False)
+     
+     @property
+     def recruit_level(self):
+          if self.attendance_cnt >= 30:
+               return BadgeLevels.LEVEL_THREE
+          elif self.attendance_cnt >= 15:
+               return BadgeLevels.LEVEL_TWO
+          elif self.attendance_cnt >= 5:
+               return BadgeLevels.LEVEL_ONE
+          else:
+               return BadgeLevels.LEVEL_DEFAULT
+     
+     @property
+     def team_participance_level(self):
+          if self.attendance_cnt >= 5:
+               return BadgeLevels.LEVEL_THREE
+          elif self.attendance_cnt >= 3:
+               return BadgeLevels.LEVEL_TWO
+          elif self.attendance_cnt >= 1:
+               return BadgeLevels.LEVEL_ONE
+          else:
+               return BadgeLevels.LEVEL_DEFAULT
      
      @property
      def attendance_level(self):
@@ -43,3 +65,4 @@ class Badge(models.Model):
                return BadgeLevels.LEVEL_ONE
           else:
                return BadgeLevels.LEVEL_DEFAULT
+          

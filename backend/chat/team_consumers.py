@@ -10,7 +10,7 @@ from django.db.models import Case, When, Value, IntegerField
 
 from .models import *
 from .serializers import*
-from team.serializers import MyTeamMemberDetailSerialzier
+from team.serializers import MyTeamMemberDetailSerializer
 from fcm_notification.tasks import send_fcm_to_user_task
 
 class TeamChatConsumer(AsyncWebsocketConsumer):
@@ -88,7 +88,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           message = await self.create_message(announcement)
           await self.send_group_message('enter', message)
      
-     async def handle_exit(self, message):
+     async def handle_exit(self):
           await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
           chatroom_active = await self.remove_this_participant_from_chatroom()
           if not chatroom_active:
@@ -268,7 +268,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      def get_non_participants(self):
           participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, member__isnull=False).values_list('member', flat=True)
           non_participants = TeamMembers.objects.filter(team=self.team_pk).exclude(id__in=participants).order_by('user__name')
-          return MyTeamMemberDetailSerialzier(non_participants, many=True).data
+          return MyTeamMemberDetailSerializer(non_participants, many=True).data
 
      @database_sync_to_async
      def update_chatroom_background(self, new_background):
@@ -301,7 +301,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                .order_by('user_is_this_user', 'user__name')
           )
           members = [participant.member for participant in participants]
-          participant_list = MyTeamMemberDetailSerialzier(members, many=True).data
+          participant_list = MyTeamMemberDetailSerializer(members, many=True).data
           name = self.chatroom.name
           background = self.chatroom.background
           alarm_on = self.this_participant.alarm_on
