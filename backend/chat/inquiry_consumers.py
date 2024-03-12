@@ -265,8 +265,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                self.chatroom.team = None
           else:
                self.chatroom.inquirer = None
+          self.chatroom.save()
           if self.chatroom.team is None and self.chatroom.inquirer is None:
                return False
+          return True
                
      @database_sync_to_async
      def update_unread_cnt(self):
