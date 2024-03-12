@@ -100,5 +100,5 @@ class BadeDetailSerializer(serializers.ModelSerializer):
                'team_refusal_status',
                'user_profile_status',
                'team_leader_status',
-               'shared_profile_level',
+               'shared_profile_status',
           ]

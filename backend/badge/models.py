@@ -19,7 +19,7 @@ class Badge(models.Model):
      team_refusal_status = models.BooleanField(default=False)
      user_profile_status = models.BooleanField(default=False)
      team_leader_status =  models.BooleanField(default=False)
-     shared_profile_cnt = models.PositiveIntegerField(default=0)
+     shared_profile_status = models.BooleanField(default=False)
      review_status = models.BooleanField(default=False)
      
      @property
