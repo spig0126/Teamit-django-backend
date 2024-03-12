@@ -14,7 +14,7 @@ BADGE_TITLES = {
      'team_refusal': '강철 심장',
      'user_profile': '위대한 첫걸음', 
      'team_leader': '팀 리더', 
-     'shared_profile': '나 이런 사람이야',
+     'shared_profile': '나로 말할 것 같으면',
 }
 
 BADGE_SUBTITLES = {
@@ -28,7 +28,7 @@ BADGE_SUBTITLES = {
      'team_refusal': '실패하면 어때, 다시 해보면 되지!',
      'user_profile': '게더어스에 도착했어요', 
      'team_leader': '내가 리더가 될 상인가?', 
-     'shared_profile': 'Let me introduce myself'
+     'shared_profile': '프로필을 공유해봐요'
 }
 
 BADGE_NAME = {
