@@ -54,8 +54,8 @@ class UserField(serializers.Field):
           return value.name
 
 class ImageSerializer(serializers.Serializer):
-    url = serializers.CharField()
-    
+     url = serializers.CharField()
+
 class UserCreateSerializer(serializers.ModelSerializer):
      avatar = UserAvatarImageField()
      background = UserBackgroundImageField()
@@ -93,7 +93,7 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
      @transaction.atomic 
      def create(self, validated_data):
           user_data = validated_data.pop('user')
-        
+
           user_serializer = UserCreateSerializer(data=user_data)
           if user_serializer.is_valid():
                user = user_serializer.save()

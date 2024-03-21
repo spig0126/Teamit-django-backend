@@ -19,11 +19,11 @@ class FirebaseTokenGenerationTestCase(TestCase):
           # 래빗
           # uid = "PsnFOUnlyJMFrd1uIX28EXdVA8g1"
           # 여니여니
-          uid = "oL9UK4B2wVQ7OYhTXdk3kwFP7Q02"
+          # uid = "oL9UK4B2wVQ7OYhTXdk3kwFP7Q02"
           # 티미_065
           # uid = "8jTawiVplrR1yGlqS4xTKPWEbuC2"
           # 개발자
-          # uid = "kakao:3228496673"
+          uid = "kakao:3228496673"
           # 루루사탕
           # uid = "naver:NGf1vHub8F_xZ7LCJWnjIJWNPhAx0onfkb9qZ7s74KM"
           # 하이롱

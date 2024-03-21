@@ -62,8 +62,8 @@ class UpdateSharedProfileCntAPIView(APIView):
      def put(self, request, *args, **kwargs):
           user = request.user
           badge = user.badge
-          if badge.shared_profile_level < 3:
-               badge.shared_profile_cnt += 1
+          if not badge.shared_profile_status:
+               badge.shared_profile_status = True
                badge.save()
                # badge가 몇개면 fcm 보내기 
           return Response(status=status.HTTP_200_OK)
