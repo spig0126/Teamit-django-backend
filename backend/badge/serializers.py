@@ -102,3 +102,30 @@ class BadeDetailSerializer(serializers.ModelSerializer):
                'team_leader_status',
                'shared_profile_status',
           ]
+     
+     def transform_data(self, data, instance):
+          result = []
+          for field_name, value in data.items():
+               badge_name = '_'.join(field_name.split('_')[:-1])
+               img = []
+               if type(value) is bool:
+                    img.append(default_storage.url(f'badges/{badge_name}.png'))
+               else:
+                    for i in range(1, 4):
+                         img.append(default_storage.url(f'badges/{badge_name}/{i}.png'))
+
+               result.append({
+                    'title': BADGE_TITLES[badge_name],
+                    'subtitle': BADGE_SUBTITLES[badge_name],
+                    'name': BADGE_NAME[badge_name],
+                    'new': getattr(instance, f'{badge_name}_change'), 
+                    'level': value,
+                    'img': img,
+                    'level_description': BADGE_LEVEL_DESCRIPTION[badge_name]
+               })
+          return result
+
+     def to_representation(self, instance):
+          data = super().to_representation(instance)
+          transformed_data = self.transform_data(data, instance)
+          return {'user': str(instance.user), 'badges': transformed_data}

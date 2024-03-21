@@ -18,5 +18,5 @@ urlpatterns = [
     path("api/search/", include("search.urls")),
     path("api/devices/", include("fcm_notification.urls")),
     path("api/chat/", include("chat.urls")),
-    path("api/badge/", include("badge.urls")),
+    path("api/badges/", include("badge.urls")),
 ]
