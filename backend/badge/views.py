@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 
 from .serializers import *
+from .utils import *
 
 class BadgeRetrieveAPIView(generics.RetrieveAPIView):
      serializer_class = BadeDetailSerializer
@@ -33,14 +34,15 @@ class UpdateUserLastLoginTimeAPIView(APIView):
                     badge.attendance_cnt = 0
                     badge.save()
                elif (now - user.last_login_time).days == 1:
+                    before_level = badge.attendance_level
                     badge.attendance_cnt += 1
-                    badge.attendance_change = True
+                    if before_level != badge.attendance_level:
+                         badge.attendance_change = True
+                         send_level_badge_fcm(request.user.pk, 'attendance', badge.attendance_level)
                     badge.save()
-               # badge가 몇개면 fcm 보내기 
-          user.save()
           return Response(status=status.HTTP_200_OK)
 
-class UpdateSharedProfileCntAPIView(APIView):
+class SharedProfileAPIView(APIView):
      def put(self, request, *args, **kwargs):
           user = request.user
           badge = user.badge
@@ -48,5 +50,5 @@ class UpdateSharedProfileCntAPIView(APIView):
                badge.shared_profile_status = True
                badge.shared_profile_change = True
                badge.save()
-               # badge가 몇개면 fcm 보내기 
+               send_status_badge_fcm(request.user.pk, 'shared_profile')
           return Response(status=status.HTTP_200_OK)

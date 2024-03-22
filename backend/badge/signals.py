@@ -1,14 +1,12 @@
 from django.db.models.signals import pre_delete, post_save, m2m_changed
 from django.dispatch import receiver
 from django.db import transaction
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-from django.db.models import Count, Sum
 
 from user.models import User, UserLikes, UserProfile
 from team.models import Team, TeamMembers, TeamApplication
 from post.models import TeamPost
 from .models import *
+from .utils import *
 
 @receiver(post_save, sender=User)
 def create_badge(sender, instance, created, **kwargs):
@@ -31,6 +29,7 @@ def update_friendship_level(sender, instance, action, pk_set, **kwargs):
                     badge.friendship_level = 1
                if before_level != badge.friendship_level:
                     badge.friendship_change = True
+                    send_level_badge_fcm(instance.pk, 'friendship', badge.friendship_level)
                badge.save()
 
 @receiver(post_save, sender=TeamMembers)
@@ -43,6 +42,7 @@ def update_team_participance_level(sender, instance, created, **kwargs):
                badge.team_participance_cnt += 1
                if before_level != badge.team_participance_level:
                     badge.team_participance_change = True
+                    send_level_badge_fcm(user.pk, 'team_participance', badge.team_participance_level)
                badge.save()
                
 @receiver(post_save, sender=TeamPost)
@@ -59,9 +59,9 @@ def update_team_post_level(sender, instance, created, **kwargs):
                     badge.team_post_level = 2
                elif team_post_cnt >= 5:
                     badge.team_post_level = 1
-               
                if before_level != badge.team_post_level:
                     badge.team_post_change = True
+                    send_level_badge_fcm(user.pk, 'team_post', badge.team_post_level)
                badge.save()
 
 @receiver(post_save, sender=TeamMembers)
@@ -74,6 +74,7 @@ def update_recruit_level(sender, instance, created, **kwargs):
                badge.recruit_cnt += 1
                if before_level != badge.recruit_level:
                     badge.recruit_change = True
+                    send_level_badge_fcm(creator.pk, 'recruit', badge.recruit_level)
                badge.save()
 
 @receiver(post_save, sender=UserLikes)
@@ -91,6 +92,8 @@ def update_liked_level(sender, instance, created, **kwargs):
                badge.liked_level = 1
           if before_level != badge.liked_level:
                badge.liked_change = True
+               send_level_badge_fcm(liked_user.pk, 'liked', badge.liked_level)
+               
           badge.save()
 
 @receiver(post_save, sender=TeamApplication)
@@ -102,6 +105,7 @@ def update_team_refusal_status(sender, instance, created, **kwargs):
                badge.team_refusal_status = True
                badge.team_refusal_change = True
                badge.save()
+               send_status_badge_fcm(user.pk, 'team_refusal')
 
 @receiver(post_save, sender=UserProfile)
 def update_user_profile_status(sender, instance, created, **kwargs):
@@ -120,6 +124,8 @@ def update_user_profile_status(sender, instance, created, **kwargs):
                     badge.user_profile_status = True
                     badge.user_profile_change = True
                     badge.save()
+                    send_status_badge_fcm(instance.user.pk, 'user_profile')
+                    
 
 
 @receiver(post_save, sender=Team)
@@ -127,9 +133,8 @@ def update_team_leader_status(sender, instance, created, **kwargs):
      if created:
           user = instance.creator
           badge = user.badge
-          print(badge.team_leader_status)
           if not badge.team_leader_status:
-               print(user)
                badge.team_leader_status = True
                badge.team_leader_change = True
                badge.save()
+               send_status_badge_fcm(user.pk, 'team_leader')

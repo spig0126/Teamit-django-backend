@@ -106,22 +106,22 @@ class BadeDetailSerializer(serializers.ModelSerializer):
      def transform_data(self, data, instance):
           result = []
           for field_name, value in data.items():
-               badge_name = '_'.join(field_name.split('_')[:-1])
+               badge_type = '_'.join(field_name.split('_')[:-1])
                img = []
                if type(value) is bool:
-                    img.append(default_storage.url(f'badges/{badge_name}.png'))
+                    img.append(default_storage.url(f'badges/{badge_type}.png'))
                else:
                     for i in range(1, 4):
-                         img.append(default_storage.url(f'badges/{badge_name}/{i}.png'))
+                         img.append(default_storage.url(f'badges/{badge_type}/{i}.png'))
 
                result.append({
-                    'title': BADGE_TITLES[badge_name],
-                    'subtitle': BADGE_SUBTITLES[badge_name],
-                    'name': BADGE_NAME[badge_name],
-                    'new': getattr(instance, f'{badge_name}_change'), 
+                    'title': BADGE_TITLES[badge_type],
+                    'subtitle': BADGE_SUBTITLES[badge_type],
+                    'name': BADGE_NAME[badge_type],
+                    'new': getattr(instance, f'{badge_type}_change'), 
                     'level': value,
                     'img': img,
-                    'level_description': BADGE_LEVEL_DESCRIPTION[badge_name]
+                    'level_description': BADGE_LEVEL_DESCRIPTION[badge_type]
                })
           return result
 

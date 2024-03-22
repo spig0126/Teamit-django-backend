@@ -25,7 +25,6 @@ def get_user_devices(user):
 def send_fcm_message_task(token, title, body, data):
      if not token:
           return
-     print(token)
      message = messaging.Message(
                notification=messaging.Notification(
                     title=title,
