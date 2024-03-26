@@ -1,11 +1,16 @@
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import APIException
+from rest_framework import status
 
-from .models import UserReview
 from team.models import Team
 from user.models import User
 
+class ReviewerRevieweeSameException(APIException):
+     status_code = status.HTTP_400_BAD_REQUEST
+     default_detail = 'reivewer and reviewee cannot be the same'
+     
 class IsEligibleForReviewer(permissions.BasePermission):
      message = "permission denied because user is not eligible for reviewer"
      
@@ -15,7 +20,7 @@ class IsEligibleForReviewer(permissions.BasePermission):
           reviewer = request.user
           reviewee = get_object_or_404(User, name=request.data.get('reviewee', None))
           if reviewer == reviewee:
-               raise ValidationError("reivewer and reviewee cannot be the same")
+               raise ReviewerRevieweeSameException()
           is_friend = reviewer.friends.filter(pk=reviewee.pk).exists()
           is_team_member = Team.objects.filter(members=reviewer).filter(members=reviewee).exists()
           is_new_reviewer = not reviewee.reviews.filter(reviewer=reviewer.pk).exists()

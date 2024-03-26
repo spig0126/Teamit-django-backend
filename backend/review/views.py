@@ -10,18 +10,28 @@ from .models import *
 from .serializers import *
 from .permissions import *
 
+class UserReviewOptionsDetailAPIView(APIView):
+     def get(self, request, *args, **kwargs):
+          data = {
+               'activity': dict(ActivityType.choices).values(),
+               'positive_keywords': UserReviewKeyword.objects.filter(type=ReviewKeywordType.POSITIVE).values_list('content', flat=True),
+               'negative_keywords': UserReviewKeyword.objects.filter(type=ReviewKeywordType.NEGATIVE).values_list('content', flat=True)
+          }
+          return Response(data, status=status.HTTP_200_OK)
+     
 @permission_classes([IsEligibleForReviewer])
-class UserReviewListCreateAPIView(generics.ListCreateAPIView):
-     def get_serializer_class(self):
-          if self.request.method == 'POST':
-               return UserReviewCreateUpdateSerializer
-          return UserReviewDetailSerializer
+class UserReviewCreateAPIView(generics.CreateAPIView):
+     serializer_class = UserReviewCreateUpdateSerializer
      
      def perform_create(self, serializer):
           serializer.save(reviewer=self.request.user)
+
+class UserReviewListAPIView(generics.ListAPIView):
+     serializer_class = UserReviewDetailSerializer
      
      def get_queryset(self):
-          user = self.request.user
+          pk = self.kwargs.get('pk', None)
+          user = User.objects.get(pk=pk)
           return UserReview.objects.filter(reviewee=user)
 
 @permission_classes([IsReviewer])
@@ -37,7 +47,7 @@ class UserReviewRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIVi
 
      def patch(self, request, *args, **kwargs):
           if self.review.edited:
-               return Response({'detail': 'User can edit review only once'}, status=status.HTTP_400_BAD_REQUEST)
+               return Response({'detail': 'user can edit review only once'}, status=status.HTTP_400_BAD_REQUEST)
           return super().patch(request, *args, **kwargs)
      
 @permission_classes([IsReviewee])
