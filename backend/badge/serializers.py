@@ -118,7 +118,7 @@ class BadeDetailSerializer(serializers.ModelSerializer):
                     'title': BADGE_TITLES[badge_type],
                     'subtitle': BADGE_SUBTITLES[badge_type],
                     'name': BADGE_NAME[badge_type],
-                    'new': getattr(instance, f'{badge_type}_change'), 
+                    'is_new': getattr(instance, f'{badge_type}_change'), 
                     'level': value,
                     'img': img,
                     'level_description': BADGE_LEVEL_DESCRIPTION[badge_type]
@@ -128,4 +128,4 @@ class BadeDetailSerializer(serializers.ModelSerializer):
      def to_representation(self, instance):
           data = super().to_representation(instance)
           transformed_data = self.transform_data(data, instance)
-          return {'user': str(instance.user), 'badges': transformed_data}
+          return {'badges': transformed_data}
