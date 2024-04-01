@@ -161,7 +161,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                'chat_type': 'team'
           }
           
-          offline_participants = set(self.participants) - set(self.online_participants)
+          offline_participants = self.get_alarm_on_offline_participants()
           for op in offline_participants:
                send_fcm_to_user_task.delay(op, title, body, data)
      
@@ -265,18 +265,28 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           
      #------------------DB related-----------------------\
      @database_sync_to_async
+     def update_chatroom(self):
+          self.chatorom = TeamChatRoom.objects.get(id=self.chatroom_id)
+          
+     @database_sync_to_async
      def get_non_participants(self):
           participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, member__isnull=False).values_list('member', flat=True)
           non_participants = TeamMembers.objects.filter(team=self.team_pk).exclude(id__in=participants).order_by('user__name')
           return MyTeamMemberDetailSerialzier(non_participants, many=True).data
 
      @database_sync_to_async
+     def get_alarm_on_offline_participants(self):
+          return TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False, alarm_on=True).values_list('user', flat=True)
+
+     @database_sync_to_async
      def update_chatroom_background(self, new_background):
+          self.update_chatroom()
           self.chatroom.background = new_background
           self.chatroom.save()
           
      @database_sync_to_async
      def update_chatroom_name(self, new_name):
+          self.update_chatroom()
           self.chatroom.name = new_name
           self.chatroom.save()
           
@@ -287,6 +297,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           
      @database_sync_to_async
      def get_settings_info(self):
+          self.update_chatroom()
           participants = (
                TeamChatParticipant.objects
                .filter(chatroom=self.chatroom, member__isnull=False)
@@ -404,6 +415,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      
      @database_sync_to_async
      def update_chatroom_last_msg(self, last_msg):
+          self.update_chatroom()
           self.chatroom.last_msg = last_msg
           self.chatroom.save()
 

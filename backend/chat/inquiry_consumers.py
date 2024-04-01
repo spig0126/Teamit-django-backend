@@ -232,6 +232,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      
      #----------------DB related------------------------
      @database_sync_to_async
+     def update_chatroom(self):
+          self.chatroom = InquiryChatRoom.objects.get(pk=self.chatroom_id)
+          
+     @database_sync_to_async
      def send_offline_participants_fcm(self, message):
           title = self.team_name if self.is_inquirer else f'{self.team_name} > {self.inquirer.name}'
           body = message['content']
@@ -241,13 +245,14 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                'chatroom_id': str(self.chatroom_id),
                'chat_type': 'inquiry'
           }
-          if self.is_responder and not self.chatroom.inquirer_is_online:
+          if self.is_responder and not self.chatroom.inquirer_is_online and self.chatroom.inquirer_alarm_on:
                send_fcm_to_user_task.delay(self.inquirer.pk, title, body, data)
-          elif self.is_inquirer and not self.chatroom.responder_is_online:
+          elif self.is_inquirer and not self.chatroom.responder_is_online and self.chatroom.responder_alarm_on:
                send_fcm_to_user_task.delay(self.responder.pk, title, body, data)
      
      @database_sync_to_async
      def update_alarm_status(self):
+          self.update_chatroom()
           if self.is_responder:
                self.chatroom.responder_alarm_on = not self.chatroom.responder_alarm_on
           else:
@@ -261,6 +266,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
           
      @database_sync_to_async
      def remove_user_from_chatroom(self):
+          self.update_chatroom()
           if self.is_responder:
                self.chatroom.team = None
           else:
@@ -270,6 +276,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                
      @database_sync_to_async
      def update_unread_cnt(self):
+          self.update_chatroom()
           if self.is_responder:
                if not self.chatroom.inquirer_is_online:
                     self.chatroom.inquirer_unread_cnt += 1
@@ -296,6 +303,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      @transaction.atomic
      def update_chatroom_last_msg(self, content):
+          self.update_chatroom()
           self.chatroom.last_msg = content
           self.chatroom.save()
           
@@ -320,6 +328,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
 
      @database_sync_to_async
      def update_user_online(self):
+          self.update_chatroom()
           if self.is_responder:
                self.chatroom.responder_is_online = True
                self.chatroom.responder_unread_cnt = 0
@@ -330,6 +339,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      
      @database_sync_to_async
      def update_user_offline(self):
+          self.update_chatroom()
           try:
                self.online_participants.remove(self.user.pk)
           except ValueError:

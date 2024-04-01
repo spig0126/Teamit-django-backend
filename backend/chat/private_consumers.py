@@ -142,7 +142,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           
      #----------------UTILITY FUNCTIONS---------------------------------
      async def send_offline_participants_fcm(self, message):
-          if await self.other_participant_was_offline():
+          if await self.other_participant_was_offline() and await self.other_participant_alarm_on():
                chatroom_name, user_pk = await self.get_other_participant_info()
                title = chatroom_name
                body = message['content']
@@ -239,18 +239,33 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           
      #----------------DATABASE RELATED------------------------------------
      @database_sync_to_async
+     def update_chatroom(self):
+          self.chatroom = PrivateChatRoom.objects.get(id=self.chatroom_id)
+     
+     @database_sync_to_async
+     def update_this_participant(self):
+          self.this_participant = PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id).get(user=self.user)
+     
+     @database_sync_to_async
+     def update_other_participant(self):
+          self.other_participant = PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id).exclude(user=self.user).first()
+          
+     @database_sync_to_async
      def update_chatroom_name(self, chatroom_name):
+          self.update_chatroom()
           self.this_participant.custom_name = chatroom_name
           self.this_participant.save()
      
      @database_sync_to_async
      def get_participant_list(self):
+          self.update_chatroom()
           participants = self.chatroom.participants.all()
           return UserSimpleDetailSerializer(participants, many=True).data
 
           
      @database_sync_to_async
      def update_alarm_status(self):
+          self.update_chatroom()
           self.this_participant.alarm_on = not self.this_participant.alarm_on
           self.this_participant.save()
           
@@ -284,6 +299,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      @transaction.atomic
      def update_chatroom_last_msg(self, content):
+          self.update_chatroom()
           self.chatroom.last_msg = content
           self.chatroom.save()
      
@@ -302,6 +318,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      @transaction.atomic
      def update_this_participant_online(self):
+          self.update_this_participant()
           self.this_participant.unread_cnt = 0
           self.this_participant.is_online = True
           self.this_participant.save()
@@ -310,6 +327,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           
      @database_sync_to_async
      def update_this_participant_offline(self):
+          self.update_this_participant()
           try:
                self.online_participants.remove(self.user.pk)
           except ValueError:
@@ -327,10 +345,17 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      
      @database_sync_to_async
      def other_participant_was_offline(self):
+          self.update_other_participant()
           return not self.other_participant.is_online
      
      @database_sync_to_async
+     def other_participant_alarm_on(self):
+          self.update_other_participant()
+          return self.other_participant.alarm_on
+     
+     @database_sync_to_async
      def get_other_participant_info(self):
+          self.update_other_participant()
           return self.other_participant.chatroom_name, self.other_participant.user.pk
      
      @database_sync_to_async
