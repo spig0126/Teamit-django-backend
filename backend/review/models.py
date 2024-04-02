@@ -41,7 +41,7 @@ class UserReview(models.Model):
                validate_0_5_increment,
           ]
      )
-     content = models.TextField(default='', max_length=300)
+     content = models.TextField( blank=True, default='', max_length=300)
      keywords = models.ManyToManyField(
           UserReviewKeyword,
           related_name='users'

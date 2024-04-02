@@ -30,8 +30,8 @@ class UserReviewListAPIView(generics.ListAPIView):
      serializer_class = UserReviewDetailSerializer
      
      def get_queryset(self):
-          pk = self.kwargs.get('pk', None)
-          user = User.objects.get(pk=pk)
+          name = self.kwargs.get('name', None)
+          user = User.objects.get(name=name)
           return UserReview.objects.filter(reviewee=user)
 
 @permission_classes([IsReviewer])
