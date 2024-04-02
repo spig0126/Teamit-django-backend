@@ -11,16 +11,27 @@ class BadgeLevels(models.IntegerChoices):
 class Badge(models.Model):
      user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='badge')
      attendance_cnt = models.PositiveIntegerField(default=0)
+     attendance_change = models.BooleanField(default=False)
      friendship_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
+     friendship_change = models.BooleanField(default=False)
      team_participance_cnt = models.PositiveIntegerField(default=0)
+     team_participance_change = models.BooleanField(default=False)
      team_post_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
+     team_post_change = models.BooleanField(default=False)
      liked_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
+     liked_change = models.BooleanField(default=False)
      recruit_cnt = models.PositiveIntegerField(default=0)
+     recruit_change = models.BooleanField(default=False)
      team_refusal_status = models.BooleanField(default=False)
+     team_refusal_change = models.BooleanField(default=False)
      user_profile_status = models.BooleanField(default=False)
+     user_profile_change = models.BooleanField(default=False)
      team_leader_status =  models.BooleanField(default=False)
+     team_leader_change = models.BooleanField(default=False)
      shared_profile_status = models.BooleanField(default=False)
+     shared_profile_change = models.BooleanField(default=False)
      review_status = models.BooleanField(default=False)
+     review_change = models.BooleanField(default=False)
      
      @property
      def recruit_level(self):
