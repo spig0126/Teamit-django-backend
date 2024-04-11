@@ -2,6 +2,7 @@ from django.db import models
 from dateutil.relativedelta import *
 from datetime import *
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 from region.models import Province, City
 from position.models import Position
@@ -19,18 +20,24 @@ class Sex(models.TextChoices):
      MALE = "M", "남자"
      UNSPECIFIED = "U", "선택하지 않을래요"
 
+class PriorityLevels(models.IntegerChoices):
+     LOW = 2, 'Low'
+     MEDIUM = 1, 'Medium'
+     HIGH = 0, 'High'
+
 # Models
 class User(models.Model):
      id = models.AutoField(primary_key=True)
      uid = models.CharField(max_length=128, unique=True, default='')
      name = models.CharField(max_length=20, unique=True)
-     last_login_time = models.DateTimeField(auto_now=True)
      interests = models.ManyToManyField(
           Interest,
+          through='UserInterest',
           related_name="users"
      )
      positions = models.ManyToManyField(
           Position,
+          through='UserPosition',
           related_name="users",
      )
      avatar = models.ImageField(upload_to='avatars/', default='avatars/1.png') 
@@ -47,6 +54,8 @@ class User(models.Model):
           settings.TEAM_MODEL,
           related_name="blocked_by"
      )
+     created_at = models.DateTimeField(auto_now_add=True)
+     last_login_time = models.DateTimeField(auto_now=True)
      
      def __str__(self):
           return self.name
@@ -75,7 +84,21 @@ class User(models.Model):
                return self.profile.keywords
           except:
                return ''
-     
+     @property
+     def main_interest(self):
+          return str(self.interests.get(userinterest__priority=PriorityLevels.HIGH))
+     @property
+     def main_position(self):
+          return str(self.positions.get(userposition__priority=PriorityLevels.HIGH))
+     @property
+     def main_activity(self):
+          return str(self.profile.activities.get(useractivity__priority=PriorityLevels.HIGH))
+     @property
+     def main_city(self):
+          return str(self.profile.cities.get(usercity__priority=PriorityLevels.HIGH))
+
+
+
 
 class UserProfile(models.Model):
      user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')
@@ -88,19 +111,20 @@ class UserProfile(models.Model):
      sex = models.CharField(max_length=1, choices=Sex.choices, default=Sex.UNSPECIFIED)
      cities = models.ManyToManyField(
           City,
+          through='UserCity',
           related_name="users"
      )
      activities = models.ManyToManyField(
           Activity,
+          through='UserActivity',
           related_name="users"
      )
      short_pr = models.CharField(max_length=50, default='', blank=True)
 
      # 선택 정보
      education = models.CharField(default='', blank=True)
-     keywords = models.CharField(default='', blank=True)
+     keywords = models.CharField(default='', blank=True, max_length=50)
      tools = models.CharField(default='', blank=True)
-     experiences = models.CharField(default='', blank=True)
      certificates = models.CharField(default='', blank=True)
      links = models.CharField(default='', blank=True)
 
@@ -122,6 +146,25 @@ class UserProfile(models.Model):
                return p_name + "권"
           return p_name + " " + c_name
 
+class UserExperience(models.Model):
+     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='experiences')
+     image = models.ImageField(upload_to='users/', default='users/experience_default.png') 
+     title = models.CharField(max_length=20)
+     start_date = models.CharField(max_length=10)
+     end_date = models.CharField(max_length=10)
+     activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+     pinned = models.BooleanField(default=False)
+     
+     def __str__(self):
+          return self.title
+     
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          if is_new and self.user_profile.experiences.count() > 10:
+               raise ValidationError('A user profile can have a maximum of 10 experiences.')
+          if self.pinned and self.user_profile.experiences.filter(pinned=True).count() > 2:
+               raise ValidationError('A user profile can have a maximum of 2 pinned experiences.')
+          super().save(*args, **kwargs)
 
 class FriendRequest(models.Model):
      from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
@@ -158,3 +201,49 @@ class FriendRequest(models.Model):
 class UserLikes(models.Model):
      from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
      to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='liked_by')
+
+# ManyToMany field models
+class UserInterest(models.Model):
+     user = models.ForeignKey(User, on_delete=models.CASCADE)
+     interest = models.ForeignKey(Interest, on_delete=models.CASCADE)
+     priority = models.PositiveSmallIntegerField(choices=PriorityLevels.choices, default=PriorityLevels.HIGH)
+     
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          if is_new and self.user.interests.count() > 3:
+               raise ValidationError('A user can have a maximum of 3 interests.')
+          super().save(*args, **kwargs)
+
+class UserPosition(models.Model):
+     user = models.ForeignKey(User, on_delete=models.CASCADE)
+     position = models.ForeignKey(Position, on_delete=models.CASCADE)
+     priority = models.PositiveSmallIntegerField(choices=PriorityLevels.choices, default=PriorityLevels.HIGH)
+
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          if is_new and self.user.positions.count() > 3:
+               raise ValidationError('A user can have a maximum of 3 positions.')
+          super().save(*args, **kwargs)
+          
+class UserActivity(models.Model):
+     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+     activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+     priority = models.PositiveSmallIntegerField(choices=PriorityLevels.choices, default=PriorityLevels.HIGH)
+
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          if is_new and self.user.activities.count() > 3:
+               raise ValidationError('A user can have a maximum of 3 activities.')
+          super().save(*args, **kwargs)
+          
+class UserCity(models.Model):
+     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+     city = models.ForeignKey(City, on_delete=models.CASCADE)
+     priority = models.PositiveSmallIntegerField(choices=PriorityLevels.choices, default=PriorityLevels.HIGH)
+     
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          if is_new and self.user.cities.count() > 3:
+               raise ValidationError('A user can have a maximum of 3 cities.')
+          super().save(*args, **kwargs)
+          

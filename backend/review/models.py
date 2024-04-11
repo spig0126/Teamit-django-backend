@@ -61,7 +61,7 @@ class UserReviewComment(models.Model):
      id = models.AutoField(primary_key=True)
      review = models.OneToOneField(UserReview, on_delete=models.CASCADE, related_name='comment')
      timestamp = models.DateTimeField(auto_now_add=True)
-     content = models.TextField(default='', blank=False, max_length=300)
+     content = models.TextField(default='', blank=False, max_length=200)
      edited = models.BooleanField(default=False)
      
      def save(self, *args, **kwargs):
