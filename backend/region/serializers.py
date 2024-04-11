@@ -19,19 +19,19 @@ class CitiesField(serializers.Field):
      def to_representation(self, value):
           return [city.province.name + ' ' + city.name for city in value]
 
-class CityField(serializers.Field):
-     def to_internal_value(self, data):
-        # Convert city name to city instance
-          try:
-               province_name, city_name = data.strip().split(' ', 1)
-               province = Province.objects.get(name=province_name)
-               city_instance = City.objects.get(name=city_name, province=province)
-               return city_instance
-          except city.DoesNotExist:
-               raise serializers.ValidationError("Invalid city name")
+# class CityField(serializers.Field):
+#      def to_internal_value(self, data):
+#         # Convert city name to city instance
+#           try:
+#                province_name, city_name = data.strip().split(' ', 1)
+#                province = Province.objects.get(name=province_name)
+#                city_instance = City.objects.get(name=city_name, province=province)
+#                return city_instance
+#           except city.DoesNotExist:
+#                raise serializers.ValidationError("Invalid city name")
      
-     def to_representation(self, value):
-          return city.province.name + ' ' + city.name
+#      def to_representation(self, value):
+#           return city.province.name + ' ' + city.name
 
 # model serializers  
 class ProvinceSerializer(serializers.ModelSerializer):

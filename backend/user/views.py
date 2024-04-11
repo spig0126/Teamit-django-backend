@@ -11,7 +11,7 @@ from .models import *
 from .serializers import *
 from .exceptions import *
 from .permissions import *
-from .index import UserIndex
+# from .index import UserIndex
 from . import client
 from .utils import *
 from activity.models import Activity
@@ -35,9 +35,9 @@ class UserWithProfileDetailAPIView(RetrieveModelMixin, generics.GenericAPIView):
      
      def post(self, request, *args, **kwargs):    # create user
           serializer = self.get_serializer(data=request.data)
-          if serializer.is_valid(raise_exception=True):
-               serializer.save()
-               return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
+          serializer.is_valid(raise_exception=True)
+          serializer.save()
+          return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
      
      def get_object(self):
           return self.request.user

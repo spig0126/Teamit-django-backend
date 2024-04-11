@@ -5,7 +5,7 @@ from .models import Position
 # field serializers
 class PositionsField(serializers.Field):
      def to_internal_value(self, data):
-        # Convert list of position names to list of position instances
+          # Convert list of position names to list of position instances
           try:
                position_instances = []
                for position_name in data:
@@ -19,7 +19,7 @@ class PositionsField(serializers.Field):
 
 class PositionField(serializers.Field):
      def to_internal_value(self, data):
-        # Convert position name to position instance
+          # Convert position name to position instance
           try:
                position = Position.objects.get(name=data)
                return position
