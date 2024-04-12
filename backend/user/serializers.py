@@ -12,6 +12,7 @@ from interest.models import Interest
 from interest.serializers import *
 from activity.serializers import *
 from region.serializers import *
+from home.serializers import ImageBase64Field
 
 # field serializers
 class UserAvatarImageField(serializers.Field):
@@ -38,29 +39,82 @@ class UserBackgroundImageField(serializers.Field):
      def to_representation(self, value):
           return value
 
-class UserField(serializers.Field):
-     def to_internal_value(self, data):
-          # Convert user pk/name to user instance
-          try:
-               if isinstance(data, str):
-                    user = User.objects.get(name=data)
-               else:
-                    user = User.objects.get(pk=data)
-               return user
-          except User.DoesNotExist:
-               raise serializers.ValidationError("Invalid user name/pk")
+#######################################################
+class UserRelatedInstancesMixin:
+     def delete_M2M_instances(self, instance, related_field_name):
+          related_field = getattr(instance, related_field_name)
+          related_field.clear()
+     
+     def delete_O2M_instances(self, instance, related_field_name):
+          related_field = getattr(instance, related_field_name)
+          related_field.all().delete()
           
-     def to_representation(self, value):
-          return value.name
+     def create_M2M_with_priority(self, instance, field_name, related_model, data):
+          for priority, foreign_key in enumerate(data):
+               related_model.objects.create(
+                    user=instance,
+                    priority=priority,
+                    **{field_name: foreign_key}
+               )
+     
+     def create_O2M(self, instance, related_model, data):
+          for d in data:
+               related_model.objects.create(user_profile=instance, **d)
+               
+     def set_M2M_with_priority(self, instance, field_name, related_field_name, related_model, data):
+          self.delete_M2M_instances(instance, related_field_name)
+          self.create_M2M_with_priority(instance, field_name, related_model, data)
+     
+     def set_related_instances(self, instance, related_field_name, related_model, data):
+          self.delete_O2M_instances(instance, related_field_name)
+          self.create_O2M(instance, related_model, data)
+          
+#######################################################
+class UserInterestSerializer(serializers.ModelSerializer):
+     interest = serializers.StringRelatedField()
+     class Meta:
+          model = UserInterest
+          fields = '__all__'
+          
+class UserPositionSerializer(serializers.ModelSerializer):
+     position = serializers.StringRelatedField()
+     class Meta:
+          model = UserPosition
+          fields = '__all__'
 
-class ImageSerializer(serializers.Serializer):
-     url = serializers.CharField()
+class UserActivitySerializer(serializers.ModelSerializer):
+     activity = serializers.StringRelatedField()
+     class Meta:
+          model = UserActivity
+          fields = '__all__'
 
-class UserCreateSerializer(serializers.ModelSerializer):
+class UserCitySerializer(serializers.ModelSerializer):
+     city = serializers.StringRelatedField()
+     class Meta:
+          model = UserCity
+          fields = '__all__'
+
+#######################################################
+class UserExperienceCreateSerializer(serializers.ModelSerializer):
+     image = ImageBase64Field(write_only=True, required=False, allow_null=True)
+     activity = serializers.SlugRelatedField(slug_field='name', queryset=Activity.objects.all())  
+     
+     class Meta:
+          model = UserExperience
+          fields = [
+               'title',
+               'image',
+               'start_date',
+               'end_date',
+               'activity',
+               'pinned'
+          ]
+
+class UserCreateSerializer(UserRelatedInstancesMixin, serializers.ModelSerializer):
      avatar = UserAvatarImageField()
      background = UserBackgroundImageField()
-     positions = PositionsField()
-     interests = InterestsField()
+     positions = serializers.SlugRelatedField(slug_field='name', queryset=Position.objects.all(), many=True)
+     interests = serializers.SlugRelatedField(slug_field='name', queryset=Interest.objects.all(), many=True)
 
      class Meta:
           model = User
@@ -74,37 +128,45 @@ class UserCreateSerializer(serializers.ModelSerializer):
                'interests'
           ]
 
-class UserProfileCreateSerializer(serializers.ModelSerializer):
+     def create(self, validated_data):
+          interests = validated_data.pop('interests')
+          positions = validated_data.pop('positions')
+          user = super().create(validated_data)
+          self.create_M2M_with_priority(user, 'interest', UserInterest, interests)
+          self.create_M2M_with_priority(user, 'position', UserPosition, positions)
+          return user
+     
+class UserProfileCreateSerializer(UserRelatedInstancesMixin, serializers.ModelSerializer):
      user = UserCreateSerializer()
-     activities = AcitivitiesField()
-     cities = CitiesField()
+     activities = serializers.SlugRelatedField(slug_field='name', queryset=Activity.objects.all(), many=True)     
+     cities = serializers.SlugRelatedField(slug_field='full_name', queryset=City.objects.all(), many=True)     
      
      class Meta:
           model = UserProfile
           fields = [
                'user', 
-               'activities', 
                'birthdate',
                'sex', 
                'short_pr',
-               'cities'
+               'cities',
+               'activities', 
           ]
      
      @transaction.atomic 
      def create(self, validated_data):
           user_data = validated_data.pop('user')
-
+          cities = validated_data.pop('cities')
+          activities = validated_data.pop('activities')
+          
           user_serializer = UserCreateSerializer(data=user_data)
-          if user_serializer.is_valid():
-               user = user_serializer.save()
-          else:
-               raise serializers.ValidationError(user_serializer.errors)
-
-          validated_data['user'] = user
-          user_profile = super().create(validated_data)
+          user_serializer.is_valid(raise_exception=True)
+          user = user_serializer.save()
+          user_profile = UserProfile.objects.create(user=user, **validated_data)
+          
+          self.create_M2M_with_priority(user_profile, 'city', UserCity, cities)
+          self.create_M2M_with_priority(user_profile, 'activity', UserActivity, activities)
 
           return user_profile
-     
 
 class UserSimpleDetailSerializer(serializers.ModelSerializer):
      class Meta:
@@ -236,8 +298,8 @@ class UserImageUpdateSerializer(serializers.ModelSerializer):
           return MyProfileDetailSerializer(instance).data
      
 class UserUpdateSerializer(serializers.ModelSerializer):
-     positions = PositionsField()
-     interests = InterestsField()
+     positions = serializers.SlugRelatedField(slug_field='name', queryset=Position.objects.all(), many=True)  
+     interests = serializers.SlugRelatedField(slug_field='name', queryset=Interest.objects.all(), many=True)  
      
      class Meta:
           model = User
@@ -247,9 +309,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                'interests'
           ]
      
-class UserProfileUpdateSerializer(serializers.ModelSerializer):
-     cities = CitiesField()
-     activities = AcitivitiesField()
+class UserProfileUpdateSerializer(UserRelatedInstancesMixin, serializers.ModelSerializer):
+     cities = serializers.SlugRelatedField(slug_field='full_name', queryset=City.objects.all(), many=True)  
+     activities = serializers.SlugRelatedField(slug_field='name', queryset=Activity.objects.all(), many=True)  
+     experiences = UserExperienceCreateSerializer(many=True)
      
      class Meta:
           model = UserProfile
@@ -267,15 +330,31 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
                'certificates',
                'links'   
           ]
+     
+     @transaction.atomic
+     def update(self, instance, validated_data):
+          activities = validated_data.pop("activities", None)
+          cities = validated_data.pop("cities", None)
+          experiences = validated_data.pop("experiences", None)
+          
+          if activities is not None:
+               self.set_M2M_with_priority(instance, 'activity', 'activities', UserActivity, activities)
+          if cities is not None:
+               self.set_M2M_with_priority(instance, 'city', 'cities', UserCity, cities)
+          if experiences is not None:
+               self.set_related_instances(instance, 'experiences', UserExperience, experiences)
+          return super().update(instance, validated_data)
 
-class UserWithProfileUpdateSerializer(serializers.ModelSerializer):
+class UserWithProfileUpdateSerializer(UserRelatedInstancesMixin, serializers.ModelSerializer):
      profile = UserProfileUpdateSerializer()
-     positions = PositionsField()
-     interests = InterestsField()
+     positions = serializers.SlugRelatedField(slug_field='name', queryset=Position.objects.all(), many=True)  
+     interests = serializers.SlugRelatedField(slug_field='name', queryset=Interest.objects.all(), many=True)  
+     essential = serializers.BooleanField(write_only=True)
 
      class Meta:
           model = User
           fields = [
+               'essential',
                'name', 
                'avatar', 
                'positions', 
@@ -285,37 +364,25 @@ class UserWithProfileUpdateSerializer(serializers.ModelSerializer):
 
      @transaction.atomic 
      def update(self, instance, validated_data):
-          request_data = self.context.get('request').data
+          essential = validated_data.pop('essential', None)
           profile_data = validated_data.pop('profile', None)
           user_data = validated_data
-
           positions = user_data.pop("positions", None)
           interests = user_data.pop("interests", None)
-          activities = profile_data.pop("activities", None)
-          cities = profile_data.pop("cities", None)
 
-          if request_data['essential']:
-               for attr, value in user_data.items():
-                    setattr(instance, attr, value)
+          if essential:
                if positions is not None:
-                    instance.positions.set(positions)
+                    self.set_M2M_with_priority(instance, 'position', 'positions', UserPosition, positions)
                if interests is not None:
-                    instance.interests.set(interests)
-                    
-          profile_instance = instance.profile
-          for attr, value in profile_data.items():
-               setattr(profile_instance, attr, value)
-          if activities is not None:
-               profile_instance.activities.set(activities)
-          if cities is not None:
-               profile_instance.cities.set(cities)
-          
-          instance.save()
-          profile_instance.save()
-          return instance
+                    self.set_M2M_with_priority(instance, 'interest', 'interests', UserInterest, interests)
+
+          profile_serializer = self.fields['profile']
+          profile_serializer.update(instance.profile, profile_data)
+
+          return super().update(instance, validated_data)
      
-     def to_representation(self, instance):
-          return MyProfileDetailSerializer(instance).data
+     # def to_representation(self, instance):
+     #      return MyProfileDetailSerializer(instance).data
      
 class UserLikesListSerializer(serializers.ListSerializer):
      child = LikedUserDetailSerialzier()

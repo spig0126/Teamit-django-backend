@@ -8,6 +8,19 @@ class BadgeLevels(models.IntegerChoices):
      LEVEL_TWO = 2, 'Level 2'
      LEVEL_THREE = 3, 'Level 3'
 
+class BadgeType(models.IntegerChoices):
+     ATTENDANCE = 0, 'Attendance'
+     FRIENDSHIP = 1, 'Frienship'
+     TEAM_PARTICIPANCE = 2, 'Team Participance'
+     TEAM_POST = 3, 'Team Post'
+     LIKED = 4, 'Liked'
+     RECRUIT = 5, 'Recruit'
+     TEAM_REFUSAL = 6, 'Team Refusal'
+     USER_PROFILE = 7, 'User p'
+     TEAM_LEADER = 8, 'Level 3'
+     SHARED_PROFILE = 9, 'Level 3'
+     REVIEW = 10, 'Level 3'
+
 class Badge(models.Model):
      user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='badge')
      attendance_cnt = models.PositiveIntegerField(default=0)

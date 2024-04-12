@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
 from .models import *
-from user.serializers import UserField
 from user.serializers import UserDetailSerializer
 from team.serializers import SearchedTeamDetailSerializer
 
