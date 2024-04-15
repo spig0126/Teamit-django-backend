@@ -12,8 +12,6 @@ from region.serializers import *
 from home.serializers import ImageBase64Field
 from profile_card.signals import user_created, user_updated
 
-
-
 # field serializers
 class UserAvatarImageField(serializers.Field):
      def to_internal_value(self, data):

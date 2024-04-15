@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "chat",
     "badge",
-    "review"
+    "review",
+    "profile_card"
 ]
 
 MIDDLEWARE = [
