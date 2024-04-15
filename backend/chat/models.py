@@ -27,7 +27,7 @@ class PrivateChatRoom(models.Model):
      
 class PrivateChatParticipant(models.Model):
      chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE)
-     custom_name = models.CharField(max_length=50, null=True, blank=True)
+     custom_name = models.CharField(max_length=20, null=True, blank=True)
      user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
      unread_cnt = models.PositiveIntegerField(default=0)
      alarm_on = models.BooleanField(default=True)
@@ -238,7 +238,7 @@ class InquiryMessage(models.Model):
 class TeamChatRoom(models.Model):
      id = models.AutoField(primary_key=True)
      team = models.ForeignKey(Team, on_delete=models.CASCADE)
-     name = models.CharField(max_length=50)
+     name = models.CharField(max_length=20)
      background = models.CharField(default='0xff00FFD1', max_length=10)
      created_at = models.DateTimeField(auto_now_add=True)
      updated_at = models.DateTimeField(auto_now=True)
