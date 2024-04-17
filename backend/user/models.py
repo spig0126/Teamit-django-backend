@@ -86,18 +86,16 @@ class User(models.Model):
                return ''
      @property
      def main_interest(self):
-          return str(self.interests.get(userinterest__priority=PriorityLevels.HIGH))
+          return self.interests.get(userinterest__priority=0)
      @property
      def main_position(self):
-          return str(self.positions.get(userposition__priority=PriorityLevels.HIGH))
+          return self.positions.get(userposition__priority=PriorityLevels.HIGH)
      @property
      def main_activity(self):
           return str(self.profile.activities.get(useractivity__priority=PriorityLevels.HIGH))
      @property
      def main_city(self):
           return str(self.profile.cities.get(usercity__priority=PriorityLevels.HIGH))
-
-
 
 
 class UserProfile(models.Model):
@@ -219,6 +217,10 @@ class UserInterest(models.Model):
                raise ValidationError('A user can have a maximum of 3 interests.')
           super().save(*args, **kwargs)
 
+     class Meta:
+          ordering = ['priority']
+          
+          
 class UserPosition(models.Model):
      user = models.ForeignKey(User, on_delete=models.CASCADE)
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
@@ -229,6 +231,10 @@ class UserPosition(models.Model):
           if is_new and self.user.positions.count() > 3:
                raise ValidationError('A user can have a maximum of 3 positions.')
           super().save(*args, **kwargs)
+     
+     class Meta:
+          ordering = ['priority']
+          
           
 class UserActivity(models.Model):
      user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.core.files.storage import default_storage
+from urllib.parse import urlparse
 
 from .models import *
 
@@ -129,3 +130,17 @@ class BadeDetailSerializer(serializers.ModelSerializer):
           data = super().to_representation(instance)
           transformed_data = self.transform_data(data, instance)
           return {'badges': transformed_data}
+
+
+# field serializers
+class BadgeImageField(serializers.Field):
+     def to_internal_value(self, data):
+          # Convert the signed url to image path
+          try:
+               parsed_url = urlparse(data)
+               return parsed_url.path[1:]
+          except:
+               return f'badges/user_profile.png'
+     
+     def to_representation(self, value):
+          return value

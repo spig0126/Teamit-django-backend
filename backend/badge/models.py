@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.files.storage import default_storage
 
 from user.models import User
 
@@ -9,17 +10,17 @@ class BadgeLevels(models.IntegerChoices):
      LEVEL_THREE = 3, 'Level 3'
 
 class BadgeType(models.IntegerChoices):
-     ATTENDANCE = 0, 'Attendance'
-     FRIENDSHIP = 1, 'Frienship'
-     TEAM_PARTICIPANCE = 2, 'Team Participance'
-     TEAM_POST = 3, 'Team Post'
-     LIKED = 4, 'Liked'
-     RECRUIT = 5, 'Recruit'
-     TEAM_REFUSAL = 6, 'Team Refusal'
-     USER_PROFILE = 7, 'User p'
-     TEAM_LEADER = 8, 'Level 3'
-     SHARED_PROFILE = 9, 'Level 3'
-     REVIEW = 10, 'Level 3'
+     ATTENDANCE = 0, 'attendance'
+     FRIENDSHIP = 1, 'friendship'
+     TEAM_PARTICIPANCE = 2, 'team_participance'
+     TEAM_POST = 3, 'team_post'
+     LIKED = 4, 'liked'
+     RECRUIT = 5, 'recruit'
+     TEAM_REFUSAL = 6, 'team_refusal'
+     USER_PROFILE = 7, 'user_profile'
+     TEAM_LEADER = 8, 'team_leader'
+     SHARED_PROFILE = 9, 'shared_profile'
+     REVIEW = 10, 'review'
 
 class Badge(models.Model):
      user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='badge')
@@ -89,4 +90,21 @@ class Badge(models.Model):
                return BadgeLevels.LEVEL_ONE
           else:
                return BadgeLevels.LEVEL_DEFAULT
-          
+     
+     @property
+     def latest_badge_images(self):
+          badge_types = [choice[1] for choice in BadgeType.choices]
+          img = []
+          for badge_type in badge_types:
+               try:
+                    badge_level = getattr(self, badge_type + '_level')
+               except AttributeError:
+                    try:
+                         badge_level = getattr(self, badge_type + '_status')
+                    except AttributeError:
+                         badge_level = getattr(self.__class__, badge_type + '_level').__get__(self)
+               if type(badge_level) is bool and badge_level:
+                    img.append(default_storage.url(f'badges/{badge_type}.png'))
+               elif badge_level:
+                    img.append(default_storage.url(f'badges/{badge_type}/{badge_level}.png'))
+          return img

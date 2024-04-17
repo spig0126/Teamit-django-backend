@@ -1,9 +1,6 @@
-from django.shortcuts import get_object_or_404
-from rest_framework import serializers, status
-from rest_framework.response import Response
-from datetime import datetime
+from rest_framework import serializers
 from django.db import transaction
-from re import search
+from urllib.parse import urlparse
 
 from .models import *
 from position.models import Position
@@ -13,16 +10,17 @@ from interest.serializers import *
 from activity.serializers import *
 from region.serializers import *
 from home.serializers import ImageBase64Field
+from profile_card.signals import user_created, user_updated
 
 # field serializers
 class UserAvatarImageField(serializers.Field):
      def to_internal_value(self, data):
           # Convert the signed url to image path
           try:
-               match = search('avatars/([1-9]|10|11)\.png', data)
-               return match.group(0)
+               parsed_url = urlparse(data)
+               return parsed_url.path[1:]
           except:
-               return f'avatars/1.png'
+               return 'avatars/1.png'
      
      def to_representation(self, value):
           return value
@@ -31,10 +29,10 @@ class UserBackgroundImageField(serializers.Field):
      def to_internal_value(self, data):
           # Convert the signed url to image path
           try:
-               match = search('backgrounds/([1-9]|10|11)\.png', data)
-               return match.group(0)
+               parsed_url = urlparse(data)
+               return parsed_url.path[1:]
           except:
-               return f'backgrounds/1.png'
+               return 'backgrounds/1.png'
           
      def to_representation(self, value):
           return value
@@ -64,7 +62,7 @@ class UserRelatedInstancesMixin:
      def set_M2M_with_priority(self, instance, field_name, related_field_name, related_model, data):
           self.delete_M2M_instances(instance, related_field_name)
           self.create_M2M_with_priority(instance, field_name, related_model, data)
-     
+          
      def set_related_instances(self, instance, related_field_name, related_model, data):
           self.delete_O2M_instances(instance, related_field_name)
           self.create_O2M(instance, related_model, data)
@@ -134,6 +132,8 @@ class UserCreateSerializer(UserRelatedInstancesMixin, serializers.ModelSerialize
           user = super().create(validated_data)
           self.create_M2M_with_priority(user, 'interest', UserInterest, interests)
           self.create_M2M_with_priority(user, 'position', UserPosition, positions)
+          
+          user_created.send(sender=self.__class__, instance=user)
           return user
      
 class UserProfileCreateSerializer(UserRelatedInstancesMixin, serializers.ModelSerializer):
@@ -298,17 +298,13 @@ class UserImageUpdateSerializer(serializers.ModelSerializer):
           return MyProfileDetailSerializer(instance).data
      
 class UserUpdateSerializer(serializers.ModelSerializer):
-     positions = serializers.SlugRelatedField(slug_field='name', queryset=Position.objects.all(), many=True)  
-     interests = serializers.SlugRelatedField(slug_field='name', queryset=Interest.objects.all(), many=True)  
+     avatar = UserAvatarImageField()
+     background = UserBackgroundImageField()
      
      class Meta:
           model = User
-          fields = [
-               'name',
-               'positions', 
-               'interests'
-          ]
-     
+          fields = '__all__'
+
 class UserProfileUpdateSerializer(UserRelatedInstancesMixin, serializers.ModelSerializer):
      cities = serializers.SlugRelatedField(slug_field='full_name', queryset=City.objects.all(), many=True)  
      activities = serializers.SlugRelatedField(slug_field='name', queryset=Activity.objects.all(), many=True)  
@@ -373,8 +369,10 @@ class UserWithProfileUpdateSerializer(UserRelatedInstancesMixin, serializers.Mod
           if essential:
                if positions is not None:
                     self.set_M2M_with_priority(instance, 'position', 'positions', UserPosition, positions)
+                    user_updated.send(sender=self.__class__, instance=instance)
                if interests is not None:
                     self.set_M2M_with_priority(instance, 'interest', 'interests', UserInterest, interests)
+                    user_updated.send(sender=self.__class__, instance=instance)
 
           profile_serializer = self.fields['profile']
           profile_serializer.update(instance.profile, profile_data)
