@@ -245,6 +245,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                'chatroom_id': str(self.chatroom_id),
                'chat_type': 'inquiry'
           }
+          self.update_chatroom()
           if self.is_responder and not self.chatroom.inquirer_is_online and self.chatroom.inquirer_alarm_on:
                send_fcm_to_user_task.delay(self.inquirer.pk, title, body, data)
           elif self.is_inquirer and not self.chatroom.responder_is_online and self.chatroom.responder_alarm_on:

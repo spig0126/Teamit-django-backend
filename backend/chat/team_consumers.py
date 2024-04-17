@@ -161,7 +161,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                'chat_type': 'team'
           }
           
-          offline_participants = self.get_alarm_on_offline_participants()
+          offline_participants = await self.get_alarm_on_offline_participants()
           for op in offline_participants:
                send_fcm_to_user_task.delay(op, title, body, data)
      
