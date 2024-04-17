@@ -126,7 +126,6 @@ class UserProfile(models.Model):
      keywords = models.CharField(default='', blank=True, max_length=50)
      tools = models.CharField(default='', blank=True)
      certificates = models.CharField(default='', blank=True)
-     links = models.CharField(default='', blank=True)
 
      def __str__(self):
           return self.user.name
@@ -145,6 +144,12 @@ class UserProfile(models.Model):
           if c_name == "전체":
                return p_name + "권"
           return p_name + " " + c_name
+
+class UserExternalLink(models.Model):
+     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='external_links')
+     name = models.CharField(default='')
+     url = models.URLField()
+     
 
 class UserExperience(models.Model):
      user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='experiences')
