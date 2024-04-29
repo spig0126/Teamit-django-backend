@@ -52,7 +52,7 @@ class TeamNotificationAPIView(generics.ListAPIView):
           queryset = self.get_queryset()
           serializer = self.get_serializer(queryset)
           return Response(serializer.data, status=status.HTTP_200_OK)
-   
+
 class NotificationListAPIView(generics.ListAPIView):
      serializer_class = NotificationDetailSerializer
      
