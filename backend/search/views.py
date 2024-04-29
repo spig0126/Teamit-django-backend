@@ -5,8 +5,6 @@ from rest_framework.exceptions import PermissionDenied
 
 from .models import *
 from .serializers import *
-from user.serializers import UserDetailSerializer
-from team.serializers import SearchedTeamDetailSerializer
 
 class UserSearchHistoryRecordAPIView(generics.CreateAPIView):
      serializer_class = UserSearchHistoryDetailSerializer

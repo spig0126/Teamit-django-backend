@@ -13,7 +13,7 @@ from .permissions import *
 from team.models import TeamPermission
 from team.utils import get_team_by_pk
 from team.permissions import IsTeamMemberPermission
-from team.serializers import TeamMemberDetailSerializer
+from team.serializers import MyTeamMemberDetailSerializer
 
 
 class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.GenericAPIView):
@@ -176,7 +176,7 @@ class TeamChatRoomParticipantDetailAPIView(DestroyModelMixin, ListModelMixin, ge
                
      def get_serializer_class(self):
           if self.request.method == 'GET':
-               return TeamMemberDetailSerializer
+               return MyTeamMemberDetailSerializer
           elif self.request.method == 'POST':
                return TeamChatParticipantCreateSerializer
      
@@ -227,7 +227,7 @@ class TeamChatRoomParticipantDetailAPIView(DestroyModelMixin, ListModelMixin, ge
 
 @permission_classes([IsTeamChatParticipant])
 class TeamChatRoomNonParticipantListAPIView(generics.ListAPIView):
-     serializer_class = TeamMemberDetailSerializer
+     serializer_class = MyTeamMemberDetailSerializer
      
      def initial(self, request, *args, **kwargs):
           self.chatroom = TeamChatRoom.objects.get(pk=kwargs.get('chatroom_pk'))

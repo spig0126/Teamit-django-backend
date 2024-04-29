@@ -19,7 +19,7 @@ class FirebaseTokenGenerationTestCase(TestCase):
           # 래빗
           # uid = "PsnFOUnlyJMFrd1uIX28EXdVA8g1"
           # 여니여니
-          uid = "oL9UK4B2wVQ7OYhTXdk3kwFP7Q02"
+          # uid = "oL9UK4B2wVQ7OYhTXdk3kwFP7Q02"
           # 티미_065
           # uid = "8jTawiVplrR1yGlqS4xTKPWEbuC2"
           # 개발자
@@ -34,7 +34,7 @@ class FirebaseTokenGenerationTestCase(TestCase):
           # uid = "kakao:3258297033"
           # Android
           # uid = "9m5Qj326mNd3QyX55oiAKNbMGOi2"
-          
+          uid = "user profile test"
           
           # Generate a custom ID token for the specified user
           custom_token = auth.create_custom_token(uid)

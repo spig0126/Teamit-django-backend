@@ -8,13 +8,12 @@ from django.db.models import Q
 from home.serializers import ImageBase64Field
 from .models import *
 from position.models import *
-from position.serializers import PositionsField, PositionField
+from position.serializers import PositionField
 from activity.models import *
 from activity.serializers import ActivityField
 from region.serializers import CitiesField
 from interest.serializers import InterestField
 from .utils import get_team_members_with_creator_first
-from user.models import User
 from home.utilities import delete_s3_folder
 
 # create serializers
@@ -148,24 +147,26 @@ class TeamMemberDetailSerializer(serializers.ModelSerializer):
                'team'
           ]
           
-class MyTeamMemberDetailSerialzier(serializers.ModelSerializer):
+class MyTeamMemberDetailSerializer(serializers.ModelSerializer):
      position = PositionField()
      custom_name = serializers.CharField(write_only=True, required=False)
+     user = serializers.CharField(source='name')
      
      class Meta:
           model = TeamMembers
           fields = [
                'id',
-               'name', 
+               'user', 
                'custom_name',
                'position',
                'background',
-               'avatar'
+               'avatar',
+               'team'
           ]
 
 class MyTeamDetailSerializer(serializers.ModelSerializer):
      positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
-     members = MyTeamMemberDetailSerialzier(many=True, source='teammembers_set')
+     members = MyTeamMemberDetailSerializer(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
@@ -194,7 +195,7 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
           ]  
 
 class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
-     members = MyTeamMemberDetailSerialzier(many=True, source='teammembers_set')
+     members = MyTeamMemberDetailSerializer(many=True, source='teammembers_set')
      last_post = serializers.SerializerMethodField()
      creator = serializers.StringRelatedField()
      
@@ -387,13 +388,11 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
           fields = [
                'id',
                'name',
-               'image',
                'active',
                'activity',
                'interest',
                'notification_status',
                'member_cnt',
-               'keywords'
           ]
           
      def get_member_cnt(self, obj):
@@ -445,7 +444,7 @@ class TeamNotificationSenderDetailSerializer(serializers.Serializer):
                data['position'] = team_application.position.name
                data['accepted'] = team_application.accepted
           return data
-   
+     
 class LikedTeamDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
      member_cnt = serializers.SerializerMethodField()

@@ -11,4 +11,9 @@ def get_index(index_name='user_index'):
 def perform_search(query, **kwargs):
      index = get_index()
      results = index.search(query)
-     return results
+     return results['hits']
+
+def perform_filtered_search(filter_expression, **kwargs):
+     index = get_index()
+     results = index.search('', {'filters': filter_expression})
+     return results['hits']

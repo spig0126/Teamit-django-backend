@@ -11,7 +11,7 @@ from .models import *
 from .serializers import *
 from .exceptions import *
 from .permissions import *
-from .index import UserIndex
+# from .index import UserIndex
 from . import client
 from .utils import *
 from activity.models import Activity
@@ -35,9 +35,9 @@ class UserWithProfileDetailAPIView(RetrieveModelMixin, generics.GenericAPIView):
      
      def post(self, request, *args, **kwargs):    # create user
           serializer = self.get_serializer(data=request.data)
-          if serializer.is_valid(raise_exception=True):
-               serializer.save()
-               return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
+          serializer.is_valid(raise_exception=True)
+          serializer.save()
+          return Response({"message": "User & UserProfile succesfully created"}, status=status.HTTP_200_OK)
      
      def get_object(self):
           return self.request.user
@@ -64,11 +64,13 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
           return context
      
      def get_serializer_class(self):
+          if self.request.method == 'PATCH':
+               return UserWithProfileUpdateSerializer
           if self.request.method == 'GET':
                if self.request.user.name == self.kwargs.get('name'):
                     return MyProfileDetailSerializer
                return UserWithProfileDetailSerializer
-          return UserWithProfileUpdateSerializer
+          
 
 @permission_classes([CanEditUser])
 class UserDetailAPIView(generics.DestroyAPIView):
@@ -82,37 +84,38 @@ class UserDetailAPIView(generics.DestroyAPIView):
 
 
 class RecommendedUserListAPIView(generics.ListAPIView):
+     serializer_class = RecommendedUserDetailSerializer
      def get_serializer_context(self):
-        context = super().get_serializer_context()
-        if self.request.method == 'GET':
-          context['viewer_user'] = self.request.user
-        return context
-   
+          context = super().get_serializer_context()
+          if self.request.method == 'GET':
+               context['viewer_user'] = self.request.user
+          return context
+
      def get_queryset(self):
-          # exclude user itself and blocked users
-          queryset = User.objects.exclude(
-                    pk=self.request.user.pk
-               ).exclude(
-                    pk__in=self.request.user.blocked_users.all().values_list('pk', flat=True)
-               )
+          user = self.request.user
+          filters = []
+          for attribute in ['interest', 'position', 'activity', 'city']:
+               values = getattr(user, f'{attribute}_names')
+               filters.extend([f'{attribute}_names:"{value}"' for value in values])
+
+          results = client.perform_filtered_search(' OR '.join(filters))
+
+          searched_pks = {int(result['objectID']) for result in results}
+          blocked_user_pks = set(self.request.user.blocked_users.all().values_list('pk', flat=True))
+          recommended_pks = searched_pks - blocked_user_pks - {user.pk}
+          
+          if len(recommended_pks) < 50:
+               exclude_pks = recommended_pks.union(blocked_user_pks).union({user.pk})
+               random_user_pks = User.objects.exclude(pk__in=exclude_pks).values_list('pk', flat=True)[:50 - len(recommended_pks)]
+               recommended_pks.union(random_user_pks)
                
-          show_top = self.request.query_params.get('show_top', None) == 'true'
-          if show_top:
-               return queryset.order_by('?')[:10]
-          return queryset.order_by('?')[:50]
-     
-     def get_serializer_class(self):
-          show_top = self.request.query_params.get('show_top', None) == 'true'
-          if show_top:
-               return RecommendedUserDetailSerializer
-          else:
-               return UserWithProfileDetailSerializer
+          return User.objects.filter(pk__in=recommended_pks).order_by('?')[:50]
 
 class CheckUserNameAvailability(APIView):
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True
           super().initial(request, *args, **kwargs)
-        
+
      def get(self, request):
           name = request.GET.get('name')
           
@@ -304,16 +307,16 @@ class BlockedUserListAPIView(generics.ListAPIView):
      
 # search api
 class UserSearchAPIView(generics.ListAPIView):
-    serializer_class = UserDetailSerializer
+     serializer_class = UserDetailSerializer
 
-    def get_queryset(self):
+     def get_queryset(self):
           # Retrieve the search query from the request
           query = self.request.query_params.get('q', '')
           blocked_user_pks = set(self.request.user.blocked_users.all().values_list('pk', flat=True))
           
           if query:
                results = client.perform_search(query)
-               pks = set([int(result['objectID']) for result in results['hits']])
+               pks = {int(result['objectID']) for result in results}
                
                # exclude blocked users
                pks -=  blocked_user_pks

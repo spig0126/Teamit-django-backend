@@ -8,7 +8,7 @@ from rest_framework.exceptions import ValidationError
 from .models import *
 from .serializers import*
 from team.serializers import TeamBasicDetailForChatSerializer
-from user.serializers import UserSimpleDetailSerializer
+from user.serializers import UserMinimalWithAvatarBackgroundDetailSerializer
 from fcm_notification.tasks import send_fcm_to_user_task
 
 class InquiryChatConsumer(AsyncWebsocketConsumer):
@@ -88,7 +88,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      
      async def handle_settings(self):
           responder_details = TeamBasicDetailForChatSerializer(self.chatroom.team).data
-          inquirer_details = UserSimpleDetailSerializer(self.inquirer).data
+          inquirer_details = UserMinimalWithAvatarBackgroundDetailSerializer(self.inquirer).data
           participant_list = [responder_details, inquirer_details] if self.is_responder else [inquirer_details, responder_details]
           alarm_on = self.chatroom.responder_alarm_on if self.is_responder else self.chatroom.inquirer_alarm_on
           type = 'settings'
@@ -265,8 +265,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                self.chatroom.team = None
           else:
                self.chatroom.inquirer = None
+          self.chatroom.save()
           if self.chatroom.team is None and self.chatroom.inquirer is None:
                return False
+          return True
                
      @database_sync_to_async
      def update_unread_cnt(self):

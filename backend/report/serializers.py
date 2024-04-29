@@ -1,31 +1,63 @@
 from rest_framework import serializers
 
 from .models import *
-from user.serializers import UserField
 
 class ReasonField(serializers.Field):
      def to_internal_value(self, data):
-          # Convert human-readable report reasons to actual values
-          for choice in Report.REASON_CHOICES:
-               if data == choice[1]:
-                    return data
+          for key, value in ReasonType.choices:
+               if value == data:
+                    return key
           raise serializers.ValidationError("Invalid choice")
      
      def to_representation(self, obj):
-          return dict(Report.REASON_CHOICES).get(obj, obj)
+          return dict(ReasonType.choices)[obj]
 
-class ReportDetailSerializer(serializers.ModelSerializer):
+report_fields = ['reported', 'reason']
+
+class UserReportDetailSerializer(serializers.ModelSerializer):
+     reported = serializers.SlugRelatedField(slug_field='name', queryset=User.objects.all())
      reason = ReasonField()
      
      class Meta:
-          model = Report
-          fields = [
-               'reporter',
-               'reported_type',
-               'reported_user',
-               'reported_team',
-               'reported_team_post',
-               'reported_team_post_comment',
-               'reason',
-               'created_at'
-          ]
+          model = UserReport
+          fields = report_fields
+
+class TeamReportDetailSerializer(serializers.ModelSerializer):
+     reported = serializers.SlugRelatedField(slug_field='pk', queryset=Team.objects.all())
+     reason = ReasonField()
+     
+     class Meta:
+          model = TeamReport
+          fields = report_fields
+
+class TeamPostReportDetailSerializer(serializers.ModelSerializer):
+     reported = serializers.SlugRelatedField(slug_field='pk', queryset=TeamPost.objects.all())
+     reason = ReasonField()
+     
+     class Meta:
+          model = TeamPostReport
+          fields = report_fields
+
+class TeamPostCommentReportDetailSerializer(serializers.ModelSerializer):
+     reported = serializers.SlugRelatedField(slug_field='pk', queryset=TeamPostComment.objects.all())
+     reason = ReasonField()
+     
+     class Meta:
+          model = TeamPostCommentReport
+          fields = report_fields
+
+class UserReviewReportDetailSerializer(serializers.ModelSerializer):
+     reported = serializers.SlugRelatedField(slug_field='pk', queryset=UserReview.objects.all())
+     reason = ReasonField()
+     
+     class Meta:
+          model = UserReviewReport
+          fields = report_fields
+
+class UserReviewCommentReportDetailSerializer(serializers.ModelSerializer):
+     reported = serializers.SlugRelatedField(slug_field='pk', queryset=UserReviewComment.objects.all())
+     reason = ReasonField()
+     
+     class Meta:
+          model = UserReviewCommentReport
+          fields = report_fields

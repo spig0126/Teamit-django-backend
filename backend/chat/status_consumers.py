@@ -198,8 +198,8 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
                await self.close()
 
      async def handle_search(self, data):
+          self.chat_type = 'all'
           query = data.get('query', '')
-          
           results = {
                'private': await self.private_chatroom_search(query),
                'team': await self.team_chatroom_search(query), 
@@ -221,14 +221,21 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
      
           if self.chat_type == 'all':
                await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
-               await self.send_message('update_chatroom', message)
+               await self.send_update_message(chat_type, message)
           elif self.chat_type == chat_type and self.team_id == team_id and (self.filter in (filter, 'all')):
-               await self.send_message('update_chatroom', message)
+               await self.send_update_message(chat_type, message)
                
      #--------------------utiity related---------------------------------       
      async def send_message(self, type, message):
           await self.send(text_data=json.dumps({
                'type': type,
+               'message': message
+          }))
+     
+     async def send_update_message(self, chat_type, message):
+          await self.send(text_data=json.dumps({
+               'type': 'update_chatroom',
+               'chat_type': chat_type,
                'message': message
           }))
      

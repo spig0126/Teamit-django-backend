@@ -4,12 +4,12 @@ from re import match
 from .models import *
 from team.models import TeamApplication
 from team.serializers import TeamSenderDetailSerializer, TeamApplicationSimpleDetailSerializer
-from user.serializers import UserSimpleDetailSerializer
+from user.serializers import UserMinimalWithAvatarBackgroundDetailSerializer
 from user.models import FriendRequest
 
 class TeamNotificationDetailSerializer(serializers.ModelSerializer):
      team_application = TeamApplicationSimpleDetailSerializer(source='related')
-     sender = UserSimpleDetailSerializer(source='related.applicant')
+     sender = UserMinimalWithAvatarBackgroundDetailSerializer(source='related.applicant')
      
      class Meta:
           model = TeamNotification
@@ -47,7 +47,7 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
                          sender = friend_request.to_user
                     else:
                          sender = friend_request.from_user
-                    data['sender'] = UserSimpleDetailSerializer(sender).data
+                    data['sender'] = UserMinimalWithAvatarBackgroundDetailSerializer(sender).data
                     data['accepted'] = friend_request.accepted
                except FriendRequest.DoesNotExist:
                     data['sender'] = None
