@@ -2,9 +2,60 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
 from django.core.files.storage import default_storage
+from datetime import date
 
 from .utilities import fetch_user_info, generate_firebase_custom_token
 from user.models import User
+from user.serializers import UserWithSameInterestDetailSerialzier
+from team.models import Team
+from team.serializers import MyTeamSimpleDetailSerializer, SearchedTeamDetailSerializer
+from article.models import EventArticle
+from article.serializers import EventArticleDetailSerializer
+
+class MainPageDetailAPIView(APIView):
+     def initial(self, request, *args, **kwargs):
+          super().initial(request, *args, **kwargs)
+          self.user = request.user
+          
+          self.unread_notification = self.user.notifications.filter(is_read=False).exists()
+          
+          self.my_teams = Team.objects.filter(members=self.user)
+          
+          blocked_team_pks = set(self.user.blocked_teams.all().values_list('pk', flat=True))
+          my_team_pks = set(self.my_teams.values_list('pk', flat=True))
+          exclude_pks = blocked_team_pks.union(my_team_pks)
+          my_position_pks = self.user.positions.values_list('pk', flat=True)
+          self.teams_recruiting_same_positions = (
+               Team.objects.
+               filter(positions__in=my_position_pks).
+               exclude(pk__in=exclude_pks).
+               exclude(recruit_enddate__lt=date.today().isoformat()).
+               exclude(active_enddate__lt=date.today().isoformat()).
+               distinct()
+          )[:50]
+          
+          blocked_user_pks = set(self.user.blocked_users.all().values_list('pk', flat=True))
+          exclude_pks = blocked_user_pks.union({self.user.pk})
+          my_interest_pks = self.user.interests.values_list('pk', flat=True)
+          self.users_with_same_interests = (
+               User.objects.
+               exclude(pk__in=exclude_pks).
+               filter(interests__in=my_interest_pks).
+               distinct()
+          )[:6]
+          
+          self.latest_event_article = EventArticle.objects.latest()
+          
+     def get(self, request):
+          result_data = {
+               'unread_notification': self.unread_notification,
+               'my_teams': MyTeamSimpleDetailSerializer(self.my_teams, context={'user': self.user}, many=True).data,
+               'teams_recruiting_same_positions': SearchedTeamDetailSerializer(self.teams_recruiting_same_positions, many=True).data,
+               'users_with_same_interests': UserWithSameInterestDetailSerialzier(self.users_with_same_interests, many=True).data,
+               'latest_event_article': EventArticleDetailSerializer(self.latest_event_article).data
+          }
+          return Response(result_data, status=status.HTTP_200_OK)
+
 
 class ThirdPartyLoginView(APIView):
      def initial(self, request, *args, **kwargs):
@@ -60,7 +111,7 @@ class ImageRetrieveAPIView(APIView):
      def initial(self, request, *args, **kwargs):
           request.skip_authentication = True
           super().initial(request, *args, **kwargs)
-        
+
      def get(self, request, *args, **kwargs):
           type = self.request.query_params.get('type', None)
           many = self.request.query_params.get('many', None) == 'true'

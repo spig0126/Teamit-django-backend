@@ -3,6 +3,8 @@ from dateutil.relativedelta import *
 from datetime import *
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from collections import Counter
+from django.db.models import Avg
 
 from region.models import Province, City
 from position.models import Position
@@ -10,10 +12,6 @@ from interest.models import Interest
 from activity.models import Activity
 
 # Choices
-class Visibility(models.TextChoices):
-     PUBLIC = "PU", "전체 공개" 
-     PRIVATE = "PI", "비공개"
-     FOLLOWERS = "FO", "팔로우 공개"
 
 class Sex(models.TextChoices):
      FEMALE = "F", "여자"    
@@ -62,49 +60,48 @@ class User(models.Model):
      
      @property
      def interest_names(self):
-          return ', '.join([str(interest) for interest in self.interests.all()])
+          return [str(interest) for interest in self.interests.all()]
      @property
      def position_names(self):
-          return ', '.join([str(position) for position in self.positions.all()])
+          return [str(position) for position in self.positions.all()]
      @property
      def city_names(self):
-          try:
-               return ', '.join([str(city) for city in self.profile.cities.all()])
-          except:
-               return ''
+          return [str(city) for city in self.profile.cities.all()]
      @property
      def activity_names(self):
-          try:
-               return ', '.join([str(activity) for activity in self.profile.activities.all()])
-          except:
-               return ''
+          return [str(activity) for activity in self.profile.activities.all()]
      @property
      def keywords(self):
-          try:
-               return self.profile.keywords
-          except:
-               return ''
+          return self.profile.keywords or ''
      @property
      def main_interest(self):
-          return str(self.interests.get(userinterest__priority=PriorityLevels.HIGH))
+          return self.interests.get(userinterest__priority=PriorityLevels.HIGH)
      @property
      def main_position(self):
-          return str(self.positions.get(userposition__priority=PriorityLevels.HIGH))
+          return self.positions.get(userposition__priority=PriorityLevels.HIGH)
      @property
      def main_activity(self):
-          return str(self.profile.activities.get(useractivity__priority=PriorityLevels.HIGH))
+          return self.profile.activities.get(useractivity__priority=PriorityLevels.HIGH)
      @property
      def main_city(self):
-          return str(self.profile.cities.get(usercity__priority=PriorityLevels.HIGH))
-
-
+          return self.profile.cities.get(usercity__priority=PriorityLevels.HIGH)
+     @property
+     def star_rating_average(self):
+          if self.reviews.count() > 5:
+               return self.reviews.aggregate(avg_star_rating=Avg('star_rating'))['avg_star_rating']
+          return None
+     @property
+     def review_keywords(self):
+          from review.models import UserReviewKeyword
+          keywords = [str(keyword) for keyword in UserReviewKeyword.objects.filter(reviews__reviewee=self)]
+          c = Counter(keywords)
+          common_keywords = list([keyword for keyword in c if c[keyword] > 1])
+          uncommon_keywords = list([keyword for keyword in c if c[keyword] == 1])
+          return {'common': common_keywords, 'uncommon': uncommon_keywords}
 
 
 class UserProfile(models.Model):
      user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='profile')
-     visibility = models.CharField(
-          max_length=2, choices=Visibility.choices, default=Visibility.PUBLIC
-     )
 
      # 필수정보 (아래 항목들 + User의 positions, avatar, interests)
      birthdate = models.CharField(max_length=10, default="1900-01-01")
@@ -123,10 +120,9 @@ class UserProfile(models.Model):
 
      # 선택 정보
      education = models.CharField(default='', blank=True)
-     keywords = models.CharField(default='', blank=True, max_length=50)
-     tools = models.CharField(default='', blank=True)
-     certificates = models.CharField(default='', blank=True)
-     links = models.CharField(default='', blank=True)
+     keywords = models.CharField(default='', max_length=60, blank=True)
+     tools = models.CharField(default='', max_length=70, blank=True)
+     certificates = models.TextField(default='', max_length=100, blank=True)
 
      def __str__(self):
           return self.user.name
@@ -145,6 +141,20 @@ class UserProfile(models.Model):
           if c_name == "전체":
                return p_name + "권"
           return p_name + " " + c_name
+
+class UserExternalLink(models.Model):
+     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='links')
+     title = models.CharField(default='', max_length=20)
+     url = models.URLField()
+     
+     def __str__(self):
+          return self.title
+     
+     def save(self, *args, **kwargs):
+          is_new = self.pk is None
+          if is_new and self.user_profile.links.count() > 5:
+               raise ValidationError('A user profile can have a maximum of 5 links.')
+          super().save(*args, **kwargs)
 
 class UserExperience(models.Model):
      user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='experiences')
@@ -214,6 +224,9 @@ class UserInterest(models.Model):
                raise ValidationError('A user can have a maximum of 3 interests.')
           super().save(*args, **kwargs)
 
+     class Meta:
+          ordering = ['priority']
+          
 class UserPosition(models.Model):
      user = models.ForeignKey(User, on_delete=models.CASCADE)
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
@@ -224,6 +237,10 @@ class UserPosition(models.Model):
           if is_new and self.user.positions.count() > 3:
                raise ValidationError('A user can have a maximum of 3 positions.')
           super().save(*args, **kwargs)
+     
+     class Meta:
+          ordering = ['priority']
+          
           
 class UserActivity(models.Model):
      user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)

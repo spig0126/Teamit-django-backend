@@ -5,6 +5,7 @@ urlpatterns = [
     path("api/third-party-login/", ThirdPartyLoginView.as_view()),
     path("api/check-user/", CheckUserWithUID.as_view()),
     path("api/images/", ImageRetrieveAPIView.as_view()),
+    path("api/home/", MainPageDetailAPIView.as_view()),
     path("api/regions/", include("region.urls")),
     path("api/users/", include("user.urls")),
     path("api/positions/", include("position.urls")),
@@ -19,5 +20,6 @@ urlpatterns = [
     path("api/devices/", include("fcm_notification.urls")),
     path("api/chat/", include("chat.urls")),
     path("api/badges/", include("badge.urls")),
-    path("api/reviews/", include("review.urls"))
+    path("api/reviews/", include("review.urls")),
+    path("api/profile-cards/", include("profile_card.urls")),
 ]

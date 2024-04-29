@@ -1,8 +1,9 @@
 from django.apps import AppConfig
 
-class UserConfig(AppConfig):
+
+class ProfileCardConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "user"
+    name = "profile_card"
     
     def ready(self):
         from . import signals
