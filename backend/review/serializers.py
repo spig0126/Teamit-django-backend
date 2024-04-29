@@ -56,7 +56,7 @@ class UserReviewCreateUpdateSerializer(serializers.ModelSerializer):
           return UserReviewDetailSerializer(instance).data
      
 class UserReviewDetailSerializer(serializers.ModelSerializer):
-     reviewer = UserSimpleDetailSerializer()
+     reviewer = UserMinimalWithAvatarBackgroundDetailSerializer()
      activity = serializers.CharField(source='get_activity_display')
      keywords = serializers.StringRelatedField(many=True)
      comment = UserReviewCommentDetailSerializer()

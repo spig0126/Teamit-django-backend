@@ -12,8 +12,8 @@ def create_profile_card(sender, instance, **kwargs):
      with transaction.atomic():
           ProfileCard.objects.create(
                user = instance,
-               interest = instance.main_interest,
-               position = instance.main_position
+               interest = 0,
+               position = 0
           )
 
 @receiver(user_updated)

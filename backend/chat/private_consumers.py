@@ -9,7 +9,7 @@ from django.db.models import F
 
 from .models import *
 from .serializers import*
-from user.serializers import UserSimpleDetailSerializer
+from user.serializers import UserMinimalWithAvatarBackgroundDetailSerializer
 from fcm_notification.tasks import send_fcm_to_user_task
 
 class PrivateChatConsumer(AsyncWebsocketConsumer):
@@ -246,7 +246,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      def get_participant_list(self):
           participants = self.chatroom.participants.all()
-          return UserSimpleDetailSerializer(participants, many=True).data
+          return UserMinimalWithAvatarBackgroundDetailSerializer(participants, many=True).data
 
           
      @database_sync_to_async

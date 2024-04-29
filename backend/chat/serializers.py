@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 
 from .models import *
-from user.serializers import UserSimpleDetailSerializer
+from user.serializers import UserMinimalWithAvatarBackgroundDetailSerializer
 from user.models import User
 from team.serializers import TeamMemberDetailSerializer
 from team.models import TeamMembers
@@ -52,7 +52,7 @@ class PrivateChatRoomDeatilSerializer(serializers.ModelSerializer):
      
      def get_sender(self, instance):
           sender = instance.participants.exclude(id=self.context.get('user').id).first()
-          return UserSimpleDetailSerializer(sender).data
+          return UserMinimalWithAvatarBackgroundDetailSerializer(sender).data
 
 class MyPrivateChatRoomDetailSerializer(serializers.ModelSerializer):
      id = serializers.PrimaryKeyRelatedField(source='chatroom', read_only=True)
@@ -317,7 +317,7 @@ class InquiryMessageSerializer(serializers.ModelSerializer):
           
 #######################################################
 class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):
-     user = UserSimpleDetailSerializer()
+     user = UserMinimalWithAvatarBackgroundDetailSerializer()
      member = TeamMemberDetailSerializer()
      
      class Meta:
