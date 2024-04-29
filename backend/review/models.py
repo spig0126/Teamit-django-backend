@@ -44,10 +44,10 @@ class UserReview(models.Model):
      content = models.TextField( blank=True, default='', max_length=300)
      keywords = models.ManyToManyField(
           UserReviewKeyword,
-          related_name='users'
+          related_name='reviews'
      )
      edited = models.BooleanField(default=False)
-     
+
      class Meta:
           ordering = ["-timestamp"]
      
