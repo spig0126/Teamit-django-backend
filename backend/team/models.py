@@ -1,14 +1,12 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import *
-from django.db.models.signals import pre_delete
-from django.dispatch import receiver
+from django.db.models import Sum
 
 from activity.models import *
 from region.models import *
 from position.models import *
 from user.models import *
-from fcm_notification.utils import send_fcm_to_team
 
 class Team(models.Model):
      id = models.AutoField(primary_key=True)
@@ -63,6 +61,11 @@ class Team(models.Model):
      @property
      def member_cnt(self):
           return self.members.count()
+     
+     @property
+     def member_and_position_cnt(self):
+          position_cnt = self.recruiting.aggregate(total_cnt=Sum('cnt'))['total_cnt'] or 0
+          return self.member_cnt + position_cnt
           
      @property
      def date_status(self):
@@ -102,7 +105,7 @@ class Team(models.Model):
 
 class TeamPositions(models.Model):
      id = models.AutoField(primary_key=True)
-     team = models.ForeignKey(Team, on_delete=models.CASCADE)
+     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='recruiting')
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
      pr = models.CharField(default='', blank=True)
      cnt = models.PositiveSmallIntegerField(

@@ -2,12 +2,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from .models import *
-from team.serializers import TeamMemberDetailSerializer
+from team.serializers import MyTeamMemberDetailSerializer
 from user.models import User
 
 # detail serializers
 class TeamPostCommentDetailSerializer(serializers.ModelSerializer):
-     writer = TeamMemberDetailSerializer()
+     writer = MyTeamMemberDetailSerializer()
      blocked_writer = serializers.SerializerMethodField()
      
      class Meta:
@@ -27,7 +27,7 @@ class TeamPostCommentDetailSerializer(serializers.ModelSerializer):
           return False
 
 class TeamPostSimpleDetailSerializer(serializers.ModelSerializer):
-     writer = TeamMemberDetailSerializer()
+     writer = MyTeamMemberDetailSerializer()
      comment_cnt = serializers.SerializerMethodField()
      viewed_cnt = serializers.ReadOnlyField()
      viewed = serializers.SerializerMethodField()
@@ -63,7 +63,7 @@ class TeamPostSimpleDetailSerializer(serializers.ModelSerializer):
           return False
 
 class TeamPostDetailSerializer(serializers.ModelSerializer):
-     writer = TeamMemberDetailSerializer()
+     writer = MyTeamMemberDetailSerializer()
      comment_cnt = serializers.SerializerMethodField()
      viewed_cnt = serializers.ReadOnlyField()
      viewed = serializers.SerializerMethodField()
@@ -90,7 +90,7 @@ class TeamPostDetailSerializer(serializers.ModelSerializer):
      
      def get_ordered_comments(self, instance):
           return instance.comments.all().order_by('id')
-   
+
      def get_comment_cnt(self, obj):
           return obj.comments.count()
      

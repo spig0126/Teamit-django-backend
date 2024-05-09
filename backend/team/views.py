@@ -22,7 +22,6 @@ from notification.models import *
 from position.models import Position
 from fcm_notification.utils import send_fcm_to_user, send_fcm_to_team
 from home.utilities import delete_s3_folder
-from user.utils import get_user_by_name
 
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
@@ -35,8 +34,12 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
                teams = Team.objects
                if self.activity != '1':   
                     teams = teams.filter(activity=self.activity)
-               teams = teams.exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))\
+               teams = (teams
+                         .exclude(pk__in=self.user.blocked_teams.all().values_list('pk', flat=True))
+                         .exclude(members=self.user)
                          .order_by('?')
+               )
+               
                          
                # values_list = [
                #      'id',
@@ -70,10 +73,10 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def get_serializer_class(self):
           if self.request.method == 'POST':  # create team
                return TeamCreateUpdateSerializer
-          elif self.request.method == 'GET': # list my teams
-               if self.activity is None:
+          elif self.request.method == 'GET':
+               if self.activity is None: # list my teams
                     return MyTeamSimpleDetailSerializer
-               else:
+               else:       # list all teams filtered by activity
                     return TeamSimpleDetailSerializer
 
 class RecommendedTeamListAPIView(generics.ListAPIView):
@@ -112,11 +115,7 @@ class TeamDetailAPIView(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin,
 
      def get_serializer_class(self):
           if self.request.method == 'GET':
-               type = self.request.query_params.get('type')
-               if type is None or type == 'detailed':
-                    return TeamDetailSerializer
-               elif type == 'simple':
-                    return TeamSimpleDetailSerializer
+               return TeamDetailSerializer
           elif self.request.method == 'PATCH':
                return TeamCreateUpdateSerializer
 
@@ -579,8 +578,7 @@ class UpdateTeamCreatorAPIView(APIView):
           super().initial(request, *args, **kwargs)
      
      def patch(self, request, *args, **kwargs):
-          member = get_member_by_pk(kwargs.get('member_pk'))
-          user = member.user
+          user = get_object_or_404(User, pk=kwargs.get('user_pk'))
           if not self.team.members.filter(pk=user.pk).exists():
                return Response({'detail': 'only team member can be team creator'}, status=status.HTTP_403_FORBIDDEN)
           self.team.creator = user

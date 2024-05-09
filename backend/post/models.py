@@ -14,6 +14,7 @@ class TeamPost(models.Model):
      
      class Meta:
           ordering = ['-created_at']
+          get_latest_by = '-created_at'
      
      @property
      def viewed_cnt(self):

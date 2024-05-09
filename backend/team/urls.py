@@ -34,7 +34,7 @@ urlpatterns = [
      
      # permission
      path("<int:team_pk>/permission/", TeamPermissionUpdateAPIView.as_view(), name="permission_update"),
-     path("<int:team_pk>/creator/<int:member_pk>/", UpdateTeamCreatorAPIView.as_view(), name="creator_update"),
+     path("<int:team_pk>/creator/<int:user_pk>/", UpdateTeamCreatorAPIView.as_view(), name="creator_update"),
      
      # search
      path("search/", TeamSearchAPIView.as_view())

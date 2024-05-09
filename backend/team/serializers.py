@@ -15,6 +15,7 @@ from region.serializers import CitiesField
 from interest.serializers import InterestField
 from .utils import get_team_members_with_creator_first
 from home.utilities import delete_s3_folder
+from user.serializers import UserMinimalDetailSerializer
 
 # create serializers
 class TeamMemberCreateSerializer(serializers.ModelSerializer):
@@ -133,39 +134,39 @@ class TeamPositionDetailSerializer(serializers.ModelSerializer):
           ]
 
 class TeamMemberDetailSerializer(serializers.ModelSerializer):
-     user = serializers.StringRelatedField(read_only=True)
+     user = UserMinimalDetailSerializer()
      position = PositionField()
      
      class Meta:
           model = TeamMembers
           fields = [
                'id',
-               'user',
+               'name',
                'position',
                'background',
                'avatar',
-               'team'
+               'team',
+               'user'
           ]
           
 class MyTeamMemberDetailSerializer(serializers.ModelSerializer):
      position = PositionField()
-     custom_name = serializers.CharField(write_only=True, required=False)
-     user = serializers.CharField(source='name')
+     user = UserMinimalDetailSerializer()
      
      class Meta:
           model = TeamMembers
           fields = [
                'id',
-               'user', 
-               'custom_name',
-               'position',
-               'background',
+               'name',
                'avatar',
-               'team'
+               'background',
+               'position',
+               'team',
+               'user'
           ]
 
 class MyTeamDetailSerializer(serializers.ModelSerializer):
-     positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
+     positions = TeamPositionDetailSerializer(many=True, source='recruiting')
      members = MyTeamMemberDetailSerializer(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
@@ -197,24 +198,25 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
 class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
      members = MyTeamMemberDetailSerializer(many=True, source='teammembers_set')
      last_post = serializers.SerializerMethodField()
-     creator = serializers.StringRelatedField()
+     creator = UserMinimalDetailSerializer()
+     has_new_team_notifications = serializers.SerializerMethodField()
      
      class Meta:
           model = Team
           fields = [
                'id',
                'name',
+               'has_new_team_notifications',
                'creator',
                'members',
                'last_post'
           ]  
+          
+     def get_has_new_team_notifications(self, instance):
+          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
      
      def get_last_post(self, instance):
-          team_posts = instance.posts.all()
-          if team_posts:
-               return team_posts.order_by('-created_at').first().content
-          else:
-               return None
+          return instance.posts.latest().content
           
      def to_representation(self, instance):
           data = super().to_representation(instance)
@@ -222,15 +224,14 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
           return data
      
 class TeamDetailSerializer(serializers.ModelSerializer):
-     creator = serializers.StringRelatedField()
-     positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
+     creator = UserMinimalDetailSerializer()
+     positions = TeamPositionDetailSerializer(many=True, source='recruiting')
      members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
      is_member = serializers.SerializerMethodField()
      likes = serializers.SerializerMethodField()
-     date_status = serializers.SerializerMethodField()
      blocked = serializers.SerializerMethodField()
      
      class Meta:
@@ -270,21 +271,12 @@ class TeamDetailSerializer(serializers.ModelSerializer):
      def get_likes(self, instance):
           user = self.context.get('user')
           team = instance
-          try:
-               TeamLike.objects.get(user=user, team=team)
-               return True
-          except:
-               return False
-          
-     def get_date_status(self, obj):
-          return obj.date_status
-     
+          return TeamLike.objects.filter(user=user, team=team).exists()
+
      def get_blocked(self, instance):
           user = self.context.get('user')
           team = instance
-          if team in user.blocked_teams.all():
-               return True
-          return False
+          return team in user.blocked_teams.all()
           
      def to_representation(self, instance):
           data = super().to_representation(instance)
@@ -293,10 +285,8 @@ class TeamDetailSerializer(serializers.ModelSerializer):
 
 class TeamSimpleDetailSerializer(serializers.ModelSerializer):  
      positions = serializers.StringRelatedField(many=True)
-     member_cnt = serializers.SerializerMethodField()
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
-     date_status = serializers.SerializerMethodField()
 
      class Meta:
           model = Team
@@ -312,11 +302,6 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):
                'positions'
           ]
           
-     def get_member_cnt(self, obj):
-          return obj.member_cnt
-     def get_date_status(self, obj):
-          return obj.date_status
-
 class TeamBasicDetailForChatSerializer(serializers.ModelSerializer):
      avatar = serializers.ImageField(source='image')
      background = serializers.SerializerMethodField()
@@ -335,8 +320,7 @@ class TeamBasicDetailForChatSerializer(serializers.ModelSerializer):
 class SearchedTeamDetailSerializer(serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
-     member_cnt = serializers.ReadOnlyField()
-     date_status = serializers.ReadOnlyField()
+     likes = serializers.SerializerMethodField()
 
      class Meta:
           model = Team
@@ -344,15 +328,22 @@ class SearchedTeamDetailSerializer(serializers.ModelSerializer):
                'id',
                'name',
                'image',
+               'date_status',
+               'likes',
                'activity',
                'interest',
                'keywords',
                'member_cnt',
-               'date_status'
+               'member_and_position_cnt'
           ]
 
+     def get_likes(self, instance):
+          user = self.context.get('user')
+          team = instance
+          return TeamLike.objects.filter(user=user, team=team).exists()
+
 class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):  
-     positions = TeamPositionDetailSerializer(many=True, source='teampositions_set')
+     positions = TeamPositionDetailSerializer(many=True, source='recruiting')
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
@@ -377,33 +368,22 @@ class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):
           ]  
 
 class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
-     member_cnt = serializers.SerializerMethodField()
      activity = serializers.StringRelatedField()
-     interest = serializers.StringRelatedField()
-     notification_status = serializers.SerializerMethodField()
-     active = serializers.SerializerMethodField()
+     has_new_team_notifications = serializers.SerializerMethodField()
      
      class Meta:
           model = Team
           fields = [
                'id',
                'name',
-               'active',
                'activity',
-               'interest',
-               'notification_status',
-               'member_cnt',
+               'has_new_team_notifications',
+               'member_cnt'
           ]
-          
-     def get_member_cnt(self, obj):
-          return obj.member_cnt
-     def get_notification_status(self, instance):
+
+     def get_has_new_team_notifications(self, instance):
           return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
-     def get_active(self, obj):
-          today = date.today()
-          active_enddate = date.fromisoformat(obj.active_enddate)
-          return True if (active_enddate - today).days >= 0 else False
-     
+
 class TeamSenderDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = Team
@@ -447,10 +427,8 @@ class TeamNotificationSenderDetailSerializer(serializers.Serializer):
      
 class LikedTeamDetailSerializer(serializers.ModelSerializer):
      positions = serializers.StringRelatedField(many=True)
-     member_cnt = serializers.SerializerMethodField()
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
-     date_status = serializers.SerializerMethodField()
      likes = serializers.SerializerMethodField()
 
      class Meta:
@@ -468,19 +446,11 @@ class LikedTeamDetailSerializer(serializers.ModelSerializer):
                'positions',
           ]
           
-     def get_member_cnt(self, obj):
-          return obj.member_cnt
-     def get_date_status(self, obj):
-          return obj.date_status
      def get_likes(self, instance):
           user = self.context.get('user')
           team = instance
-          try:
-               TeamLike.objects.get(user=user, team=team)
-               return True
-          except:
-               return False
-          
+          return TeamLike.objects.filter(user=user, team=team).exists()
+
 
 class TeamApplicationDetailSerializer(serializers.ModelSerializer):
      team = serializers.StringRelatedField()

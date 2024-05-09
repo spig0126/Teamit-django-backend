@@ -197,8 +197,9 @@ class UserExternalLinkDetailSerializer(serializers.ModelSerializer):
           ]
 
 class UserMinimalDetailSerializer(serializers.ModelSerializer):
-     model = User
-     fields = ['id', 'name']
+     class Meta:
+          model = User
+          fields = ['id', 'name']
      
 class UserMinimalWithAvatarDetailSerializer(serializers.ModelSerializer):  
      class Meta:

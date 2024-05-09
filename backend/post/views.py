@@ -136,7 +136,7 @@ class TeamPostCommenDestroyAPIView(generics.DestroyAPIView):
 
 @permission_classes([IsTeamMemberPermission])
 class TeamPostViewerListAPIView(generics.ListAPIView):
-     serializer_class = TeamMemberDetailSerializer
+     serializer_class = MyTeamMemberDetailSerializer
      
      def initial(self, request, *args, **kwargs):
           self.team = get_team_by_pk(self.kwargs.get('team_pk'))
