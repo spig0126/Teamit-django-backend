@@ -7,18 +7,19 @@ import os
 TEAM_MODEL = 'team.Team'
 
 # Initialize Firebase Admin SDK
-CONFIG_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-firebase_credentials_path = os.path.join(CONFIG_BASE_DIR, 'firebase-credentials.json')
+CONFIG_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+firebase_credentials_path = os.path.join(CONFIG_BASE_DIR, '.config', 'firebase-credentials.json')
+
 
 cred = credentials.Certificate(firebase_credentials_path)
 firebase_admin.initialize_app(cred)
 
 # Load variables from .env file
-ENV_FILE_PATH = os.path.join(CONFIG_BASE_DIR, '.env') 
+ENV_FILE_PATH = os.path.join(CONFIG_BASE_DIR, '.config', '.env') 
 config = AutoConfig(search_path=ENV_FILE_PATH)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config("SECRET_KEY")
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 CORS_ALLOW_ALL_ORIGINS = True
@@ -105,16 +106,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "teamhapso_db",
-        "USER": "teamhapso",
-        "PASSWORD": "teamhapso_pwd",
-        "HOST": "localhost",
+        "NAME": config("RDS_NAME"),
+        "USER": config("RDS_USER"),
+        "PASSWORD": config("RDS_PASSWORD"),
+        "HOST": config("RDS_HOST"),
         "PORT": "5432",
-        # "NAME": config("RDS_NAME"),
-        # "USER": config("RDS_USER"),
-        # "PASSWORD": config("RDS_PASSWORD"),
-        # "HOST": config("RDS_HOST"),
-        # "PORT": "5432",
     }
 }
 
