@@ -15,7 +15,7 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
 
-    - name: Connect to EC2 instance and copy code
+    - name: Connect to EC2 instance and copy code 
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.HOST }}
