@@ -22,5 +22,5 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.KEY }}
         script: |
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
           rsync -avzr --delete ./* ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/home/ubuntu/Teamit-django-backend-1/
