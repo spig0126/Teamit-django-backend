@@ -370,6 +370,29 @@ class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):
 class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
      has_new_team_notifications = serializers.SerializerMethodField()
+     active = serializers.SerializerMethodField()
+     
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'image',
+               'activity',
+               'has_new_team_notifications',
+               'member_cnt',
+               'active',
+               'keywords'
+          ]
+
+     def get_has_new_team_notifications(self, instance):
+          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
+     def get_active(self, instance):
+          return datetime.fromisoformat(instance.active_enddate) >= datetime.now()
+     
+class MyActiveTeamSimpleDetailSerializer(serializers.ModelSerializer):
+     activity = serializers.StringRelatedField()
+     has_new_team_notifications = serializers.SerializerMethodField()
      
      class Meta:
           model = Team
@@ -383,7 +406,7 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
 
      def get_has_new_team_notifications(self, instance):
           return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
-
+     
 class TeamSenderDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = Team
