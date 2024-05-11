@@ -8,7 +8,7 @@ from .utilities import fetch_user_info, generate_firebase_custom_token
 from user.models import User
 from user.serializers import UserWithSameInterestDetailSerialzier
 from team.models import Team
-from team.serializers import MyTeamSimpleDetailSerializer, SearchedTeamDetailSerializer
+from team.serializers import SearchedTeamDetailSerializer, MyActiveTeamSimpleDetailSerializer
 from article.models import EventArticle
 from article.serializers import EventArticleDetailSerializer
 
@@ -19,39 +19,42 @@ class MainPageDetailAPIView(APIView):
           
           self.unread_notification = self.user.notifications.filter(is_read=False).exists()
           
-          self.my_teams = Team.objects.filter(members=self.user)
+          my_teams = Team.objects.filter(members=self.user)
+          self.is_new_user = not my_teams.exists()
+          self.my_active_teams = my_teams.exclude(active_enddate__lt=date.today().isoformat())
           
           blocked_team_pks = set(self.user.blocked_teams.all().values_list('pk', flat=True))
-          my_team_pks = set(self.my_teams.values_list('pk', flat=True))
+          my_team_pks = set(my_teams.values_list('pk', flat=True))
           exclude_pks = blocked_team_pks.union(my_team_pks)
-          my_position_pks = self.user.positions.values_list('pk', flat=True)
-          self.teams_recruiting_same_positions = (
+          my_activity_pks = self.user.profile.activities.values_list('pk', flat=True)
+          self.teams_with_same_activity = (
                Team.objects.
-               filter(positions__in=my_position_pks).
+               filter(activity__in=my_activity_pks).
                exclude(pk__in=exclude_pks).
                exclude(recruit_enddate__lt=date.today().isoformat()).
                exclude(active_enddate__lt=date.today().isoformat()).
                distinct()
-          )[:50]
+          ).order_by('?')[:50]
           
           blocked_user_pks = set(self.user.blocked_users.all().values_list('pk', flat=True))
           exclude_pks = blocked_user_pks.union({self.user.pk})
-          my_interest_pks = self.user.interests.values_list('pk', flat=True)
-          self.users_with_same_interests = (
+          my_interest_categories = self.user.interests.values_list('category', flat=True).distinct()
+          self.users_with_similar_interests = (
                User.objects.
                exclude(pk__in=exclude_pks).
-               filter(interests__in=my_interest_pks).
+               filter(interests__category__in=my_interest_categories).
                distinct()
-          )[:6]
+          ).order_by('?')[:6]
           
           self.latest_event_article = EventArticle.objects.latest()
           
      def get(self, request):
           result_data = {
+               'is_new_user': self.is_new_user,
                'unread_notification': self.unread_notification,
-               'my_teams': MyTeamSimpleDetailSerializer(self.my_teams, context={'user': self.user}, many=True).data,
-               'teams_recruiting_same_positions': SearchedTeamDetailSerializer(self.teams_recruiting_same_positions, many=True).data,
-               'users_with_same_interests': UserWithSameInterestDetailSerialzier(self.users_with_same_interests, many=True).data,
+               'my_active_teams': MyActiveTeamSimpleDetailSerializer(self.my_active_teams, context={'user': self.user}, many=True).data,
+               'teams_with_same_activity': SearchedTeamDetailSerializer(self.teams_with_same_activity, many=True).data,
+               'users_with_similar_interests': UserWithSameInterestDetailSerialzier(self.users_with_similar_interests, many=True).data,
                'latest_event_article': EventArticleDetailSerializer(self.latest_event_article).data
           }
           return Response(result_data, status=status.HTTP_200_OK)
