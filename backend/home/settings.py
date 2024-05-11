@@ -10,7 +10,6 @@ TEAM_MODEL = 'team.Team'
 CONFIG_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 firebase_credentials_path = os.path.join(CONFIG_BASE_DIR, '.config', 'firebase-credentials.json')
 
-
 cred = credentials.Certificate(firebase_credentials_path)
 firebase_admin.initialize_app(cred)
 

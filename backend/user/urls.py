@@ -30,7 +30,7 @@ urlpatterns = [
      path("recommended/", RecommendedUserListAPIView.as_view()),
      path("images/", UserImageUpdateAPIView.as_view()),
      path("name/available/", CheckUserNameAvailability.as_view()),
-
+     path("update-info/", UpdatePageInfoRetrieveAPIView.as_view(), name='retrive info for profile update page'), 
      path("<str:name>/like/", LikeUnlikeAPIView.as_view()),
      path("<str:name>/profile/", UserWithProfileRetrieveUpdateAPIView.as_view(), name='update my profile / retrieve user profile'), 
      path("<str:name>/block/", BlockUnblockUserAPIView.as_view()),

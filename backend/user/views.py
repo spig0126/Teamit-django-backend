@@ -3,8 +3,8 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import permission_classes
-from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.mixins import RetrieveModelMixin
+from django.db import connections
 from django.db import transaction
 
 from .models import *
@@ -71,7 +71,17 @@ class UserWithProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
                     return MyProfileDetailSerializer
                return UserWithProfileDetailSerializer
           
-
+class UpdatePageInfoRetrieveAPIView(APIView):
+     def get(self, request, *args, **kwargs):
+          data = {
+               'regions': ProvinceWithCitiesSerializer(Province.objects.all(), many=True).data,
+               'positions': Position.objects.all().values_list('name', flat=True),
+               'activities': Activity.objects.all().values_list("name", flat=True),
+               'interests': Interest.objects.all().values_list("name", flat=True),
+               'tools': Tool.objects.all().values_list('name', flat=True),
+          }
+          return Response(data, status=status.HTTP_200_OK)
+     
 @permission_classes([CanEditUser])
 class UserDetailAPIView(generics.DestroyAPIView):
      queryset = User.objects.all()

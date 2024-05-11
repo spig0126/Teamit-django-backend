@@ -263,4 +263,10 @@ class UserCity(models.Model):
           if is_new and self.user.cities.count() > 3:
                raise ValidationError('A user can have a maximum of 3 cities.')
           super().save(*args, **kwargs)
-          
+
+class Tool(models.Model):
+     id = models.AutoField(primary_key=True)
+     name = models.CharField()
+     
+     class Meta:
+          managed = False

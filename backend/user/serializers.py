@@ -176,7 +176,6 @@ class UserProfileCreateSerializer(UserRelatedInstancesMixin, serializers.ModelSe
           cities = validated_data.pop('cities')
           activities = validated_data.pop('activities')
           
-
           user_serializer = UserCreateSerializer(data=user_data)
           user_serializer.is_valid(raise_exception=True)
           user = user_serializer.save()
