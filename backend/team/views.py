@@ -188,7 +188,7 @@ class TeamPositionListAPIView(generics.ListAPIView):
           super().initial(request, *args, **kwargs)
      
      def get_queryset(self):
-          team = get_object_or_404(Team, pk=self.kwargs.get('pk'))
+          team = get_object_or_404(Team, pk=self.kwargs.get('team_pk'))
           return TeamPositions.objects.filter(team=team)
 
 # Team member views

@@ -216,7 +216,10 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
           return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
      
      def get_last_post(self, instance):
-          return instance.posts.latest().content
+          try:
+               return instance.posts.latest().content
+          except Exception:
+               return None
           
      def to_representation(self, instance):
           data = super().to_representation(instance)

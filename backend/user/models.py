@@ -66,13 +66,22 @@ class User(models.Model):
           return [str(position) for position in self.positions.all()]
      @property
      def city_names(self):
-          return [str(city) for city in self.profile.cities.all()]
+          try:
+               return [str(city) for city in self.profile.cities.all()]
+          except Exception:
+               return []
      @property
      def activity_names(self):
-          return [str(activity) for activity in self.profile.activities.all()]
+          try:
+               return [str(activity) for activity in self.profile.activities.all()]
+          except Exception:
+               return []
      @property
      def keywords(self):
-          return self.profile.keywords or ''
+          try:
+               return self.profile.keywords
+          except Exception:
+               return ''
      @property
      def main_interest(self):
           return self.interests.get(userinterest__priority=PriorityLevels.HIGH)

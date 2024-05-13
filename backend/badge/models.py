@@ -49,22 +49,22 @@ class Badge(models.Model):
      
      @property
      def recruit_level(self):
-          if self.attendance_cnt >= 30:
+          if self.recruit_cnt >= 30:
                return BadgeLevels.LEVEL_THREE
-          elif self.attendance_cnt >= 15:
+          elif self.recruit_cnt >= 15:
                return BadgeLevels.LEVEL_TWO
-          elif self.attendance_cnt >= 5:
+          elif self.recruit_cnt >= 5:
                return BadgeLevels.LEVEL_ONE
           else:
                return BadgeLevels.LEVEL_DEFAULT
      
      @property
      def team_participance_level(self):
-          if self.attendance_cnt >= 5:
+          if self.team_participance_cnt >= 5:
                return BadgeLevels.LEVEL_THREE
-          elif self.attendance_cnt >= 3:
+          elif self.team_participance_cnt >= 3:
                return BadgeLevels.LEVEL_TWO
-          elif self.attendance_cnt >= 1:
+          elif self.team_participance_cnt >= 1:
                return BadgeLevels.LEVEL_ONE
           else:
                return BadgeLevels.LEVEL_DEFAULT

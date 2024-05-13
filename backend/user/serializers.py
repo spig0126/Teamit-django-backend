@@ -185,7 +185,7 @@ class UserProfileCreateSerializer(UserRelatedInstancesMixin, serializers.ModelSe
           self.create_M2M_with_priority(user_profile, 'activity', UserActivity, activities)
 
           return user_profile
-
+     
 ########################DETAIL SERIALIZERS##############################################
 class UserExternalLinkDetailSerializer(serializers.ModelSerializer):
      class Meta:
@@ -458,10 +458,10 @@ class UserProfileUpdateSerializer(UserRelatedInstancesMixin, serializers.ModelSe
                
      @transaction.atomic
      def update(self, instance, validated_data):
-          activities = validated_data.pop('activities', None)
-          cities = validated_data.pop('cities', None)
-          experiences = validated_data.pop('experiences', None)
-          links = validated_data.pop('links', None)
+          activities = validated_data.get('activities', None)
+          cities = validated_data.get('cities', None)
+          experiences = validated_data.get('experiences', None)
+          links = validated_data.get('links', None)
           
           for attr, value in validated_data.items():
                if value is None:
