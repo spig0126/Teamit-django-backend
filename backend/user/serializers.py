@@ -373,6 +373,8 @@ class RecommendedUserDetailSerializer(serializers.ModelSerializer):
 class UserWithSameInterestDetailSerialzier(serializers.ModelSerializer):  
      main_activity = serializers.StringRelatedField()
      main_interest = serializers.StringRelatedField()
+     likes = serializers.SerializerMethodField()
+     
      class Meta:
           model = User
           fields = [
@@ -382,8 +384,13 @@ class UserWithSameInterestDetailSerialzier(serializers.ModelSerializer):
                'background',
                'main_activity',
                'main_interest',
-               'keywords'
+               'keywords',
+               'likes'
           ]
+          
+     def get_likes(self, instance):
+          viewer_user = self.context.get('viewer_user')
+          return UserLikes.objects.filter(from_user=viewer_user, to_user=instance).exists()
           
 class FriendRequestDetailSerializer(serializers.ModelSerializer):
      to_user = serializers.StringRelatedField()

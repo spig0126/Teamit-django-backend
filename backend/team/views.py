@@ -231,8 +231,7 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
           team_position.cnt -= 1
           if team_position.cnt == 0:
                team_position.delete()
-          else:
-               team_position.save()
+          team_position.save()
           
           # alert team that invitation was accepted
           TeamNotification.objects.create(
@@ -515,12 +514,17 @@ class TeamApplicationDeclineAPIView(APIView):
 
 
 # team likes related views
-class UserTeamLikesListAPIView(APIView):
-     def get(self, request, *args, **kwargs):
-          team_likes = [obj.team for obj in TeamLike.objects.filter(user=request.user)]
-          context = {'user': request.user}
-          serializer = TeamLikesListSerializer(team_likes, context=context)
-          return Response(serializer.data, status=status.HTTP_200_OK)
+class UserTeamLikesListAPIView(generics.ListAPIView):
+     serializer_class = TeamSimpleDetailWithLikesSerializer
+     
+     def get_serializer_context(self):
+          context = super().get_serializer_context()
+          context['user'] = self.request.user
+          return context
+
+     def get_queryset(self):
+          team_likes = TeamLike.objects.filter(user=self.request.user).values_list('team', flat=True)
+          return Team.objects.filter(pk__in=team_likes)
      
 class TeamLikeUnlikeAPIView(APIView):
      @transaction.atomic

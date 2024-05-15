@@ -84,7 +84,7 @@ class Team(models.Model):
           elif (active_enddate - today).days <= 0:
                return "활동종료"
           else:
-               return "D" + str((today - recruit_enddate).days)
+               return f"D{str((today - recruit_enddate).days)}"
      
      @property
      def activity_name(self):

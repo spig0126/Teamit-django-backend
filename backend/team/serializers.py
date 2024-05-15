@@ -302,9 +302,37 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):
                'keywords', 
                'date_status',
                'member_cnt',
+               'member_and_position_cnt',
+               'positions'
+          ]
+
+class TeamSimpleDetailWithLikesSerializer(serializers.ModelSerializer):
+     activity = serializers.StringRelatedField()
+     interest = serializers.StringRelatedField()
+     likes = serializers.SerializerMethodField()
+     positions = serializers.StringRelatedField(many=True)
+     
+     class Meta:
+          model = Team
+          fields = [
+               'id',
+               'name',
+               'image',
+               'date_status',
+               'activity',
+               'interest',
+               'keywords',
+               'member_cnt',
+               'member_and_position_cnt',
+               'likes',
                'positions'
           ]
           
+     def get_likes(self, instance):
+          user = self.context.get('user')
+          team = instance
+          return TeamLike.objects.filter(user=user, team=team).exists()
+     
 class TeamBasicDetailForChatSerializer(serializers.ModelSerializer):
      avatar = serializers.ImageField(source='image')
      background = serializers.SerializerMethodField()
@@ -323,7 +351,6 @@ class TeamBasicDetailForChatSerializer(serializers.ModelSerializer):
 class SearchedTeamDetailSerializer(serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
-     likes = serializers.SerializerMethodField()
 
      class Meta:
           model = Team
@@ -332,18 +359,12 @@ class SearchedTeamDetailSerializer(serializers.ModelSerializer):
                'name',
                'image',
                'date_status',
-               'likes',
                'activity',
                'interest',
                'keywords',
                'member_cnt',
                'member_and_position_cnt'
           ]
-
-     def get_likes(self, instance):
-          user = self.context.get('user')
-          team = instance
-          return TeamLike.objects.filter(user=user, team=team).exists()
 
 class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):  
      positions = TeamPositionDetailSerializer(many=True, source='recruiting')
@@ -451,33 +472,6 @@ class TeamNotificationSenderDetailSerializer(serializers.Serializer):
                data['accepted'] = team_application.accepted
           return data
      
-class LikedTeamDetailSerializer(serializers.ModelSerializer):
-     positions = serializers.StringRelatedField(many=True)
-     activity = serializers.StringRelatedField()
-     interest = serializers.StringRelatedField()
-     likes = serializers.SerializerMethodField()
-
-     class Meta:
-          model = Team
-          fields = [
-               'id',
-               'name',
-               'image',
-               'activity',
-               'interest',
-               'keywords', 
-               'date_status',
-               'member_cnt',
-               'likes',
-               'positions',
-          ]
-          
-     def get_likes(self, instance):
-          user = self.context.get('user')
-          team = instance
-          return TeamLike.objects.filter(user=user, team=team).exists()
-
-
 class TeamApplicationDetailSerializer(serializers.ModelSerializer):
      team = serializers.StringRelatedField()
      applicant = serializers.StringRelatedField()
@@ -486,13 +480,6 @@ class TeamApplicationDetailSerializer(serializers.ModelSerializer):
           model = TeamApplication
           fields = '__all__'
 
-# list serializers
-class TeamLikesListSerializer(serializers.ListSerializer):
-     child = LikedTeamDetailSerializer()
-     class Meta:
-          model = Team
-          fields = '__all__'
-          
 class TeamPermissionDetailSerializer(serializers.ModelSerializer):
      class Meta:
           model = TeamPermission

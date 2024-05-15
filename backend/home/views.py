@@ -8,7 +8,7 @@ from .utilities import fetch_user_info, generate_firebase_custom_token
 from user.models import User
 from user.serializers import UserWithSameInterestDetailSerialzier
 from team.models import Team
-from team.serializers import SearchedTeamDetailSerializer, MyActiveTeamSimpleDetailSerializer
+from team.serializers import TeamSimpleDetailWithLikesSerializer, MyActiveTeamSimpleDetailSerializer
 from article.models import EventArticle
 from article.serializers import EventArticleDetailSerializer
 
@@ -32,6 +32,7 @@ class MainPageDetailAPIView(APIView):
                filter(activity__in=my_activity_pks).
                exclude(pk__in=exclude_pks).
                exclude(recruit_enddate__lt=date.today().isoformat()).
+               exclude(positions__isnull=True).
                exclude(active_enddate__lt=date.today().isoformat()).
                distinct()
           ).order_by('?')[:50]
@@ -48,12 +49,17 @@ class MainPageDetailAPIView(APIView):
           
           self.latest_event_article = EventArticle.objects.latest()
           
+     def get_serializer_context(self):
+          context = super().get_serializer_context()
+          context['viewer_user'] = self.user
+          return context
+     
      def get(self, request):
           result_data = {
                'is_new_user': self.is_new_user,
                'unread_notification': self.unread_notification,
                'my_active_teams': MyActiveTeamSimpleDetailSerializer(self.my_active_teams, context={'user': self.user}, many=True).data,
-               'teams_with_same_activity': SearchedTeamDetailSerializer(self.teams_with_same_activity, many=True).data,
+               'teams_with_same_activity': TeamSimpleDetailWithLikesSerializer(self.teams_with_same_activity, many=True).data,
                'users_with_similar_interests': UserWithSameInterestDetailSerialzier(self.users_with_similar_interests, many=True).data,
                'latest_event_article': EventArticleDetailSerializer(self.latest_event_article).data
           }
