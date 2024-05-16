@@ -35,7 +35,7 @@ class MainPageDetailAPIView(APIView):
                exclude(positions__isnull=True).
                exclude(active_enddate__lt=date.today().isoformat()).
                distinct()
-          ).order_by('?')[:50]
+          ).order_by('?')[:6]
           
           blocked_user_pks = set(self.user.blocked_users.all().values_list('pk', flat=True))
           exclude_pks = blocked_user_pks.union({self.user.pk})
