@@ -19,12 +19,12 @@ class MainPageDetailAPIView(APIView):
           
           self.unread_notification = self.user.notifications.filter(is_read=False).exists()
           
-          my_teams = Team.objects.filter(members=self.user)
-          self.is_new_user = not my_teams.exists()
-          self.my_active_teams = my_teams.exclude(active_enddate__lt=date.today().isoformat())
+          self.my_teams = Team.objects.filter(members=self.user)
+          self.is_new_user = not self.user.badge.team_participance_cnt
+          self.my_active_teams = self.my_teams.exclude(active_enddate__lt=date.today().isoformat())
           
           blocked_team_pks = set(self.user.blocked_teams.all().values_list('pk', flat=True))
-          my_team_pks = set(my_teams.values_list('pk', flat=True))
+          my_team_pks = set(self.my_teams.values_list('pk', flat=True))
           exclude_pks = blocked_team_pks.union(my_team_pks)
           my_activity_pks = self.user.profile.activities.values_list('pk', flat=True)
           self.teams_with_same_activity = (
@@ -59,8 +59,8 @@ class MainPageDetailAPIView(APIView):
                'is_new_user': self.is_new_user,
                'unread_notification': self.unread_notification,
                'my_active_teams': MyActiveTeamSimpleDetailSerializer(self.my_active_teams, context={'user': self.user}, many=True).data,
-               'teams_with_same_activity': TeamSimpleDetailWithLikesSerializer(self.teams_with_same_activity, many=True).data,
-               'users_with_similar_interests': UserWithSameInterestDetailSerialzier(self.users_with_similar_interests, many=True).data,
+               'teams_with_same_activity': TeamSimpleDetailWithLikesSerializer(self.teams_with_same_activity, context={'user': self.user}, many=True).data,
+               'users_with_similar_interests': UserWithSameInterestDetailSerialzier(self.users_with_similar_interests, context={'viewer_user': self.user}, many=True).data,
                'latest_event_article': EventArticleDetailSerializer(self.latest_event_article).data
           }
           return Response(result_data, status=status.HTTP_200_OK)
