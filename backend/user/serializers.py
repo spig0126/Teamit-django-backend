@@ -107,8 +107,7 @@ class UserExperienceCreateSerializer(serializers.ModelSerializer):
                'user_profile',
                'title',
                'image',
-               'start_date',
-               'end_date',
+               'start_end_date',
                'activity',
                'pinned'
           ]
@@ -168,6 +167,7 @@ class UserProfileCreateSerializer(UserRelatedInstancesMixin, serializers.ModelSe
                'short_pr',
                'cities',
                'activities', 
+               'education'
           ]
      
      @transaction.atomic 
@@ -248,7 +248,7 @@ class UserExperienceDetailSerializer(serializers.ModelSerializer):
      
      class Meta:
           model = UserExperience
-          fields = ['title', 'image', 'start_date', 'end_date', 'activity', 'pinned']
+          fields = ['title', 'image', 'start_end_date', 'activity', 'pinned']
           
 class UserProfileDetailSerializer(serializers.ModelSerializer):
      activities = serializers.StringRelatedField(many=True)

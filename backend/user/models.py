@@ -169,10 +169,9 @@ class UserExperience(models.Model):
      user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='experiences')
      image = models.ImageField(upload_to='users/', default='users/experience_default.png') 
      title = models.CharField(max_length=20)
-     start_date = models.CharField(max_length=10)
-     end_date = models.CharField(max_length=10)
+     start_end_date = models.CharField(max_length=23, default='')
      activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
-     pinned = models.BooleanField(default=False)
+     pinned= models.BooleanField(default=False)
      
      def __str__(self):
           return self.title
