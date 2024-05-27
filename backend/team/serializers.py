@@ -13,7 +13,7 @@ from activity.models import *
 from activity.serializers import ActivityField
 from region.serializers import CitiesField
 from interest.serializers import InterestField
-from .utils import get_team_members_with_creator_first
+from .utils import get_team_members
 from home.utilities import delete_s3_folder
 from user.serializers import UserMinimalDetailSerializer
 
@@ -167,7 +167,7 @@ class MyTeamMemberDetailSerializer(serializers.ModelSerializer):
 
 class MyTeamDetailSerializer(serializers.ModelSerializer):
      positions = TeamPositionDetailSerializer(many=True, source='recruiting')
-     members = MyTeamMemberDetailSerializer(many=True, source='teammembers_set')
+     members = serializers.SerializerMethodField()
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
@@ -195,8 +195,11 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
                'members'
           ]  
 
+     def get_members(self, instnace):
+          return get_team_members(instnace, MyTeamMemberDetailSerializer)
+     
 class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
-     members = MyTeamMemberDetailSerializer(many=True, source='teammembers_set')
+     members = serializers.SerializerMethodField()
      last_post = serializers.SerializerMethodField()
      creator = UserMinimalDetailSerializer()
      has_new_team_notifications = serializers.SerializerMethodField()
@@ -220,16 +223,14 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
                return instance.posts.latest().content
           except Exception:
                return None
-          
-     def to_representation(self, instance):
-          data = super().to_representation(instance)
-          data['members'] = get_team_members_with_creator_first(data['members'])
-          return data
+     
+     def get_members(self, instance):
+          return get_team_members(instance, MyTeamMemberDetailSerializer)
      
 class TeamDetailSerializer(serializers.ModelSerializer):
      creator = UserMinimalDetailSerializer()
      positions = TeamPositionDetailSerializer(many=True, source='recruiting')
-     members = TeamMemberDetailSerializer(many=True, source='teammembers_set')
+     members = serializers.SerializerMethodField()
      cities = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
@@ -281,11 +282,9 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           team = instance
           return team in user.blocked_teams.all()
           
-     def to_representation(self, instance):
-          data = super().to_representation(instance)
-          data['members'] = get_team_members_with_creator_first(data['members'])
-          return data
-
+     def get_members(self, instance):
+          return get_team_members(instance, TeamMemberDetailSerializer)
+     
 class TeamSimpleDetailSerializer(serializers.ModelSerializer):  
      positions = serializers.StringRelatedField(many=True)
      activity = serializers.StringRelatedField()
