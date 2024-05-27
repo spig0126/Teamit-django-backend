@@ -54,12 +54,18 @@ class PrivateChatParticipant(models.Model):
      @property
      def other_user_pk(self):
           other_user = self._get_other_user()
-          return other_user.pk
+          try:
+               return other_user.pk
+          except Exception:
+               return None
      
      @property
      def other_user_name(self):
           other_user = self._get_other_user()
-          return other_user.name or '(알 수 없음)'
+          try:
+               return other_user.name
+          except Exception:
+               return '(알 수 없음)'
      
      @property
      def chatroom_name(self):
@@ -68,13 +74,18 @@ class PrivateChatParticipant(models.Model):
      @property
      def avatar(self):
           other_user = self._get_other_user()
-          return other_user.avatar.url or default_storage.url('avatars/default.png')
+          try:
+               return other_user.avatar.url 
+          except Exception:
+               return default_storage.url('avatars/default.png')
      
      @property
      def background(self):
           other_user = self._get_other_user()
-
-          return other_user.background.url or ''
+          try:
+               return other_user.background
+          except Exception:
+               return ''
      
      @property
      def updated_at(self):

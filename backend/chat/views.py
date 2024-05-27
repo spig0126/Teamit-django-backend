@@ -38,11 +38,12 @@ class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
           if request.user.name not in participants:
                return Response({"detail": "user can't create private chat room that one's not a part of"}, status=status.HTTP_403_FORBIDDEN)
           
+          
           # check if there is already private chat room 
           existing_room = PrivateChatRoom.objects.filter(participants__name=participants[0]).filter(participants__name=participants[1]).first()
           if existing_room:
-               return Response({"detail": "private chat room already exists", "room_pk": existing_room.pk}, status=status.HTTP_409_CONFLICT)
-          
+               chatroom_name = PrivateChatParticipant.objects.filter(user=self.request.user, chatroom=existing_room).first().chatroom_name
+               return Response({"detail": "private chat room already exists", "chatroom_id": existing_room.pk, "chatroom_name": chatroom_name}, status=status.HTTP_409_CONFLICT)
           return self.create(request, *args, **kwargs)
 
      def get(self, request, *args, **kwargs):
@@ -92,14 +93,14 @@ class InquiryChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
      def post(self, request, *args, **kwargs):
           inquirer = request.data.get('inquirer', '')
           team = request.data.get('team', '')
-          
+
           if request.user.name != inquirer:
-               return Response({"detail": "user can't create inquiry chat room whose inquirer isn't the user"}, status=status.HTTP_403_FORBIDDEN) 
+               return Response({"detail": "user can't create inquiry chat room whose inquirer isn't the user"}, status=status.HTTP_403_FORBIDDEN)
           if TeamMembers.objects.filter(team__pk=team, user=request.user).exists():
-               return Response({"detail": "user can't inquiry team one's already member of"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
-          if InquiryChatRoom.objects.filter(inquirer=request.user, team__pk=team).exists():
-               return Response({"detail": "inquiry chat room already exists"}, status=status.HTTP_409_CONFLICT)
-          
+               return Response({"detail": "user can't inquiry team one's already member of"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+          if existing_room := InquiryChatRoom.objects.filter(inquirer=request.user, team__pk=team).first():
+               return Response({"detail": "inquiry chat room already exists", "chatroom_id": existing_room.pk, "chatroom_name": existing_room.inquirer_chatroom_name}, status=status.HTTP_409_CONFLICT)
+
           return self.create(request, *args, **kwargs)
      
      def get(self, request, *args, **kwargs):

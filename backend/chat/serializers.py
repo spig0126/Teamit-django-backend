@@ -24,13 +24,13 @@ class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
                user = User.objects.get(name=participant)
                PrivateChatParticipant.objects.create(
                     chatroom=chatroom,
-                    chatroom_name = participants[-i],
                     user=user
                )
           return chatroom
      
      def to_representation(self, instance):
-          return {'chatroom_id': instance.id}
+          chatroom_name = PrivateChatParticipant.objects.get(chatroom=instance, user=self.context.get('user')).chatroom_name
+          return {'chatroom_id': instance.id, "chatroom_name": chatroom_name}
 
 class PrivateChatRoomDeatilSerializer(serializers.ModelSerializer):
      sender = serializers.SerializerMethodField()
@@ -141,7 +141,7 @@ class InquiryChatRoomCreateSerializer(serializers.ModelSerializer):
           fields = '__all__'
      
      def to_representation(self, instance):
-          return {'chatroom_id': instance.id}
+          return {'chatroom_id': instance.id, 'chatroom_name': instance.inquirer_chatroom_name}
 
 class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
      unread_cnt = serializers.SerializerMethodField()
@@ -358,7 +358,8 @@ class TeamChatRoomCreateSerializer(serializers.ModelSerializer):
           return team_chat_room
 
      def to_representation(self, instance):
-          return {'chatroom_id': instance.id}
+          chatroom_name = TeamChatParticipant.objects.get(chatroom=instance, user=self.context.get('user')).chatroom_name
+          return {'chatroom_id': instance.id, "chatroom_name": chatroom_name}
 
 class TeamChatRoomDetailSerializer(serializers.ModelSerializer):
      avatar = serializers.SerializerMethodField()
