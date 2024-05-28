@@ -16,19 +16,6 @@ class Notification(models.Model):
           indexes = [
                models.Index(fields=['related_id', 'type'], name='related_id_type_idx'),
           ]
-                    
-     
-     def save(self, *args, **kwargs):
-          super().save(*args, **kwargs)
-
-          # Check if the user has more than 50 notifications
-          user_notifications = Notification.objects.filter(to_user=self.to_user)
-          notifications_count = user_notifications.count()
-
-          if notifications_count > 50:
-               notifications_to_delete = notifications_count - 50
-               oldest_notifications = user_notifications.order_by("created_at")[:notifications_to_delete]
-               oldest_notifications.delete()
 
 
 class TeamNotification(models.Model):
@@ -50,12 +37,3 @@ class TeamNotification(models.Model):
           # alert team members with new notification 
           if is_new:
                TeamMembers.objects.filter(team=self.to_team).update(noti_unread_cnt=F('noti_unread_cnt') + 1)
-          
-          # Check if the user has more than 50 notifications
-          team_notifications = TeamNotification.objects.filter(to_team=self.to_team)
-          notifications_count = team_notifications.count()
-
-          if notifications_count > 50:
-               notifications_to_delete = notifications_count - 50
-               oldest_notifications = team_notifications.order_by("created_at")[:notifications_to_delete]
-               oldest_notifications.delete()
