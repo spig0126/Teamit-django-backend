@@ -7,8 +7,8 @@ cd /home/ubuntu/Teamit-django-backend-1/
 python3 -m venv venv
 source venv/bin/activate
 
-# install requirements.txt
-pip install -r /home/ubuntu/acc-cicd-hands-on/requirements.txt
+# # install requirements.txt
+# pip install -r /home/ubuntu/acc-cicd-hands-on/requirements.txt
 
 # run server
 screen -d -m python3 manage.py runserver 0.0.0.0:8000 --settings=djangoProject.settings.prod
