@@ -65,9 +65,12 @@ class ProfileCardUpdateSerializer(serializers.ModelSerializer):
 
      @transaction.atomic 
      def update(self, instance, validated_data):
+          validated_data['position'] = int(validated_data['position'])
+          validated_data['interest'] = int(validated_data['interest'])
           user_data = validated_data.pop('user', None)
           if user_data:
                user_serializer = self.fields['user']
+               
                user_serializer.update(instance.user, user_data)
           return super().update(instance, validated_data)
      
