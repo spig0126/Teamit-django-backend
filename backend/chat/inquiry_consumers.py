@@ -101,10 +101,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      #---------------event related----------------------
      async def online(self, event):
           user = event['message'].get('user', None)
-          print('online', self.user, user)
-          print('before', self.online_participants)
+          # print('online', self.user, user)
+          # print('before', self.online_participants)
           self.online_participants.append(user)
-          print('after', self.online_participants)
+          # print('after', self.online_participants)
           
      async def offline(self, event):
           user = event['message'].get('user', None)
@@ -112,8 +112,8 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                self.online_participants.remove(user)
           except ValueError:
                pass
-          print('exit', self.user, user)
-          print(self.online_participants)
+          # print('exit', self.user, user)
+          # print(self.online_participants)
      
      async def msg(self, event):
           await self.send_message(event['type'], event['message'])
@@ -193,6 +193,12 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                'message': message
           }))
           
+     async def send_is_alone_message(self):
+          is_alone = False
+          if (self.is_responder and self.inquirer is None) or (self.is_inquirer and self.responder is None):
+               is_alone = True
+          await self.send_message('is_alone', is_alone)
+          
      async def send_last_30_messages(self):
           message = await self.get_last_30_messages()
           await self.send_message('history', message)
@@ -200,6 +206,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
      async def join_chatroom(self):
           await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
           await self.accept()
+          await self.send_is_alone_message()
           await self.send_user_roles()
           await self.send_last_30_messages()
           

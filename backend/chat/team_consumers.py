@@ -191,6 +191,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           '''
           await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
           await self.accept()
+          await self.send_is_alone_message()
           await self.send_last_30_messages()
           
      async def send_message(self, type, message):
@@ -208,6 +209,9 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           message = await self.get_last_30_messages()
           await self.send_message('history', message)
      
+     async def send_is_alone_message(self):
+          await self.send_message('is_alone', self.participant_cnt == 1)
+          
      async def send_user_status_this_message(self, status_message):
           for user in self.participants:
                await self.channel_layer.group_send(

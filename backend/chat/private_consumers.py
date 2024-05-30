@@ -159,6 +159,9 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                'type': type,
                'message': message
           }))
+     
+     async def send_is_alone_message(self):
+          await self.send_message('is_alone', len(self.participants) == 1)
           
      async def send_last_30_messages(self):
           message = await self.get_last_30_messages()
@@ -172,6 +175,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
      async def join_chatroom(self):
           await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
           await self.accept()
+          await self.send_is_alone_message()
           await self.send_last_30_messages()
           
      async def mark_as_online(self):
@@ -206,7 +210,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
           }
           
           for user in self.participants:
-               print(self.online_participants)
+               # print(self.online_participants)
                status_message['update_unread_cnt'] = (user not in self.online_participants)
                await self.channel_layer.group_send(
                     f'status_{user}', 
