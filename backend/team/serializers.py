@@ -202,6 +202,7 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
      members = serializers.SerializerMethodField()
      last_post = serializers.SerializerMethodField()
      creator = UserMinimalDetailSerializer()
+     responder = UserMinimalDetailSerializer()
      has_new_team_notifications = serializers.SerializerMethodField()
      
      class Meta:
@@ -211,6 +212,7 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
                'name',
                'has_new_team_notifications',
                'creator',
+               'responder',
                'members',
                'last_post'
           ]  
