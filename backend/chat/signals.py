@@ -30,7 +30,7 @@ def send_chatroom_announcement(chatroom, participant, action):
      action_text = '입장했습니다' if action == 'enter' else '퇴장했습니다'
      announcement = {
           'chatroom': chatroom.id,
-          'content': f'{participant.user} / {participant.position} 님이 {action_text}',
+          'content': f'{participant.name} / {participant.position} 님이 {action_text}',
           'is_msg': False
      }
      serializer = TeamMessageCreateSerialzier(data=announcement)
