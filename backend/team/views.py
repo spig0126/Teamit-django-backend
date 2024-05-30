@@ -399,28 +399,34 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
           applicant = request.user
           position = get_object_or_404(Position, name=request.data["position"])
           
-          if team.positions.all().filter(name=position.name).exists():
-               if not TeamApplication.objects.filter(applicant=applicant, team=team, accepted=None).exists():
-                    team_application  = TeamApplication.objects.create(    # TeamNotification 자동적으로 생성됨
-                         team = team,
-                         applicant = applicant,
-                         position = position
-                    )
-                    serializer = TeamApplicationDetailSerializer(team_application)
-                    
-                    # send fcm to team
-                    title = f'{team.name} 지원'
-                    body = f'{applicant.name} 님이 {position.name} 포지션으로 지원하였습니다.'
-                    data = {
-                         "page": "team_notification",
-                         "team_pk": str(team.pk),
-                         "team_name": team.name    
-                    }
-                    send_fcm_to_team(team, title, body, data)
+          if not date.fromisoformat(team.recruit_startdate) <= date.today() <= date.fromisoformat(team.recruit_enddate):
+               return Response({"detail": "this team is not currently accepting applications"}, status=status.HTTP_406_NOT_ACCEPTABLE)
           
-                    return Response(serializer.data, status=status.HTTP_200_OK)
-               return Response({"detail": "this team application already exists"}, status=status.HTTP_208_ALREADY_REPORTED)   
-          return Response({"detail": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+          if not team.positions.all().filter(name=position.name).exists():
+               return Response({"detail": "the position is already taken or doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+          
+          if TeamApplication.objects.filter(applicant=applicant, team=team, date__lte=team.recruit_enddate, date__gte=team.recruit_startdate).exists():
+               return Response({"detail": "this team application already exists"}, status=status.HTTP_208_ALREADY_REPORTED)  
+          
+          team_application  = TeamApplication.objects.create(    # TeamNotification 자동적으로 생성됨
+               team = team,
+               applicant = applicant,
+               position = position
+          )
+          serializer = TeamApplicationDetailSerializer(team_application)
+          
+          # send fcm to team
+          title = f'{team.name} 지원'
+          body = f'{applicant.name} 님이 {position.name} 포지션으로 지원하였습니다.'
+          data = {
+               "page": "team_notification",
+               "team_pk": str(team.pk),
+               "team_name": team.name    
+          }
+          send_fcm_to_team(team, title, body, data)
+
+          return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @permission_classes([IsTeamCreatorPermission])
 class TeamApplicationAcceptAPIView(APIView):

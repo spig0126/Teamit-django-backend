@@ -142,6 +142,7 @@ class TeamApplication(models.Model):
      applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications') 
      position = models.ForeignKey(Position, on_delete=models.CASCADE)
      accepted = models.BooleanField(null=True, default=None)
+     date = models.DateField(auto_now_add=True)
      
      def save(self, *args, **kwargs):
           is_new = self.pk is None
