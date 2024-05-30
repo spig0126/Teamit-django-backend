@@ -79,7 +79,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
      def remove_user_from_chatroom(self, chat_type, chatroom_id):
           if chat_type == 'private':
                participant = PrivateChatParticipant.objects.get(user=self.user, chatroom=chatroom_id)
-               participant_name = participant.name
+               participant_name = participant.user.name
                participant.delete()
                return participant_name, None
           if chat_type == 'team':
