@@ -275,6 +275,7 @@ class TeamChatParticipant(models.Model):
      last_read_time = models.DateTimeField(auto_now=True)
      unread_cnt = models.PositiveIntegerField(default=0)
      alarm_on = models.BooleanField(default=True)
+     entered_chatroom_at = models.DateTimeField(auto_now=True)
      
      @property
      def chatroom_pk(self):

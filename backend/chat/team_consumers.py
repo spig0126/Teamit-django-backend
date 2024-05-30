@@ -402,7 +402,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      def get_last_30_messages(self):
           last_read_time_list = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).values_list('last_read_time', flat=True)
-          messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt+30]
+          messages = self.chatroom.messages.filter(timestamp__gt=self.this_participant.entered_chatroom_at)[self.loaded_cnt:self.loaded_cnt+30]
           self.loaded_cnt += 30
           return TeamMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
      
