@@ -75,7 +75,7 @@ class PrivateChatParticipant(models.Model):
      def avatar(self):
           other_user = self._get_other_user()
           try:
-               return other_user.avatar.url 
+               return default_storage.url(other_user.avatar.url)
           except Exception:
                return default_storage.url('avatars/default.png')
      
@@ -83,7 +83,7 @@ class PrivateChatParticipant(models.Model):
      def background(self):
           other_user = self._get_other_user()
           try:
-               return other_user.background
+               return default_storage.url(other_user.background)
           except Exception:
                return ''
      
