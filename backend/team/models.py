@@ -75,14 +75,14 @@ class Team(models.Model):
           active_enddate = date.fromisoformat(self.active_enddate)
           
           recruiting_positions = len(self.positions.all())
+          if (active_enddate - today).days <= 0:
+               return "활동종료"
           if (recruit_startdate - today).days > 0:
                return "모집예정"
           elif (recruit_enddate - today).days < 0 or not recruiting_positions:
                return "모집완료"
           elif (recruit_enddate - today).days == 0:
                return "오늘 마감"
-          elif (active_enddate - today).days <= 0:
-               return "활동종료"
           else:
                return f"D{str((today - recruit_enddate).days)}"
      
