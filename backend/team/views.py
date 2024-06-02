@@ -22,6 +22,7 @@ from notification.models import *
 from position.models import Position
 from fcm_notification.utils import send_fcm_to_user, send_fcm_to_team
 from home.utilities import delete_s3_folder
+from region.serializers import ProvinceWithCitiesSerializer
 
 class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
      def initial(self, request, *args, **kwargs):
@@ -158,6 +159,16 @@ class HasUnreadTeamNotifications(APIView):
                data['has_new_team_notifications'] = True
           return Response(data, status=status.HTTP_200_OK)
           
+class TeamUpdatePageInfoRetrieveAPIView(APIView):
+     def get(self, request, *args, **kwargs):
+          data = {
+               'positions': Position.objects.all().values_list('name', flat=True),
+               'activities': Activity.objects.all().values_list("name", flat=True),
+               'interests': Interest.objects.all().values_list("name", flat=True),
+               'regions': ProvinceWithCitiesSerializer(Province.objects.all(), many=True).data,
+          }
+          return Response(data, status=status.HTTP_200_OK)
+     
 
 @permission_classes([IsTeamCreatorPermission]) 
 class TeamBeforeUpdateDetailAPIView(generics.RetrieveAPIView):

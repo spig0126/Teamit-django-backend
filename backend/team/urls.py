@@ -6,6 +6,7 @@ urlpatterns = [
      # team 
      path("", TeamListCreateAPIView.as_view(), name='create team, get list by activity, get my team list'), 
      path("recommended/", RecommendedTeamListAPIView.as_view(), name='get recommended team list'), 
+     path("update-info/", TeamUpdatePageInfoRetrieveAPIView.as_view(), name='update page info'),
      path("<int:team_pk>/", TeamDetailAPIView.as_view(), name='update, delete, retrieve team'),  
      path("<int:team_pk>/room/", MyTeamRoomDetailAPIView.as_view(), name='get my team room info'), 
      path("<int:team_pk>/before/", TeamBeforeUpdateDetailAPIView.as_view()),  
