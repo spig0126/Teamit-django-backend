@@ -275,7 +275,7 @@ class TeamChatParticipant(models.Model):
      last_read_time = models.DateTimeField(auto_now=True)
      unread_cnt = models.PositiveIntegerField(default=0)
      alarm_on = models.BooleanField(default=True)
-     entered_chatroom_at = models.DateTimeField(auto_now=True)
+     entered_chatroom_at = models.DateTimeField(auto_now_add=True)
      
      @property
      def chatroom_pk(self):
@@ -342,13 +342,19 @@ class TeamMessage(models.Model):
      def name(self):
           if not self.is_msg:
                return ''
-          return self.member.name or '(알 수 없음)'
+          try:
+               return self.member.name
+          except Exception:
+               return '(알 수 없음)'
      
      @property
      def avatar(self):
           if not self.is_msg:
                return ''
-          return self.user.avatar.url or default_storage.url('avatars/default.png')
+          try:
+               return self.user.avatar.url
+          except Exception:
+               return default_storage.url('avatars/default.png')
      
      @property
      def background(self):
