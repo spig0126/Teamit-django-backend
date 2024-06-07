@@ -317,7 +317,9 @@ class TeamChatParticipant(models.Model):
      def name(self):
           if self.user is None:
                return '(알 수 없음)'
-          return self.member.name or self.user.name
+          if self.member is None:
+               return self.user.name
+          return self.member.name
      
      @property 
      def position(self):
