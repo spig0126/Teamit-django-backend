@@ -401,7 +401,7 @@ class MyTeamSimpleDetailSerializer(TeamMethodsMixin, serializers.ModelSerializer
      def get_active(self, instance):
           return self.active(instance)
      
-class MyActiveTeamSimpleDetailSerializer(serializers.ModelSerializer):
+class MyActiveTeamSimpleDetailSerializer(TeamMethodsMixin, serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
      has_new_team_notifications = serializers.SerializerMethodField()
      
