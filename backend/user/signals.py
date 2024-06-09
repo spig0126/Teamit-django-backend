@@ -8,5 +8,5 @@ from .models import UserExperience
 def delete_experience_S3_image(sender, instance, **kwargs):
      with transaction.atomic():
           default_image = instance._meta.get_field('image').get_default()
-          if instance.image is not default_image:
+          if str(instance.image) != default_image:
                instance.image.delete(save=False)
