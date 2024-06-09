@@ -496,4 +496,22 @@ class TeamApplicationDetailSerializer(serializers.ModelSerializer):
 class TeamPermissionDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeamPermission
-        fields = '__all__'
+        fields = [
+            'team',
+            'responder'
+        ]
+
+    def to_representation(self, instance):
+        return {'team': instance.team.id, 'responser': UserMinimalDetailSerializer(instance.responder).data}
+
+
+class TeamCreatorDetailSerializer(serializers.ModelSerializer):
+    team = serializers.IntegerField(source='id')
+    creator = UserMinimalDetailSerializer()
+
+    class Meta:
+        model = Team
+        fields = [
+            'team',
+            'creator'
+        ]
