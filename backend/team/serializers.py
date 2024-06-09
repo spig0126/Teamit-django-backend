@@ -13,9 +13,9 @@ from activity.models import *
 from activity.serializers import ActivityField
 from region.serializers import CitiesField
 from interest.serializers import InterestField
-from .utils import get_team_members
 from home.utilities import delete_s3_folder
 from user.serializers import UserMinimalDetailSerializer
+from .mixins import TeamMethodsMixin
 
 # create serializers
 class TeamMemberCreateSerializer(serializers.ModelSerializer):
@@ -165,7 +165,7 @@ class MyTeamMemberDetailSerializer(serializers.ModelSerializer):
                'user'
           ]
 
-class MyTeamDetailSerializer(serializers.ModelSerializer):
+class MyTeamDetailSerializer(TeamMethodsMixin, serializers.ModelSerializer):
      positions = TeamPositionDetailSerializer(many=True, source='recruiting')
      members = serializers.SerializerMethodField()
      cities = serializers.StringRelatedField(many=True)
@@ -195,10 +195,10 @@ class MyTeamDetailSerializer(serializers.ModelSerializer):
                'members'
           ]  
 
-     def get_members(self, instnace):
-          return get_team_members(instnace, MyTeamMemberDetailSerializer)
+     def get_members(self, instance):
+          return self.members(instance, MyTeamMemberDetailSerializer) 
      
-class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
+class MyTeamRoomDetailSerializer(TeamMethodsMixin, serializers.ModelSerializer):
      members = serializers.SerializerMethodField()
      last_post = serializers.SerializerMethodField()
      creator = UserMinimalDetailSerializer()
@@ -218,18 +218,15 @@ class MyTeamRoomDetailSerializer(serializers.ModelSerializer):
           ]  
           
      def get_has_new_team_notifications(self, instance):
-          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
+          return self.has_new_team_notifications(instance)
      
      def get_last_post(self, instance):
-          try:
-               return instance.posts.latest().content
-          except Exception:
-               return None
+          return self.last_post(instance)
      
      def get_members(self, instance):
-          return get_team_members(instance, MyTeamMemberDetailSerializer)
+          return self.members(instance, MyTeamMemberDetailSerializer)
      
-class TeamDetailSerializer(serializers.ModelSerializer):
+class TeamDetailSerializer(TeamMethodsMixin, serializers.ModelSerializer):
      creator = UserMinimalDetailSerializer()
      positions = TeamPositionDetailSerializer(many=True, source='recruiting')
      members = serializers.SerializerMethodField()
@@ -267,25 +264,16 @@ class TeamDetailSerializer(serializers.ModelSerializer):
           ]  
           
      def get_is_member(self, instance):
-          user = self.context.get('user')
-          if user in instance.members.all():
-               return True
-          elif TeamApplication.objects.filter(applicant=user, team=instance).filter(Q(accepted__isnull=True) | Q(accepted=True)).exists():
-               return None
-          return False
+          return self.is_member(instance)
      
      def get_likes(self, instance):
-          user = self.context.get('user')
-          team = instance
-          return TeamLike.objects.filter(user=user, team=team).exists()
+          return self.likes(instance)
 
      def get_blocked(self, instance):
-          user = self.context.get('user')
-          team = instance
-          return team in user.blocked_teams.all()
+          return self.blocked(instance)
           
      def get_members(self, instance):
-          return get_team_members(instance, TeamMemberDetailSerializer)
+          return self.members(instance, TeamMemberDetailSerializer)
      
 class TeamSimpleDetailSerializer(serializers.ModelSerializer):  
      positions = serializers.StringRelatedField(many=True)
@@ -307,7 +295,7 @@ class TeamSimpleDetailSerializer(serializers.ModelSerializer):
                'positions'
           ]
 
-class TeamSimpleDetailWithLikesSerializer(serializers.ModelSerializer):
+class TeamSimpleDetailWithLikesSerializer(TeamMethodsMixin, serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
      interest = serializers.StringRelatedField()
      likes = serializers.SerializerMethodField()
@@ -330,9 +318,7 @@ class TeamSimpleDetailWithLikesSerializer(serializers.ModelSerializer):
           ]
           
      def get_likes(self, instance):
-          user = self.context.get('user')
-          team = instance
-          return TeamLike.objects.filter(user=user, team=team).exists()
+          return self.likes(instance)
      
 class TeamBasicDetailForChatSerializer(serializers.ModelSerializer):
      avatar = serializers.ImageField(source='image')
@@ -392,7 +378,7 @@ class TeamBeforeUpdateDetailSerializer(serializers.ModelSerializer):
                'positions'
           ]  
 
-class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
+class MyTeamSimpleDetailSerializer(TeamMethodsMixin, serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
      has_new_team_notifications = serializers.SerializerMethodField()
      active = serializers.SerializerMethodField()
@@ -411,9 +397,9 @@ class MyTeamSimpleDetailSerializer(serializers.ModelSerializer):
           ]
 
      def get_has_new_team_notifications(self, instance):
-          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
+          return self.has_new_team_notifications(instance)
      def get_active(self, instance):
-          return datetime.fromisoformat(instance.active_enddate) >= datetime.now()
+          return self.active(instance)
      
 class MyActiveTeamSimpleDetailSerializer(serializers.ModelSerializer):
      activity = serializers.StringRelatedField()
@@ -430,7 +416,7 @@ class MyActiveTeamSimpleDetailSerializer(serializers.ModelSerializer):
           ]
 
      def get_has_new_team_notifications(self, instance):
-          return get_object_or_404(TeamMembers, team=instance, user=self.context.get('user')).noti_unread_cnt > 0
+          return self.has_new_team_notifications(instance)
      
 class TeamSenderDetailSerializer(serializers.ModelSerializer):
      class Meta:
