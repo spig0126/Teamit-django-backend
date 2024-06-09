@@ -7,6 +7,7 @@ from user.models import User
 from team.serializers import TeamMemberDetailSerializer
 from team.models import TeamMembers
 from django.core.files.storage import default_storage
+from user.serializers import UserMinimalDetailSerializer
 
 
 class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
@@ -413,6 +414,7 @@ class TeamMessageCreateSerialzier(serializers.ModelSerializer):
 
 class TeamMessageSerializer(serializers.ModelSerializer):
      unread_cnt = serializers.SerializerMethodField(read_only=True)
+     user = UserMinimalDetailSerializer()
      
      class Meta:
           model = TeamMessage
@@ -425,7 +427,8 @@ class TeamMessageSerializer(serializers.ModelSerializer):
                'position',
                'background',
                'unread_cnt',
-               'is_msg'
+               'is_msg',
+               'user'
           ]
           
      def get_unread_cnt(self, instance):
