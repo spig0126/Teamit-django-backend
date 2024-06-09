@@ -36,7 +36,7 @@ BADGE_NAME = {
      'attendance': '개근상',
      'friendship': '인맥왕',
      'team_participance': '팀플 마스터',
-     'team_post': '쌩썡 정보통',
+     'team_post': '쌩쌩 정보통',
      'review': '당신의 소중한 의견을 사람들에게 전파해주세요!',
      'liked': '슈퍼스타',
      'recruit': '헤드 헌터',
