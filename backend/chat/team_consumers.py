@@ -20,6 +20,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           self.chatroom_name = f"team_chat_{self.chatroom_id}"
           self.last_read_time = None
           self.loaded_cnt = 0
+          self.chatroom = None
           
           is_valid = await self.get_chatroom_and_participants_info()
           if not is_valid:
@@ -124,8 +125,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      async def online(self, event):
           user = event['message'].get('user', None)
           self.online_participants.append(user)
-          print('online', self.user, user)
-          print(self.online_participants)
+          # print('online', self.user, user)
+          # print(self.online_participants)
           await self.send_message(event['type'], event['message'])
 
 
@@ -136,8 +137,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                self.online_participants.remove(user)
           except ValueError:
                pass
-          print('exit', self.user, user)
-          print(self.online_participants)
+          # print('exit', self.user, user)
+          # print(self.online_participants)
 
      async def enter(self, event):
           await self.send_message('msg', event['message'])
@@ -242,16 +243,19 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                )
                
      async def send_user_status_reset_message(self):
-          status_message = await self.create_status_message({})
+          try:
+               status_message = await self.create_status_message({})
 
-          await self.channel_layer.group_send(
-               f'status_{self.user.pk}',
-               {
-                    "type": "msg", 
-                    "chat_type": "team", 
-                    "team_id": self.team_pk,
-                    "message": status_message}
-          )
+               await self.channel_layer.group_send(
+                    f'status_{self.user.pk}',
+                    {
+                         "type": "msg", 
+                         "chat_type": "team", 
+                         "team_id": self.team_pk,
+                         "message": status_message}
+               )
+          except(Exception):
+               return
      
      async def create_status_message(self, updates):
           base = {
@@ -271,8 +275,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      def get_non_participants(self):
           participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, member__isnull=False).values_list('member', flat=True)
-          non_participants = TeamMembers.objects.filter(team=self.team_pk).exclude(id__in=participants).order_by('user__name')
-          return MyTeamMemberDetailSerializer(non_participants, many=True).data
+          non_participants = TeamMembers.objects.filter(team=self.team_pk).exclude(id__in=participants)
+          return MyTeamMemberDetailSerializer(sorted(non_participants, key=lambda participant: participant.name), many=True).data
 
      @database_sync_to_async
      def update_chatroom_background(self, new_background):
@@ -302,15 +306,19 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                          output_field=IntegerField(),
                     )
                )
-               .order_by('user_is_this_user', 'user__name')
+               .order_by('user_is_this_user')
           )
-          members = [participant.member for participant in participants]
+          members = sorted([participant.member for participant in participants], key=lambda member: member.name)
           participant_list = MyTeamMemberDetailSerializer(members, many=True).data
           name = self.chatroom.name
           background = self.chatroom.background
           alarm_on = self.this_participant.alarm_on
           
           return background, name, participant_list, alarm_on
+     
+     # @database_sync_to_async
+     # def add_chat_participant(member_id):
+     #      TeamChatParticipant.objects.create(chatroom=self.chatroom, )
      
      @database_sync_to_async
      def remove_this_participant_from_chatroom(self):
@@ -402,7 +410,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      @database_sync_to_async
      def get_last_30_messages(self):
           last_read_time_list = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).values_list('last_read_time', flat=True)
-          messages = self.chatroom.messages.filter(timestamp__gt=self.this_participant.entered_chatroom_at)[self.loaded_cnt:self.loaded_cnt+30]
+          messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt+30]
           self.loaded_cnt += 30
           return TeamMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
      

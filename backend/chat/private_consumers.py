@@ -130,8 +130,8 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                self.online_participants.remove(user)
           except ValueError:
                pass
-          print('exit', self.user, user)
-          print(self.online_participants)
+          # print('exit', self.user, user)
+          # print(self.online_participants)
      
      async def msg(self, event):
           await self.send_message(event['type'], event['message'])
