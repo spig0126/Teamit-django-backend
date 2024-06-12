@@ -23,24 +23,36 @@ class ViewChangedBadgeAPIView(APIView):
           badge.save()
           return Response(status=status.HTTP_200_OK)
 
+
 class UpdateUserLastLoginTimeAPIView(APIView):
-     def put(self, request, *args, **kwargs):
-          user = request.user
-          badge = user.badge
-          now = timezone.now()
-          
-          if badge.attendance_level < 3:
-               if (now - user.last_login_time).days > 1:
-                    badge.attendance_cnt = 0
-                    badge.save()
-               elif (now - user.last_login_time).days == 1:
-                    before_level = badge.attendance_level
-                    badge.attendance_cnt += 1
-                    if before_level != badge.attendance_level:
-                         badge.attendance_change = True
-                         send_level_badge_fcm(request.user.pk, 'attendance', badge.attendance_level)
-                    badge.save()
-          return Response(status=status.HTTP_200_OK)
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        badge = user.badge
+        now = timezone.now().date()
+        last_login_date = user.last_login_time.date()
+
+        if badge.attendance_level >= 3:
+            return Response(status=status.HTTP_200_OK)
+
+        if (now - last_login_date).days > 1:
+            badge.attendance_cnt = 0
+            badge.save()
+        elif (now - last_login_date).days == 1:
+            before_level = badge.attendance_level
+            badge.attendance_cnt += 1
+
+            if badge.attendance_cnt >= 25:
+                badge.attendance_level = BadgeLevels.LEVEL_THREE
+            elif badge.attendance_cnt >= 14:
+                badge.attendance_level = BadgeLevels.LEVEL_TWO
+            elif badge.attendance_cnt >= 5:
+                badge.attendance_level = BadgeLevels.LEVEL_ONE
+
+            if before_level != badge.attendance_level:
+                badge.attendance_change = True
+                send_level_badge_fcm(request.user.pk, 'attendance', badge.attendance_level)
+            badge.save()
+        return Response(status=status.HTTP_200_OK)
 
 class SharedProfileAPIView(APIView):
      def put(self, request, *args, **kwargs):

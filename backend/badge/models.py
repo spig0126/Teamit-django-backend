@@ -28,6 +28,7 @@ class BadgeType(models.IntegerChoices):
 class Badge(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='badge')
     attendance_cnt = models.PositiveIntegerField(default=0)
+    attendance_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
     attendance_change = models.BooleanField(default=False)
     friendship_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
     friendship_change = models.BooleanField(default=False)
