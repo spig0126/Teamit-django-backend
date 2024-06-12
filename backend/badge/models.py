@@ -13,7 +13,7 @@ class BadgeLevels(models.IntegerChoices):
 
 class BadgeType(models.IntegerChoices):
     ATTENDANCE = 0, 'attendance'
-    FRIENDSHIP = 1, 'friendship'
+    USER_REVIEW = 1, 'user_review'
     TEAM_PARTICIPANCE = 2, 'team_participance'
     TEAM_POST = 3, 'team_post'
     LIKED = 4, 'liked'
@@ -30,8 +30,6 @@ class Badge(models.Model):
     attendance_cnt = models.PositiveIntegerField(default=0)
     attendance_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
     attendance_change = models.BooleanField(default=False)
-    friendship_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
-    friendship_change = models.BooleanField(default=False)
     team_participance_cnt = models.PositiveIntegerField(default=0)
     team_participance_change = models.BooleanField(default=False)
     team_post_level = models.IntegerField(choices=BadgeLevels.choices, default=BadgeLevels.LEVEL_DEFAULT)
@@ -50,6 +48,8 @@ class Badge(models.Model):
     shared_profile_change = models.BooleanField(default=False)
     early_user_status = models.BooleanField(default=False)
     early_user_change = models.BooleanField(default=False)
+    user_review_cnt = models.PositiveIntegerField(default=0)
+    user_review_change = models.BooleanField(default=False)
 
     @property
     def recruit_level(self):
@@ -74,12 +74,12 @@ class Badge(models.Model):
             return BadgeLevels.LEVEL_DEFAULT
 
     @property
-    def attendance_level(self):
-        if self.attendance_cnt >= 25:
+    def user_review_level(self):
+        if self.user_review_cnt >= 30:
             return BadgeLevels.LEVEL_THREE
-        elif self.attendance_cnt >= 14:
+        elif self.user_review_cnt >= 15:
             return BadgeLevels.LEVEL_TWO
-        elif self.attendance_cnt >= 5:
+        elif self.user_review_cnt >= 5:
             return BadgeLevels.LEVEL_ONE
         else:
             return BadgeLevels.LEVEL_DEFAULT

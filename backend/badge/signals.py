@@ -2,7 +2,8 @@ from django.db.models.signals import pre_delete, post_save, m2m_changed
 from django.dispatch import receiver
 from django.db import transaction
 
-from user.models import User, UserLikes, UserProfile
+from review.models import UserReview
+from user.models import UserLikes, UserProfile
 from team.models import Team, TeamMembers, TeamApplication
 from post.models import TeamPost
 from .models import *
@@ -47,13 +48,14 @@ def update_team_participance_level(sender, instance, created, **kwargs):
     if created:
         user = instance.user
         badge = user.badge
-        if badge.team_participance_level < 3:
-            before_level = badge.team_participance_level
-            badge.team_participance_cnt += 1
-            if before_level != badge.team_participance_level:
-                badge.team_participance_change = True
-                send_level_badge_fcm(user.pk, 'team_participance', badge.team_participance_level)
-            badge.save()
+    if badge.team_participance_level >= 3:
+        return
+    before_level = badge.team_participance_level
+    badge.team_participance_cnt += 1
+    if before_level != badge.team_participance_level:
+        badge.team_participance_change = True
+        send_level_badge_fcm(user.pk, 'team_participance', badge.team_participance_level)
+    badge.save()
 
 
 @receiver(post_save, sender=TeamPost)
@@ -112,6 +114,22 @@ def update_liked_level(sender, instance, created, **kwargs):
         badge.liked_change = True
         send_level_badge_fcm(liked_user.pk, 'liked', badge.liked_level)
         badge.save()
+
+
+@receiver(post_save, sender=UserReview)
+def update_user_review_level(sender, instance, created, **kwargs):
+    reviewer = instance.reviewer
+    badge = reviewer.badge
+    if not created:
+        return
+    if badge.user_review_level >= 3:
+        return
+    before_level = badge.user_review_level
+    badge.user_review_cnt += 1
+    if before_level != badge.user_review_level:
+        badge.user_review_change = True
+        send_level_badge_fcm(reviewer.pk, 'user_review', badge.user_review_level)
+    badge.save()
 
 
 @receiver(post_save, sender=TeamApplication)
