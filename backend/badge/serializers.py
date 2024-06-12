@@ -93,13 +93,13 @@ class BadeDetailSerializer(serializers.ModelSerializer):
             'user_review_level',
             'team_participance_level',
             'team_post_level',
+            'early_user_status',
             'liked_level',
             'recruit_level',
             'team_refusal_status',
             'user_profile_status',
             'team_leader_status',
             'shared_profile_status',
-            'early_user_status',
         ]
 
     def transform_data(self, data, instance):
