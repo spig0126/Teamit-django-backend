@@ -46,8 +46,9 @@ def update_friendship_level(sender, instance, action, pk_set, **kwargs):
 @receiver(post_save, sender=TeamMembers)
 def update_team_participance_level(sender, instance, created, **kwargs):
     if created:
-        user = instance.user
-        badge = user.badge
+        return
+    user = instance.user
+    badge = user.badge
     if badge.team_participance_level >= 3:
         return
     before_level = badge.team_participance_level
