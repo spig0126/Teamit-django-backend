@@ -49,6 +49,8 @@ def update_team_participance_level(sender, instance, created, **kwargs):
         return
     user = instance.user
     badge = user.badge
+    if user == instance.team.creator:
+        return
     if badge.team_participance_level >= 3:
         return
     before_level = badge.team_participance_level
