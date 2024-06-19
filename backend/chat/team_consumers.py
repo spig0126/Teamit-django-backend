@@ -36,7 +36,6 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
      async def disconnect(self, close_code):
           await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
           await self.mark_as_offline()
-          await self.send_user_status_reset_message()
           await self.close()
      
      async def receive(self, text_data):
@@ -62,9 +61,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                await self.handle_update_chatroom_name(message)
           elif type == "fetch_non_participants":
                await self.handle_fetch_non_participants()
-          elif type == 'invite_members':
-               await self.handle_invite_members(message)
-     
+
      #------------------handle related----------------------
      async def handle_message(self, message):
           msg_details = {
@@ -75,11 +72,11 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
           }
           message = await self.create_message(msg_details)
           await self.update_chatroom_last_msg(message['content'])
-          await self.send_group_message('msg', message)
-          await self.send_user_status_new_message(message)
-          await self.send_offline_participants_fcm(message)
           await self.update_offline_participant_unread_cnt()
-          
+          await self.send_group_message('msg', message)
+          await self.send_offline_participants_fcm(message)
+          await self.send_user_status_new_message(message)
+
      async def handle_enter(self, message):
           announcement = {
                'chatroom': self.chatroom_id,
@@ -242,21 +239,6 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                          "message": status_message}
                )
                
-     async def send_user_status_reset_message(self):
-          try:
-               status_message = await self.create_status_message({})
-
-               await self.channel_layer.group_send(
-                    f'status_{self.user.pk}',
-                    {
-                         "type": "msg", 
-                         "chat_type": "team", 
-                         "team_id": self.team_pk,
-                         "message": status_message}
-               )
-          except(Exception):
-               return
-     
      async def create_status_message(self, updates):
           base = {
                'id': self.chatroom_id,
@@ -265,7 +247,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
                'background': '',
                'last_msg': '',
                'updated_at': '',
-               'update_unread_cnt': None
+               'update_unread_cnt': False
           }
           status_mesage = {key: updates.get(key, base.get(key)) for key in base}
           return status_mesage
