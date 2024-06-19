@@ -148,30 +148,29 @@ class InquiryChatRoom(models.Model):
     inquirer = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL,
                                  related_name='inquiry_chat_rooms')
     team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.SET_NULL, related_name='inquiry_chat_rooms')
-    inquirer_unread_cnt = models.PositiveIntegerField(default=0)
-    responder_unread_cnt = models.PositiveIntegerField(default=0)
-    inquirer_alarm_on = models.BooleanField(default=True)
-    responder_alarm_on = models.BooleanField(default=True)
-    inquirer_is_online = models.BooleanField(default=False)
-    responder_is_online = models.BooleanField(default=False)
-
-    # inquirer_last_read_time = models.DateTimeField(auto_now_add=True)
-    # responder_last_read_time = models.DateTimeField(auto_now_add=True)
 
     @property
     def inquirer_chatroom_name(self):
+        if self.team is None:
+            return '(알 수 없음)'
         return self.team.name
 
     @property
-    def responder_chatroom_name(self):
-        return self.team.name + ' > ' + self.inquirer.name
+    def team_chatroom_name(self):
+        team_name = self.team.name if self.team else '(알 수 없음)'
+        inquirer_name = self.inquirer.name if self.inquirer else '(알 수 없음)'
+        return team_name + ' > ' + inquirer_name
 
     @property
     def inquirer_avatar(self):
+        if self.inquirer is None:
+            return default_storage.url('users/default.png')
         return self.inquirer.avatar.url
 
     @property
     def team_image(self):
+        if self.team is None:
+            return default_storage.url('teams/default.png')
         return self.team.image.url
 
     @property
@@ -180,71 +179,132 @@ class InquiryChatRoom(models.Model):
 
     @property
     def inquirer_background(self):
+        if self.inquirer is None:
+            return ''
         return self.inquirer.background.url
 
     @property
     def responder(self):
-        return self.team.responder or None
+        if self.team is None:
+            return None
+        return self.team.responder
+
+    @property
+    def team_name(self):
+        if self.team is None:
+            return '(알 수 없음)'
+        return self.team.name
 
     @property
     def inquirer_name(self):
+        if self.inquirer is None:
+            return '(알 수 없음)'
         return self.inquirer.name
 
     @property
     def responder_pk(self):
+        if self.team is None:
+            return None
         return self.team.responder.pk
 
     @property
     def inquirer_pk(self):
+        if self.inquirer is None:
+            return None
         return self.inquirer.pk
-
-    @property
-    def team_name(self):
-        return self.team.name
 
     class Meta:
         ordering = ['-updated_at']
 
 
+class InquiryChatParticipant(models.Model):
+    chatroom = models.ForeignKey(InquiryChatRoom, on_delete=models.CASCADE, related_name='participants')
+    is_inquirer = models.BooleanField()
+    unread_cnt = models.PositiveIntegerField(default=0)
+    alarm_on = models.BooleanField(default=True)
+    is_online = models.BooleanField(default=False)
+    last_read_time = models.DateTimeField(auto_now=True)
+
+    @property
+    def chatroom_name(self):
+        if self.is_inquirer:
+            return self.chatroom.inquirer_chatroom_name
+        return self.chatroom.team_chatroom_name
+
+    @property
+    def name(self):
+        if self.is_inquirer:
+            if self.chatroom.inquirer is None:
+                return '(알 수 없음)'
+            return self.chatroom.inquirer.name
+        else:
+            if self.chatroom.team is None:
+                return '(알 수 없음)'
+            return self.chatroom.team.name
+
+    @property
+    def avatar(self):
+        if self.is_inquirer:
+            if self.chatroom.inquirer is None:
+                return default_storage.url('avatars/default.png')
+            return self.chatroom.inquirer.avatar.url
+        else:
+            if self.chatroom.team is None:
+                return default_storage.url('teams/default.png')
+            return self.chatroom.team.image.url
+
+    @property
+    def background(self):
+        if self.is_inquirer:
+            if self.chatroom.inquirer is None:
+                return ''
+            return self.chatroom.inquirer.background.url
+        else:
+            return ''
+
+    @property
+    def last_msg(self):
+        return self.chatroom.last_msg
+
+
 class InquiryMessage(models.Model):
     chatroom = models.ForeignKey(InquiryChatRoom, on_delete=models.CASCADE, related_name="messages")
     sender = models.CharField(max_length=1, choices=InquiryRoleType.choices, blank=True, null=True)
-    user = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
-    team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.SET_NULL)
     content = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
     is_msg = models.BooleanField(default=True)
 
+
     @property
     def name(self):
         if self.sender == InquiryRoleType.TEAM:
-            if self.team is None:
+            if self.chatroom.team is None:
                 return '(알 수 없음)'
-            return self.team.name
+            return self.chatroom.team.name
         else:
-            if self.user is None:
+            if self.chatroom.inquirer is None:
                 return '(알 수 없음)'
-            return self.user.name
+            return self.chatroom.inquirer.name
 
     @property
     def avatar(self):
         if self.sender == InquiryRoleType.TEAM:
-            if self.team is None:
+            if self.chatroom.team is None:
                 return default_storage.url('teams/default.png')
-            return self.team.image.url
+            return self.chatroom.team.image.url
         else:
-            if self.user is None:
+            if self.chatroom.inquirer is None:
                 return default_storage.url('avatars/default.png')
-            return self.user.avatar.url
+            return self.chatroom.inquirer.avatar.url
 
     @property
     def background(self):
         if self.sender == InquiryRoleType.TEAM:
             return ''
         else:
-            if self.user is None:
+            if self.chatroom.inquirer is None:
                 return ''
-            return self.user.background.url
+            return self.chatroom.inquirer.background.url
 
     class Meta:
         ordering = ['-timestamp']
@@ -332,8 +392,7 @@ class TeamChatParticipant(models.Model):
     def position(self):
         if self.user is None or self.member is None:
             return ''
-        else:
-            return self.member.position.name
+        return self.member.position.name
 
     class Meta:
         constraints = [
@@ -353,39 +412,37 @@ class TeamMessage(models.Model):
     def name(self):
         if not self.is_msg:
             return ''
-        try:
-            return self.member.name
-        except Exception:
+        if self.user is None:
             return '(알 수 없음)'
+        if self.member is None:
+            return self.user.name
+        return self.member.name
 
     @property
     def avatar(self):
         if not self.is_msg:
             return ''
-        try:
-            return self.user.avatar.url
-        except Exception:
+        if self.user is None:
             return default_storage.url('avatars/default.png')
+        return self.user.avatar.url
 
     @property
     def background(self):
         if not self.is_msg:
             return ''
-        elif self.user is None:
+        if self.user is None:
             return ''
-        elif self.member is None:
+        if self.member is None:
             return '0xff45474D'
-        else:
-            return self.member.background
+        return self.member.background
 
     @property
     def position(self):
         if not self.is_msg:
             return ''
-        elif self.member is None or self.user is None:
+        if self.member is None or self.user is None:
             return ''
-        else:
-            return self.member.position.name
+        return self.member.position.name
 
     class Meta:
         ordering = ['-timestamp']

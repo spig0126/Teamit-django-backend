@@ -154,14 +154,12 @@ class InquiryChatRoomCreateSerializer(serializers.ModelSerializer):
 
 
 class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
-    unread_cnt = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
-    background = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
-    alarm_on = serializers.SerializerMethodField()
+    id = serializers.IntegerField(source='chatroom.pk', read_only=True)
+    name = serializers.CharField(source='chatroom_name')
+    updated_at = serializers.CharField(source='chatroom.updated_at')
 
     class Meta:
-        model = InquiryChatRoom
+        model = InquiryChatParticipant
         fields = [
             'id',
             'name',
@@ -172,136 +170,25 @@ class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
             'updated_at',
             'alarm_on'
         ]
-
-    def get_unread_cnt(self, instance):
-        if self.context['user'] == instance.inquirer:
-            return instance.inquirer_unread_cnt
-        else:
-            return instance.responder_unread_cnt
-
-    def get_avatar(self, instance):
-        if self.context['user'] == instance.inquirer:
-            return instance.team.image.url or default_storage.url('teams/default.png')
-        return instance.inquirer.avatar.url or default_storage.url('avatars/default.png')
-
-    def get_background(self, instance):
-        if self.context['user'] == instance.inquirer:
-            return ''
-        return instance.inquirer.background.url or ''
-
-    def get_name(self, instance):
-        team_name = instance.team.name
-        inquirer_name = instance.inquirer.name
-
-        if self.context['user'] == instance.inquirer:
-            return team_name
-        else:
-            return f'{team_name} > {inquirer_name}'
-
-    def get_alarm_on(self, instance):
-        if self.context['user'] == instance.inquirer:
-            return instance.inquirer_alarm_on
-        else:
-            return instance.responder_alarm_on
-
-
-class InquiryChatRoomWithTypeDetailSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField()
-    unread_cnt = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
-    background = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
-    alarm_on = serializers.SerializerMethodField()
-
-    class Meta:
-        model = InquiryChatRoom
-        fields = [
-            'id',
-            'type',
-            'name',
-            'avatar',
-            'background',
-            'last_msg',
-            'unread_cnt',
-            'updated_at',
-            'alarm_on'
-        ]
-
-    def get_type(self, instance):
-        return self.context['type']
-
-    def get_unread_cnt(self, instance):
-        if self.context['type'] == 'inquirer':
-            return instance.inquirer_unread_cnt
-        else:
-            return instance.responder_unread_cnt
-
-    def get_avatar(self, instance):
-        if self.context['type'] == 'inquirer':
-            return instance.team.image.url or default_storage.url('teams/default.png')
-        else:
-            return instance.inquirer.avatar.url or default_storage.url('avatars/default.png')
-
-    def get_background(self, instance):
-        if self.context['type'] == 'inquirer':
-            return ''
-        else:
-            return instance.inquirer.background.url or ''
-
-    def get_name(self, instance):
-        team_name = instance.team.name
-        inquirer_name = instance.inquirer.name
-
-        if self.context['type'] == 'inquirer':
-            return team_name
-        else:
-            return f'{team_name} > {inquirer_name}'
-
-    def get_alarm_on(self, instance):
-        if self.context['type'] == 'inquirer':
-            return instance.inquirer_alarm_on
-        else:
-            return instance.responder_alarm_on
 
 
 class InquiryChatRoomDetailForTeamSerializer(serializers.ModelSerializer):
-    avatar = serializers.SerializerMethodField()
-    background = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
+    name = serializers.CharField(source='team_chatroom_name')
 
     class Meta:
         model = InquiryChatRoom
         fields = [
             'id',
             'name',
-            'avatar',
-            'background',
             'last_msg',
             'updated_at',
         ]
 
-    def get_name(self, instance):
-        if instance.inquirer is None:
-            return '(알 수 없음)'
-        return instance.inquirer.name
 
-    def get_avatar(self, instance):
-        if instance.inquirer is None:
-            return ''
-        return instance.inquirer.avatar.url
-
-    def get_background(self, instance):
-        if instance.inquirer is None:
-            return ''
-        return instance.inquirer.background.url
-
-
-class InquiryMessageCreateSeriazlier(serializers.ModelSerializer):
+class InquiryMessageCreateSerializer(serializers.ModelSerializer):
     chatroom = serializers.SlugRelatedField(slug_field='pk', queryset=InquiryChatRoom.objects.all())
     is_msg = serializers.BooleanField(default=True, required=False)
     sender = serializers.CharField(required=False)
-    user = serializers.SlugRelatedField(slug_field='pk', required=False, allow_null=True, queryset=User.objects.all())
-    team = serializers.SlugRelatedField(slug_field='pk', required=False, allow_null=True, queryset=Team.objects.all())
 
     class Meta:
         model = InquiryMessage
@@ -309,13 +196,13 @@ class InquiryMessageCreateSeriazlier(serializers.ModelSerializer):
             'chatroom',
             'content',
             'sender',
-            'user',
-            'team',
             'is_msg'
         ]
 
 
 class InquiryMessageSerializer(serializers.ModelSerializer):
+    unread_cnt = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = InquiryMessage
         fields = [
@@ -326,9 +213,24 @@ class InquiryMessageSerializer(serializers.ModelSerializer):
             'name',
             'avatar',
             'background',
-            'is_msg'
+            'unread_cnt',
+            'is_msg',
         ]
 
+    def get_unread_cnt(self, instance):
+        try:
+            return self.context['unread_cnt']
+        except KeyError:
+            if instance.is_msg:
+                return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
+            else:
+                return 0
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for key in ('name', 'avatar', 'background'):
+            data[key] = ''
+        return data
 
 #######################################################
 class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):

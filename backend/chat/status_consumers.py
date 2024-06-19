@@ -3,7 +3,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Sum, F
 from channels.db import database_sync_to_async
-from django.db import transaction
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 
 from .models import *
@@ -27,18 +27,16 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def fetch_inquiry_chatrooms(self):
-        responder_rooms = InquiryChatRoom.objects.filter(team__permission__responder=self.user)
-        inquirer_rooms = InquiryChatRoom.objects.filter(inquirer=self.user)
-        responder_room_list = InquiryChatRoomDetailSerializer(responder_rooms, many=True,
-                                                              context={'user': self.user}).data
-        inquirer_room_list = InquiryChatRoomDetailSerializer(inquirer_rooms, many=True,
-                                                             context={'user': self.user}).data
+        participants = InquiryChatParticipant.objects.filter(
+            Q(chatroom__inquirer=self.user) & Q(is_inquirer=True) |
+            Q(chatroom__team__permission__responder=self.user) & Q(is_inquirer=False)
+        ).order_by('-chatroom__updated_at')
+
         if self.filter == 'responder':
-            return responder_room_list
+            participants = participants.filter(is_inquirer=False)
         elif self.filter == 'inquirer':
-            return inquirer_room_list
-        room_list = responder_room_list + inquirer_room_list
-        return sorted(room_list, key=lambda x: x['updated_at'], reverse=True)
+            participants = participants.filter(is_inquirer=True)
+        return InquiryChatRoomDetailSerializer(participants, many=True).data
 
     @database_sync_to_async
     def fetch_team_chatrooms(self):
@@ -53,14 +51,11 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def update_inquiry_chatroom_alarm(self, chatroom_id):
-        instance = InquiryChatRoom.objects.get(id=chatroom_id)
-        type = 'inquirer'
-        if self.user == instance.inquirer:
-            instance.inquirer_alarm_on = not instance.inquirer_alarm_on
+        participants = InquiryChatParticipant.objects.filter(chatroom=chatroom_id)
+        if self.user == InquiryChatRoom.objects.get(pk=chatroom_id).inquirer:
+            participants.filter(is_inquirer=True).update(alarm_on=~F('alarm_on'))
         else:
-            type = 'responder'
-            instance.responder_alarm_on = not instance.responder_alarm_on
-        instance.save()
+            participants.filter(is_inquirer=False).update(alarm_on=~F('alarm_on'))
 
     @database_sync_to_async
     def update_team_chatroom_alarm(self, chatroom_id):
@@ -71,17 +66,16 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_total_unread_cnt(self):
         private_unread_cnt = \
-        PrivateChatParticipant.objects.filter(user=self.user).aggregate(private_unread_cnt=Sum('unread_cnt'))[
-            'private_unread_cnt'] or 0
+            PrivateChatParticipant.objects.filter(user=self.user).aggregate(private_unread_cnt=Sum('unread_cnt'))[
+                'private_unread_cnt'] or 0
         team_unread_cnt = TeamChatParticipant.objects.filter(user=self.user, member__isnull=False).aggregate(
             team_unread_cnt=Sum('unread_cnt'))['team_unread_cnt'] or 0
-        inquirer_unread_cnt = \
-        InquiryChatRoom.objects.filter(inquirer=self.user).aggregate(inquiry_unread_cnt=Sum('inquirer_unread_cnt'))[
-            'inquiry_unread_cnt'] or 0
-        responder_unread_cnt = InquiryChatRoom.objects.filter(team__permission__responder=self.user).aggregate(
-            responder_unread_cnt=Sum('responder_unread_cnt'))['responder_unread_cnt'] or 0
+        inquiry_unread_cnt = \
+            InquiryChatParticipant.objects.filter(
+                Q(chatroom__inquirer=self.user) | Q(chatroom__team__permission__responder=self.user)).aggregate(
+                inquiry_unread_cnt=Sum('unread_cnt'))['inquiry_unread_cnt'] or 0
 
-        return private_unread_cnt + team_unread_cnt + inquirer_unread_cnt + responder_unread_cnt
+        return private_unread_cnt + team_unread_cnt + inquiry_unread_cnt
 
     @database_sync_to_async
     @transaction.atomic
@@ -98,32 +92,31 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
             participant.delete()
             return participant_name, participant_position
         if chat_type == 'inquiry':
-            chatroom = InquiryChatRoom.objects.get(chatroom=chatroom_id)
-            participant_name = ''
-            if chatroom.inquirer == self.user:
-                participant_name = chatroom.inquirer.name
-                chatroom.inquirer = None
-            else:
-                participant_name = chatroom.team.name
-                chatroom.team = None
-            chatroom.save()
-            return participant_name, None
+            is_inquirer = InquiryChatRoom.objects.get(pk=chatroom_id).inquirer == self.user
+            InquiryChatParticipant.objects.filter(chatroom=chatroom_id, is_inquirer=is_inquirer).delete()
+
 
     @database_sync_to_async
     @transaction.atomic
-    def create_message(self, chat_type, data):
-        if chat_type == 'private':
-            pass
-        if chat_type == 'team':
-            try:
-                serializer = TeamMessageCreateSerialzier(data=data)
-                serializer.is_valid(raise_exception=True)
-                instance = serializer.save()
-                return TeamMessageSerializer(instance, context={'unread_cnt': None}).data
-            except ValidationError as e:
-                self.send_message('error', e.detail)
-        if chat_type == 'inquiry':
-            pass
+    def create_non_msg(self, chat_type, data):
+        create_serializer = {
+            'private': PrivateMessageCreateSerializer,
+            'team': TeamMessageCreateSerialzier,
+            'inquiry': InquiryMessageCreateSerializer
+        }
+        detail_serializer = {
+            'private': PrivateMessageSerializer,
+            'team': TeamMessageSerializer,
+            'inquiry': InquiryMessageSerializer
+        }
+
+        try:
+            serializer = create_serializer[chat_type](data=data)
+            serializer.is_valid(raise_exception=True)
+            instance = serializer.save()
+            return detail_serializer[chat_type](instance, context={'unread_cnt': 0}).data
+        except ValidationError as e:
+            self.send_message('error', e.detail)
 
     commands = {
         'fetch_private_chatrooms': fetch_private_chatrooms,
@@ -189,20 +182,8 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
         chat_type = data.get('chat_type')
         chatroom_id = data.get('chatroom_id')
         if chat_type and chatroom_id:
-            # create exit message
-            name, position = await self.remove_user_from_chatroom(chat_type, chatroom_id)
-            data = {
-                'chatroom': chatroom_id,
-                'content': f'{name} / {position} 님이 퇴장했습니다' if position else f'{name} 님이 퇴장했습니다',
-                'is_msg': False
-            }
-            message = await self.create_message(chat_type, data)
-
-            # send message to group
-            chatroom_name = f'{chat_type}_chat_{chatroom_id}'
-            await self.channel_layer.group_send(
-                chatroom_name, {"type": "msg", "message": message}
-            )
+            await self.remove_user_from_chatroom(chat_type, chatroom_id)
+            await self.send_message('exit_successful', True)
             await self.close()
 
     async def handle_search(self, data):
@@ -229,7 +210,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
         if self.chat_type == 'all':
             await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
-            await self.send_update_message(chat_type, message)
+            # await self.send_update_message(chat_type, message)
         elif self.chat_type == chat_type and self.team_id == team_id and (self.filter in (filter, 'all')):
             await self.send_update_message(chat_type, message)
 
