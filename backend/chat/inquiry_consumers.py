@@ -241,7 +241,6 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         }
         alarm_on_offline_participants = (self.participants_set - set(self.online_participants)).intersection(
             self.alarm_on_participants)
-        print(self.alarm_on_participant, self.user.pk)
         for participant in alarm_on_offline_participants:
             send_fcm_to_user_task.delay(participant, title, body, data)
 
