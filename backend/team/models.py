@@ -9,7 +9,7 @@ from user.models import *
 
 class Team(models.Model):
     id = models.AutoField(primary_key=True)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, default=54, related_name='created_teams')
+    creator = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='created_teams')
     name = models.CharField(max_length=20)
     short_pr = models.CharField(max_length=50)
     keywords = models.CharField(default='')
@@ -121,7 +121,7 @@ class TeamMembers(models.Model):
     position = models.ForeignKey(Position, on_delete=models.CASCADE, default=1)
     background = models.CharField(default='')
     noti_unread_cnt = models.IntegerField(default=0)
-    custom_name = models.CharField(max_length=20, default='')
+    custom_name = models.CharField(max_length=10, default='')
 
     class Meta:
         constraints = [
@@ -166,4 +166,4 @@ class TeamLike(models.Model):
 
 class TeamPermission(models.Model):
     team = models.OneToOneField(Team, related_name="permission", primary_key=True, on_delete=models.CASCADE)
-    responder = models.ForeignKey(User, related_name="responder", on_delete=models.CASCADE, null=True)
+    responder = models.ForeignKey(User, related_name="responder", on_delete=models.SET_NULL, null=True)
