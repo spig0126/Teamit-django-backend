@@ -236,7 +236,9 @@ class TeamChatRoomParticipantDetailAPIView(DestroyModelMixin, ListModelMixin, ge
                     data={'chatroom': self.chatroom.pk, 'user': member.user.pk, 'member': member.pk})
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
-            return Response(status=status.HTTP_201_CREATED)
+            all_members = TeamMembers.objects.filter(team=self.chatroom.team)
+            data = MyTeamMemberDetailSerializer(all_members, many=True).data
+            return Response(data, status=status.HTTP_201_CREATED)
         except IntegrityError as e:
             return Response({'detail': 'user is already chatroom participant'}, status=status.HTTP_409_CONFLICT)
 
