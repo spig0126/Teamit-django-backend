@@ -228,8 +228,9 @@ class InquiryMessageSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        for key in ('name', 'avatar', 'background'):
-            data[key] = ''
+        if not data['is_msg']:
+            for key in ('name', 'avatar', 'background'):
+                data[key] = ''
         return data
 
 #######################################################
