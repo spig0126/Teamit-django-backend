@@ -145,12 +145,8 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
         await self.close(code=close_code)
 
     async def receive(self, text_data):
-        try:
-            data = json.loads(text_data)
-        except json.JSONDecodeError:
-            await self.close()
-
-        msg_type = data.get("type")
+        data = json.loads(text_data)
+        msg_type = data["type"]
 
         if msg_type == 'change':
             await self.handle_change(data)
@@ -165,7 +161,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
     async def handle_change(self, data):
         self.chat_type = data.get("chat_type", self.chat_type)
         self.team_id = data.get("team_id", self.team_id)
-        self.filter = data.get("filter", self.team_id)
+        self.filter = data.get("filter", self.filter)
 
         if self.chat_type == 'all':
             await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
@@ -203,7 +199,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
         message = event['message']
         update_unread_cnt = message.get('update_unread_cnt', False)
         team_id = event.get('team_id', self.team_id)
-        filter = event.get('filter', self.filter)
+        filter_type = event.get('filter', self.filter)
 
         if update_unread_cnt:
             self.total_unread_cnt += 1
@@ -211,7 +207,7 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
         if self.chat_type == 'all':
             await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
             # await self.send_update_message(chat_type, message)
-        elif self.chat_type == chat_type and self.team_id == team_id and (self.filter in (filter, 'all')):
+        elif self.chat_type == chat_type and self.team_id == team_id and (self.filter in (filter_type, 'all')):
             await self.send_update_message(chat_type, message)
 
     # --------------------utiity related---------------------------------
