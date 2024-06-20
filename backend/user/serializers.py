@@ -18,7 +18,7 @@ class UserAvatarImageField(serializers.Field):
         # Convert the signed url to image path
         try:
             parsed_url = urlparse(data)
-            return parsed_url.path[1:]
+            return parsed_url.path
         except:
             return 'avatars/1.png'
 
