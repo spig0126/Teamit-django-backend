@@ -106,8 +106,12 @@ class InquiryChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
             return Response({"detail": "user can't inquiry team one's already member of"},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         if existing_room := InquiryChatRoom.objects.filter(inquirer=request.user, team__pk=team).first():
+            if InquiryChatParticipant.objects.filter(chatroom=existing_room, is_inquirer=True).exists():
+                InquiryChatParticipant.objects.create(chatroom=existing_room, is_inquirer=False)
+            else:
+                InquiryChatParticipant.objects.create(chatroom=existing_room, is_inquirer=True)
             return Response({"detail": "inquiry chat room already exists", "chatroom_id": existing_room.pk,
-                             "chatroom_name": existing_room.inquirer_chatroom_name}, status=status.HTTP_409_CONFLICT)
+                             "chatroom_name": existing_room.inquirer_chatroom_name}, status=status.HTTP_202_ACCEPTED)
 
         return self.create(request, *args, **kwargs)
 
