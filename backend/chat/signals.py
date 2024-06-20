@@ -27,8 +27,13 @@ def delete_chat_participant_when_user_delete(sender, instance, **kwargs):
 @receiver(pre_delete, sender=Team)
 def delete_chat_participant_when_team_delete(sender, instance, **kwargs):
     InquiryChatParticipant.objects.filter(is_inquirer=False, chatroom__team=instance).delete()
-    # InquiryChatRoom.objects.filter(team=instance, inquirer=None).delete()
 
+'''
+CHAT PARTICIPANT CREATE 
+'''
+@receiver(post_save, sender=InquiryChatParticipant)
+def handle_inquiry_chat_participant_save(sender, instance, **kwargs):
+    send_chatroom_announcement(instance.chatroom, instance.name, '', 'inquiry', 'enter')
 
 
 '''
