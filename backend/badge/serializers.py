@@ -14,7 +14,7 @@ BADGE_TITLES = {
     'user_profile': '위대한 첫걸음',
     'team_leader': '팀 리더',
     'shared_profile': '나로 말할 것 같으면',
-    'early_user': '게더어스 행성의 콜럼버스',
+    'early_user': '게더어스 행성의\n콜럼버스',
     'user_review': '여정을 함께해요'
 }
 
@@ -75,8 +75,8 @@ BADGE_LEVEL_DESCRIPTION = {
     'team_refusal': {1: '팀 지원 5번 실패'},
     'user_profile': {1: '프로필 \'필수 정보\' + \'선택 정보\' 작성하기'},
     'team_leader': {1: '직접 팀 개설하기'},
-    'shared_profile': {1: '공유 카드 1회 이상 공유하기 (외부 링크, 카카오톡)'},
-    'early_user': {1: '처음 게더어스 행성에 도착한 전설의 999명 중 한 명'},
+    'shared_profile': {1: '공유 카드 1회 이상 공유하기\n(외부 링크, 카카오톡)'},
+    'early_user': {1: '처음 게더어스 행성에 도착한\n전설의 999명 중 한 명'},
     'user_review': {
             1: '활동 후기 5개 남기기',
             2: '활동 후기 15개 남기기',
