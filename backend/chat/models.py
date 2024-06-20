@@ -95,6 +95,10 @@ class PrivateChatParticipant(models.Model):
     def last_msg(self):
         return self.chatroom.last_msg
 
+    @property
+    def name(self):
+        return self.user.name
+
 
 class PrivateMessage(models.Model):
     chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE, related_name='messages')
@@ -245,22 +249,22 @@ class InquiryChatParticipant(models.Model):
     @property
     def avatar(self):
         if self.is_inquirer:
-            if self.chatroom.inquirer is None:
-                return default_storage.url('avatars/default.png')
-            return self.chatroom.inquirer.avatar.url
-        else:
             if self.chatroom.team is None:
                 return default_storage.url('teams/default.png')
             return self.chatroom.team.image.url
+        else:
+            if self.chatroom.inquirer is None:
+                return default_storage.url('avatars/default.png')
+            return self.chatroom.inquirer.avatar.url
 
     @property
     def background(self):
         if self.is_inquirer:
+            return ''
+        else:
             if self.chatroom.inquirer is None:
                 return ''
             return self.chatroom.inquirer.background.url
-        else:
-            return ''
 
     @property
     def last_msg(self):
@@ -382,8 +386,6 @@ class TeamChatParticipant(models.Model):
 
     @property
     def name(self):
-        if self.user is None:
-            return '(알 수 없음)'
         if self.member is None:
             return self.user.name
         return self.member.name
