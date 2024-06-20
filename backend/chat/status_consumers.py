@@ -142,7 +142,6 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.name, self.channel_name)
-        await self.close(code=close_code)
 
     async def receive(self, text_data):
         data = json.loads(text_data)

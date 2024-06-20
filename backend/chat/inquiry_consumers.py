@@ -1,4 +1,5 @@
 import json
+from django.utils import timezone
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -13,6 +14,7 @@ from fcm_notification.tasks import send_fcm_to_user_task
 
 
 class InquiryChatConsumer(AsyncWebsocketConsumer):
+
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
         self.this_participant = None
@@ -52,7 +54,6 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
         if self.is_inquirer or self.is_responder:
             await self.mark_as_offline()
-        await self.close()
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -123,8 +124,6 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         except ValueError:
             pass
         await self.send_message(event['type'], event['message'])
-        # print('exit', self.user, user)
-        # print(self.online_participants)
 
     async def msg(self, event):
         await self.send_message(event['type'], event['message'])
@@ -205,8 +204,8 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
 
     async def mark_as_offline(self):
         if self.chatroom is not None:
-            await self.update_user_offline()
             await self.send_group_message('offline', {'user': self.user.pk})
+            await self.update_user_offline()
 
     async def send_group_message(self, type, message):
         await self.channel_layer.group_send(
@@ -226,9 +225,11 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         if self.is_responder or self.is_inquirer:
             self.online_participants.append(self.user.pk)
             await self.send_group_message('online', {'user': self.user.pk,
-                                                     'last_read_time': self.this_participant.last_read_time.isoformat()})
+                                                     'last_read_time': self.this_participant.last_read_time.astimezone(
+                                                         timezone.get_current_timezone()).isoformat()})
 
     # ----------------DB related------------------------
+
     @database_sync_to_async
     def send_offline_participants_fcm(self, message):
         title = self.chatroom.team_chatroom_name if self.is_inquirer else self.chatroom.inquirer_chatroom_name
@@ -307,21 +308,8 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def update_user_offline(self):
-        try:
-            self.online_participants.remove(self.user.pk)
-        except ValueError:
-            pass
-        try:
-            if self.user not in self.online_participants:
-                if self.is_responder:
-                    self.chatroom.responder_is_online = False
-                    self.chatroom.responder_unread_cnt = 0
-                elif self.is_inquirer:
-                    self.chatroom.inquirer_is_online = False
-                    self.chatroom.inquirer_unread_cnt = 0
-                self.chatroom.save()
-        except:
-            pass
+        InquiryChatParticipant.objects.filter(chatroom=self.chatroom, is_inquirer=self.is_inquirer).update(
+            is_online=False)
 
     @database_sync_to_async
     def get_chatroom_and_participants_info(self):
@@ -342,8 +330,6 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                 self.is_inquirer = True
                 self.this_participant = self.participants.get(is_inquirer=True)
             self.is_member = self.chatroom.team.members.filter(pk=self.user.pk).exists()
-
-
 
             self.online_participants = []
             for participant in self.participants.filter(is_online=True):
