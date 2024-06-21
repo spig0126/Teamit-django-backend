@@ -95,7 +95,6 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
             is_inquirer = InquiryChatRoom.objects.get(pk=chatroom_id).inquirer == self.user
             InquiryChatParticipant.objects.filter(chatroom=chatroom_id, is_inquirer=is_inquirer).delete()
 
-
     @database_sync_to_async
     @transaction.atomic
     def create_non_msg(self, chat_type, data):
@@ -246,10 +245,9 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def inquiry_chatroom_search(self, query):
-        filter_expression = f'inquirer_pk={self.user.pk} OR responder_pk={self.user.pk}'
+        filter_expression = f'is_user={self.user.pk}'
         results = client.perform_search(query, 'inquiry', filter_expression)
-        chatrooms = InquiryChatRoom.objects.filter(pk__in=results)
-        return InquiryChatRoomDetailSerializer(chatrooms, many=True, context={'user': self.user}).data
+        return results
 
 
 ######################################################################

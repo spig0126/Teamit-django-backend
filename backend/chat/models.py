@@ -230,6 +230,10 @@ class InquiryChatParticipant(models.Model):
     last_read_time = models.DateTimeField(auto_now=True)
 
     @property
+    def chatroom_pk(self):
+        return self.chatroom.pk
+
+    @property
     def chatroom_name(self):
         if self.is_inquirer:
             return self.chatroom.inquirer_chatroom_name
@@ -269,6 +273,18 @@ class InquiryChatParticipant(models.Model):
     @property
     def last_msg(self):
         return self.chatroom.last_msg
+
+    @property
+    def updated_at(self):
+        return self.chatroom.updated_at.isoformat()
+
+    @property
+    def is_user(self):
+        if self.chatroom.inquirer is None or self.chatroom.team is None:
+            return None
+        if self.is_inquirer:
+            return self.chatroom.inquirer.pk
+        return self.chatroom.responder.pk
 
 
 class InquiryMessage(models.Model):
