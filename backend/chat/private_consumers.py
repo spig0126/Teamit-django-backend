@@ -41,7 +41,6 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
         await self.mark_as_offline()
-        await self.close()
 
     # Receive message from WebSocket (frontend -> channel)
     async def receive(self, text_data):
@@ -77,9 +76,9 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         await self.send_offline_participants_fcm(message)
 
     async def handle_exit(self):
-        await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
         await self.remove_this_participant_from_chatroom()
         await self.send_message('exit_successful', True)
+        await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
         await self.close()
 
     async def handle_settings(self):
@@ -123,7 +122,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         user = event['message'].get('user', None)
         try:
             self.online_participants.remove(user)
-        except ValueError:
+        except Exception:
             pass
         # print('exit', self.user, user)
         # print(self.online_participants)
