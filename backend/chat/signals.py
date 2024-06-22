@@ -4,6 +4,7 @@ from django.db import transaction
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from rest_framework.exceptions import ValidationError
+from django.utils import timezone
 
 from .models import *
 from .serializers import TeamMessageCreateSerialzier, TeamMessageSerializer, PrivateMessageCreateSerializer, \
@@ -28,9 +29,44 @@ def delete_chat_participant_when_user_delete(sender, instance, **kwargs):
 def delete_chat_participant_when_team_delete(sender, instance, **kwargs):
     InquiryChatParticipant.objects.filter(is_inquirer=False, chatroom__team=instance).delete()
 
+
+'''
+CHATROOM CREATE
+'''
+
+
+@receiver(post_save, sender=TeamChatParticipant)
+def alert_status_consumer_of_new_team_chatroom(sender, instance, created, **kwargs):
+    if not created:
+        return
+    chatroom = instance.chatroom
+    status_message = create_status_message({
+        'id': chatroom.pk,
+        'name': chatroom.name,
+        'avatar': '',
+        'background': chatroom.background,
+        'updated_at': chatroom.created_at.astimezone(
+            timezone.get_current_timezone()).isoformat()
+    })
+
+    chatroom_name = f'status_{instance.user.pk}'
+    async_to_sync(get_channel_layer().group_send)(
+        chatroom_name,
+        {
+            "type": "msg",
+            "chat_type": "team",
+            "team_id": chatroom.team.pk,
+            'message': status_message
+        }
+    )
+
+
+
 '''
 CHAT PARTICIPANT CREATE 
 '''
+
+
 @receiver(post_save, sender=InquiryChatParticipant)
 def handle_inquiry_chat_participant_save(sender, instance, **kwargs):
     send_chatroom_announcement(instance.chatroom, instance.name, '', 'inquiry', 'enter')
@@ -39,6 +75,8 @@ def handle_inquiry_chat_participant_save(sender, instance, **kwargs):
 '''
 CHAT PARTICIPANT DELETE
 '''
+
+
 @receiver(pre_delete, sender=PrivateChatParticipant)
 def handle_private_chat_participant_delete(sender, instance, **kwargs):
     try:
@@ -50,6 +88,7 @@ def handle_private_chat_participant_delete(sender, instance, **kwargs):
         send_chatroom_announcement(instance.chatroom, instance.name, '', 'team', 'exit')
     except AttributeError:
         return
+
 
 @receiver(pre_delete, sender=TeamChatParticipant)
 def handle_team_chat_participant_delete(sender, instance, **kwargs):
@@ -91,6 +130,7 @@ def send_offline_msg(chatroom, user_pk, chat_type):
         }
     )
 
+
 def send_chatroom_announcement(chatroom, name, position, chat_type, action):
     channel_layer = get_channel_layer()
     action_content = '퇴장했습니다' if action == 'exit' else '입장했습니다'
@@ -129,3 +169,17 @@ def create_announce_msg(chat_type, data):
         return detail_serializer[chat_type](instance, context={'unread_cnt': 0}).data
     except ValidationError as e:
         print('error', e.detail)
+
+
+def create_status_message(updates):
+    base = {
+        'id': '',
+        'name': '',
+        'avatar': '',
+        'background': '',
+        'last_msg': '',
+        'updated_at': '',
+        'update_unread_cnt': False
+    }
+    status_message = {key: updates.get(key, base.get(key)) for key in base}
+    return status_message
