@@ -355,9 +355,8 @@ class TeamChatRoom(models.Model):
 class TeamChatParticipant(models.Model):
     id = models.AutoField(primary_key=True)
     chatroom = models.ForeignKey(TeamChatRoom, blank=True, null=True, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
-    member = models.ForeignKey(TeamMembers, related_name="participants", blank=True, null=True,
-                               on_delete=models.SET_NULL)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    member = models.ForeignKey(TeamMembers, related_name="participants", on_delete=models.CASCADE)
     is_online = models.BooleanField(default=False)
     last_read_time = models.DateTimeField(auto_now=True)
     unread_cnt = models.PositiveIntegerField(default=0)
