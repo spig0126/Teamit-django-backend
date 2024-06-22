@@ -240,8 +240,8 @@ class TeamChatRoomParticipantDetailAPIView(DestroyModelMixin, ListModelMixin, ge
                     data={'chatroom': self.chatroom.pk, 'user': member.user.pk, 'member': member.pk})
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
-            all_members = TeamMembers.objects.filter(team=self.chatroom.team)
-            data = MyTeamMemberDetailSerializer(all_members, many=True).data
+            all_particiapnts = TeamMembers.objects.filter(participants__chatroom=self.chatroom).distinct()
+            data = MyTeamMemberDetailSerializer(all_particiapnts, many=True).data
             return Response(data, status=status.HTTP_201_CREATED)
         except IntegrityError as e:
             return Response({'detail': 'user is already chatroom participant'}, status=status.HTTP_409_CONFLICT)
@@ -256,7 +256,6 @@ class TeamChatRoomNonParticipantListAPIView(generics.ListAPIView):
         super().initial(request, *args, **kwargs)
 
     def get_queryset(self):
-        participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom, member__isnull=False).values_list(
-            'member', flat=True)
-        non_participants = TeamMembers.objects.filter(team=self.chatroom.team).exclude(id__in=participants)
+        participating_member_pks = TeamMembers.objects.filter(participants__chatroom=self.chatroom).values('pk')
+        non_participants = TeamMembers.objects.filter(team=self.chatroom.team).exclude(pk__in=participating_member_pks)
         return non_participants
