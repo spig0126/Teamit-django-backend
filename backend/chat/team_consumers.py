@@ -3,10 +3,8 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import F
 from channels.db import database_sync_to_async
-from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
-from django.db.models import Case, When, Value, IntegerField
 
 from .models import *
 from .serializers import *
@@ -278,16 +276,9 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             TeamChatParticipant.objects
                 .filter(chatroom=self.chatroom, member__isnull=False)
                 .select_related('member', 'user')
-                .annotate(
-                user_is_this_user=Case(
-                    When(user=self.user, then=Value(0)),
-                    default=Value(1),
-                    output_field=IntegerField(),
-                )
-            )
-                .order_by('user_is_this_user')
         )
-        members = sorted([participant.member for participant in participants], key=lambda member: member.name)
+        members = sorted([participant.member for participant in participants],
+                         key=lambda member: (member.user != self.user, member.name))
         participant_list = MyTeamMemberDetailSerializer(members, many=True).data
         name = self.chatroom.name
         background = self.chatroom.background
