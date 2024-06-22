@@ -6,6 +6,7 @@ from django.db.models import Case, When, Value, IntegerField
 from rest_framework.decorators import permission_classes
 from django.db import transaction, IntegrityError
 from rest_framework.views import APIView
+from django.db.models import Q
 
 from .models import *
 from .serializers import *
@@ -40,14 +41,22 @@ class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
                             status=status.HTTP_403_FORBIDDEN)
 
         # check if there is already private chat room
-        existing_room = PrivateChatRoom.objects.filter(participants__name=participants[0]).filter(
-            participants__name=participants[1]).first()
-        if existing_room:
+        existing_room = PrivateChatRoom.objects.filter(
+            (Q(user1__name=participants[0]) & Q(user2__name=participants[1])) |
+            (Q(user1__name=participants[1]) & Q(user2__name=participants[0]))
+        ).first()
+        if not existing_room:
+            return self.create(request, *args, **kwargs)
+
+        chatroom_name = None
+        try:
             chatroom_name = PrivateChatParticipant.objects.filter(user=self.request.user,
-                                                                  chatroom=existing_room).first().chatroom_name
-            return Response({"detail": "private chat room already exists", "chatroom_id": existing_room.pk,
-                             "chatroom_name": chatroom_name}, status=status.HTTP_409_CONFLICT)
-        return self.create(request, *args, **kwargs)
+                                                              chatroom=existing_room).first().chatroom_name
+        except AttributeError:
+            participant = PrivateChatParticipant.objects.create(chatroom=existing_room, user=self.request.user)
+            chatroom_name = participant.other_user_name
+        return Response({"detail": "private chat room already exists", "chatroom_id": existing_room.pk,
+                         "chatroom_name": chatroom_name}, status=status.HTTP_409_CONFLICT)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)

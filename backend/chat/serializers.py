@@ -20,12 +20,13 @@ class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         participants = validated_data.pop('participants', [])
+        validated_data['user1'] = User.objects.get(name=participants[0])
+        validated_data['user2'] = User.objects.get(name=participants[1])
         chatroom = PrivateChatRoom.objects.create(**validated_data)
         for participant, i in zip(participants, range(1, 3)):
-            user = User.objects.get(name=participant)
             PrivateChatParticipant.objects.create(
                 chatroom=chatroom,
-                user=user
+                user=validated_data[f'user{i}']
             )
         return chatroom
 
