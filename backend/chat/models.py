@@ -11,6 +11,8 @@ class PrivateChatRoom(models.Model):
     last_msg = models.CharField(max_length=255, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    user1 = models.ForeignKey(User, related_name="private_chatrooms_1", null=True, on_delete=models.SET_NULL)
+    user2 = models.ForeignKey(User, related_name="private_chatrooms_2", null=True, on_delete=models.SET_NULL)
     participants = models.ManyToManyField(
         User,
         through="PrivateChatParticipant",
@@ -39,8 +41,12 @@ class PrivateChatParticipant(models.Model):
         self._other_user = None
 
     def _get_other_user(self):
-        if self._other_user is None:
-            self._other_user = self.chatroom.participants.exclude(pk=self.user.pk).first()
+        if self._other_user is not None:
+            return self._other_user
+        if self.chatroom.user1 == self.user:
+            self._other_user = self.chatroom.user2
+        else:
+            self._other_user = self.chatroom.user1
         return self._other_user
 
     @property
