@@ -36,7 +36,7 @@ class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
         return {'chatroom_id': instance.id, "chatroom_name": chatroom_name}
 
 
-class PrivateChatRoomDeatilSerializer(serializers.ModelSerializer):
+class PrivateChatRoomDetailSerializer(serializers.ModelSerializer):
     sender = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
 
@@ -95,7 +95,7 @@ class PrivateChatParticipantDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         request = self.context['request']
         if request and request.method == 'PATCH':
-            serializer = PrivateChatRoomDeatilSerializer(instance.chatroom, context=self.context)
+            serializer = PrivateChatRoomDetailSerializer(instance.chatroom, context=self.context)
             return serializer.data
         return super().to_representation(instance)
 
@@ -116,8 +116,6 @@ class PrivateMessageCreateSerializer(serializers.ModelSerializer):
 
 
 class PrivateMessageSerializer(serializers.ModelSerializer):
-    unread_cnt = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = PrivateMessage
         fields = [
@@ -127,18 +125,8 @@ class PrivateMessageSerializer(serializers.ModelSerializer):
             'name',
             'avatar',
             'background',
-            'unread_cnt',
             'is_msg'
         ]
-
-    def get_unread_cnt(self, instance):
-        try:
-            return self.context['unread_cnt']
-        except KeyError:
-            if instance.is_msg:
-                return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
-            else:
-                return 0
 
 
 #######################################################
@@ -175,12 +163,16 @@ class InquiryChatRoomDetailSerializer(serializers.ModelSerializer):
 
 class InquiryChatRoomDetailForTeamSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='team_chatroom_name')
+    avatar = serializers.CharField(source='inquirer_avatar')
+    background = serializers.CharField(source='inquirer_background')
 
     class Meta:
         model = InquiryChatRoom
         fields = [
             'id',
             'name',
+            'avatar',
+            'background',
             'last_msg',
             'updated_at',
         ]

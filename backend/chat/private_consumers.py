@@ -16,6 +16,9 @@ from fcm_notification.tasks import send_fcm_to_user_task
 class PrivateChatConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
+        self.participants_set = None
+        self.alarm_on_particiapnts = None
+        self.this_participant = None
         self.last_read_time = None
         self.participants = None
         self.other_participant = None
@@ -134,12 +137,13 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         await self.send_message('msg', event['message'])
         await self.update_participant_info()
 
+    async def alarm_change(self, event):
+        return
+
     # ----------------UTILITY FUNCTIONS---------------------------------
     async def send_offline_participants_fcm(self, message):
-        if not self.other_participant.alarm_on:
-            return
-        if self.other_participant.pk not in set(self.online_participants):
-            chatroom_name, user_pk = await self.get_other_participant_info()
+        should_send, chatroom_name, user_pk = await self.alarm_on_offline_participants()
+        if should_send:
             title = chatroom_name
             body = message['content']
             data = {
@@ -149,6 +153,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                 'chat_type': 'private'
             }
             send_fcm_to_user_task.delay(user_pk, title, body, data)
+
 
     async def send_message(self, type, message):
         await self.send(text_data=json.dumps({
@@ -228,6 +233,14 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
 
     # ----------------DATABASE RELATED------------------------------------
     @database_sync_to_async
+    def alarm_on_offline_participants(self):
+        other_participant = PrivateChatParticipant.objects.filter(chatroom=self.chatroom, is_online=False, alarm_on=True).exclude(
+            user=self.user).first()
+        if other_participant:
+            return True, other_participant.chatroom_name, other_participant.user.pk
+        return False, None, None
+
+    @database_sync_to_async
     def update_chatroom_name(self, chatroom_name):
         self.this_participant.custom_name = chatroom_name
         self.this_participant.save()
@@ -264,9 +277,8 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def update_offline_participant_unread_cnt(self):
-        if self.other_participant.pk not in set(self.online_participants):
-            PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).exclude(
-                user=self.user).update(unread_cnt=F('unread_cnt') + 1)
+        PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id, is_online=False).exclude(
+            user=self.user).update(unread_cnt=F('unread_cnt') + 1)
 
     @database_sync_to_async
     @transaction.atomic
@@ -281,8 +293,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
             serializer = PrivateMessageCreateSerializer(data=data)
             serializer.is_valid(raise_exception=True)
             instance = serializer.save()
-            unread_cnt = 0 if not instance.is_msg else 2 - len(set(self.online_participants))
-            return PrivateMessageSerializer(instance, context={'unread_cnt': unread_cnt}).data
+            return PrivateMessageSerializer(instance).data
         except ValidationError as e:
             self.send_message('error', e.detail)
 
@@ -333,12 +344,14 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
             self.chatroom = PrivateChatRoom.objects.get(id=self.chatroom_id)
             participants = PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id)
             self.participants = list(participants.values_list('user', flat=True))
+            self.participants_set = {self.chatroom.user1.pk, self.chatroom.user2.pk}
             self.this_participant = participants.get(user=self.user)
             self.this_participant.is_online = True
             self.this_participant.save()
             self.other_participant = participants.exclude(user=self.user).first()
             self.last_read_time = self.this_participant.last_read_time.astimezone(timezone.get_current_timezone())
             self.online_participants = list(participants.filter(is_online=True).values_list('user', flat=True))
+            self.alarm_on_particiapnts = set(participants.filter(alarm_on=True).values_list('user', flat=True))
             return True
         except:
             return False
@@ -348,6 +361,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         last_read_time_list = PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id,
                                                                     is_online=False).values_list('last_read_time',
                                                                                                  flat=True)
-        messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt + 30]
+        messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[
+                   self.loaded_cnt:self.loaded_cnt + 30]
         self.loaded_cnt += 30
         return PrivateMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data

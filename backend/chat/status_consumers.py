@@ -45,23 +45,31 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def update_private_chatroom_alarm(self, chatroom_id):
-        instance = PrivateChatParticipant.objects.filter(user=self.user, chatroom=chatroom_id).first()
-        instance.alarm_on = not instance.alarm_on
-        instance.save()
+        participant = PrivateChatParticipant.objects.filter(user=self.user, chatroom=chatroom_id).first()
+        participant.alarm_on = not participant.alarm_on
+        participant.save()
+        return participant.alarm_on
 
     @database_sync_to_async
     def update_inquiry_chatroom_alarm(self, chatroom_id):
         participants = InquiryChatParticipant.objects.filter(chatroom=chatroom_id)
         if self.user == InquiryChatRoom.objects.get(pk=chatroom_id).inquirer:
-            participants.filter(is_inquirer=True).update(alarm_on=~F('alarm_on'))
+            participant = participants.filter(is_inquirer=True).first()
+            participant.alarm_on = not participant.alarm_on
+            participant.save()
+            return participant.alarm_on
         else:
-            participants.filter(is_inquirer=False).update(alarm_on=~F('alarm_on'))
+            participant = participants.filter(is_inquirer=False).first()
+            participant.alarm_on = not participant.alarm_on
+            participant.save()
+            return participant.alarm_on
 
     @database_sync_to_async
     def update_team_chatroom_alarm(self, chatroom_id):
-        instance = TeamChatParticipant.objects.filter(user=self.user, chatroom=chatroom_id).first()
-        instance.alarm_on = not instance.alarm_on
-        instance.save()
+        participant = TeamChatParticipant.objects.filter(user=self.user, chatroom=chatroom_id).first()
+        participant.alarm_on = not participant.alarm_on
+        participant.save()
+        return participant.alarm_on
 
     @database_sync_to_async
     def get_total_unread_cnt(self):
@@ -170,7 +178,14 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
         chat_type = data.get('chat_type')
         chatroom_id = data.get('chatroom_id')
         if chat_type and chatroom_id:
-            await self.commands[f'update_{chat_type}_chatroom_alarm'](self, chatroom_id)
+            new_alarm_status = await self.commands[f'update_{chat_type}_chatroom_alarm'](self, chatroom_id)
+            await self.channel_layer.group_send(
+                f'{chat_type}_chat_{chatroom_id}',
+                {
+                    'type': 'alarm_change',
+                    'message': {'user': self.user.pk, 'alarm_on': new_alarm_status}
+                }
+            )
 
     async def handle_exit(self, data):
         chat_type = data.get('chat_type')
@@ -178,7 +193,6 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
         if chat_type and chatroom_id:
             await self.remove_user_from_chatroom(chat_type, chatroom_id)
             await self.send_message('exit_successful', True)
-            await self.close()
 
     async def handle_search(self, data):
         self.chat_type = 'all'
@@ -267,7 +281,6 @@ class TeamInquiryStatusConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
-        await self.close(code=close_code)
 
     # -------------------event related----------------------------
     async def msg(self, event):

@@ -51,7 +51,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         elif type == 'settings':
             await self.handle_settings()
         elif type == 'update_alarm_status':
-            await self.update_alarm_status()
+            await self.handle_update_alarm_status()
         elif type == 'update_chatroom_background':
             await self.handle_update_chatroom_background(message)
         elif type == 'update_chatroom_name':
@@ -60,6 +60,10 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             await self.handle_fetch_non_participants()
 
     # ------------------handle related----------------------
+    async def handle_update_alarm_status(self):
+        new_alarm_status = await self.update_alarm_status()
+        await self.send_group_message('alarm_change', {'user': self.user.pk, 'alarm_on': new_alarm_status})
+
     async def handle_message(self, message):
         msg_details = {
             'chatroom': self.chatroom_id,
@@ -84,9 +88,9 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         await self.send_group_message('enter', message)
 
     async def handle_exit(self):
-        await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
         await self.remove_this_participant_from_chatroom()
         await self.send_message('exit_successful', True)
+        await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
         await self.close()
 
     async def handle_settings(self):
@@ -127,7 +131,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         user = event['message'].get('user', None)
         try:
             self.online_participants.remove(user)
-        except ValueError:
+        except Exception as e:
             pass
         await self.send_message(event['type'], event['message'])
 
@@ -142,6 +146,13 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
     async def msg(self, event):
         await self.send_message(event['type'], event['message'])
 
+    async def alarm_change(self, event):
+        if event['message']['alarm_on']:
+            self.alarm_on_participants.add(event['message']['user'])
+        else:
+            self.alarm_on_participants.discard(event['message']['user'])
+        await self.send_message(event['type'], event['message'])
+
     # ------------------utility related-----------------------
     async def send_offline_participants_fcm(self, message):
         title = self.chatroom.name
@@ -153,9 +164,10 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             'chat_type': 'team'
         }
 
-        offline_participants = set(self.participants) - set(self.online_participants)
-        for op in offline_participants:
-            send_fcm_to_user_task.delay(op, title, body, data)
+        alarm_on_offline_participants = (set(self.participants) - set(self.online_participants)).intersection(
+            self.alarm_on_participants)
+        for participant in alarm_on_offline_participants:
+            send_fcm_to_user_task.delay(participant, title, body, data)
 
     async def mark_as_online(self):
         '''
@@ -249,9 +261,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
     # ------------------DB related-----------------------\
     @database_sync_to_async
     def get_non_participants(self):
-        participants = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id, member__isnull=False).values_list(
-            'member', flat=True)
-        non_participants = TeamMembers.objects.filter(team=self.team_pk).exclude(id__in=participants)
+        participating_member_pks = TeamMembers.objects.filter(participants__chatroom=self.chatroom).values('pk')
+        non_participants = TeamMembers.objects.filter(team=self.chatroom.team).exclude(pk__in=participating_member_pks)
         return MyTeamMemberDetailSerializer(sorted(non_participants, key=lambda participant: participant.name),
                                             many=True).data
 
@@ -269,6 +280,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
     def update_alarm_status(self):
         self.this_participant.alarm_on = not self.this_participant.alarm_on
         self.this_participant.save()
+        return self.this_participant.alarm_on
 
     @database_sync_to_async
     def get_settings_info(self):
@@ -345,6 +357,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             self.this_participant = participants.get(user=self.user)
             self.member_pk = self.this_participant.member.pk
             self.last_read_time = self.this_participant.last_read_time.astimezone(timezone.get_current_timezone())
+            self.alarm_on_participants = set(participants.filter(alarm_on=True).values_list('user', flat=True))
             return True
         except:
             return False
@@ -374,7 +387,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         last_read_time_list = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id,
                                                                  is_online=False).values_list('last_read_time',
                                                                                               flat=True)
-        messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt + 30]
+        messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[
+                   self.loaded_cnt:self.loaded_cnt + 30]
         self.loaded_cnt += 30
         return TeamMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
 

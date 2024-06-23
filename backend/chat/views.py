@@ -25,7 +25,7 @@ class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
-            return PrivateChatRoomDeatilSerializer
+            return PrivateChatRoomDetailSerializer
         elif self.request.method == 'POST':
             return PrivateChatRoomCreateSerializer
 
