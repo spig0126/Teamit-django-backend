@@ -92,10 +92,19 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         await self.close()
 
     async def handle_settings(self):
-        responder_details = TeamBasicDetailForChatSerializer(self.chatroom.team).data
-        inquirer_details = UserMinimalWithAvatarBackgroundDetailSerializer(self.inquirer).data
-        participant_list = [responder_details, inquirer_details] if self.is_responder else [inquirer_details,
-                                                                                            responder_details]
+        participants = await self.get_paricipants()
+        participant_list = []
+
+        if await self.is_inquirer_participant_exist(participants):
+            data = UserMinimalWithAvatarBackgroundDetailSerializer(self.inquirer).data
+            participant_list.append(data)
+        if await self.is_responder_participant_exist(participants):
+            data = TeamBasicDetailForChatSerializer(self.chatroom.team).data
+            participant_list.append(data)
+
+        if len(participant_list) == 2 and not self.is_inquirer:
+            participant_list.reverse()
+
         alarm_on = self.this_participant.alarm_on
         type = 'settings'
         message = {
@@ -296,15 +305,16 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         last_read_time_list = InquiryChatParticipant.objects.filter(chatroom=self.chatroom_id,
                                                                     is_online=False).values_list('last_read_time',
                                                                                                  flat=True)
-        messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt + 30]
+        messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[self.loaded_cnt:self.loaded_cnt + 30]
         self.loaded_cnt += 30
         return InquiryMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
 
     @database_sync_to_async
     def update_participant_online(self):
         participant = self.participants.filter(is_inquirer=self.is_inquirer)
-        participant.update(is_online=True)
-        participant.update(unread_cnt=0)
+        if participant:
+            participant.update(is_online=True)
+            participant.update(unread_cnt=0)
 
     @database_sync_to_async
     def update_user_offline(self):
@@ -355,3 +365,15 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         elif self.is_inquirer:
             return not self.participants.get(is_inquirer=True).is_online
         return None
+
+    @database_sync_to_async
+    def get_paricipants(self):
+        return InquiryChatParticipant.objects.filter(chatroom=self.chatroom)
+
+    @database_sync_to_async
+    def is_inquirer_participant_exist(self, participants):
+        return participants.filter(is_inquirer=True).exists()
+
+    @database_sync_to_async
+    def is_responder_participant_exist(self, participants):
+        return participants.filter(is_inquirer=False).exists()
