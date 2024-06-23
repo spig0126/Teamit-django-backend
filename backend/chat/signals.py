@@ -35,6 +35,31 @@ CHATROOM CREATE
 '''
 
 
+@receiver(post_save, sender=PrivateChatParticipant)
+def alert_status_consumer_of_new_private_chatroom(sender, instance, created, **kwargs):
+    if not created:
+        return
+    chatroom = instance.chatroom
+    status_message = create_status_message({
+        'id': chatroom.pk,
+        'name': instance.chatroom_name,
+        'avatar': instance.avatar,
+        'background': instance.background,
+        'updated_at': chatroom.updated_at.astimezone(
+            timezone.get_current_timezone()).isoformat()
+    })
+
+    chatroom_name = f'status_{instance.user.pk}'
+    async_to_sync(get_channel_layer().group_send)(
+        chatroom_name,
+        {
+            "type": "msg",
+            "chat_type": "private",
+            'message': status_message
+        }
+    )
+
+
 @receiver(post_save, sender=TeamChatParticipant)
 def alert_status_consumer_of_new_team_chatroom(sender, instance, created, **kwargs):
     if not created:
@@ -45,7 +70,7 @@ def alert_status_consumer_of_new_team_chatroom(sender, instance, created, **kwar
         'name': chatroom.name,
         'avatar': '',
         'background': chatroom.background,
-        'updated_at': chatroom.created_at.astimezone(
+        'updated_at': chatroom.updated_at.astimezone(
             timezone.get_current_timezone()).isoformat()
     })
 
@@ -54,22 +79,59 @@ def alert_status_consumer_of_new_team_chatroom(sender, instance, created, **kwar
         chatroom_name,
         {
             "type": "msg",
-            "chat_type": "team",
-            "team_id": chatroom.team.pk,
+            "chat_type": "inquiry",
             'message': status_message
         }
     )
 
 
+@receiver(post_save, sender=InquiryChatParticipant)
+def alert_status_consumer_of_new_inquiry_chatroom(sender, instance, created, **kwargs):
+    if not created:
+        return
+    chatroom = instance.chatroom
+    status_message = create_status_message({
+        'id': chatroom.pk,
+        'name': chatroom.name,
+        'avatar': '',
+        'background': chatroom.background,
+        'updated_at': chatroom.updated_at.astimezone(
+            timezone.get_current_timezone()).isoformat()
+    })
+
+    user_pk = chatroom.inquirer_pk if instance.is_inquirer else chatroom.responder_pk
+    chatroom_name = f'status_{user_pk}'
+    async_to_sync(get_channel_layer().group_send)(
+        chatroom_name,
+        {
+            "type": "msg",
+            "chat_type": "inquiry",
+            "team_id": chatroom.team.pk,
+            'message': status_message
+        }
+    )
 
 '''
 CHAT PARTICIPANT CREATE 
 '''
 
 
+@receiver(post_save, sender=PrivateChatParticipant)
+def send_enter_announcement_when_private_chat_participant_created(sender, instance, created, **kwargs):
+    if created:
+        send_chatroom_announcement(instance.chatroom, instance.name, '', 'private', 'enter')
+
+
 @receiver(post_save, sender=InquiryChatParticipant)
-def handle_inquiry_chat_participant_save(sender, instance, **kwargs):
-    send_chatroom_announcement(instance.chatroom, instance.name, '', 'inquiry', 'enter')
+def send_enter_announcement_when_inquiry_chat_participant_created(sender, instance, created, **kwargs):
+    if created:
+        send_chatroom_announcement(instance.chatroom, instance.name, '', 'inquiry', 'enter')
+
+
+@receiver(post_save, sender=TeamChatParticipant)
+def send_enter_announcement_when_team_chat_participant_created(sender, instance, created, **kwargs):
+    if created:
+        send_chatroom_announcement(instance.chatroom, instance.name, instance.position, 'team', 'enter')
 
 
 '''
@@ -85,7 +147,7 @@ def handle_private_chat_participant_delete(sender, instance, **kwargs):
             instance.chatroom.delete()
             return
         send_offline_msg(instance.chatroom, instance.user.pk, 'private')
-        send_chatroom_announcement(instance.chatroom, instance.name, '', 'team', 'exit')
+        send_chatroom_announcement(instance.chatroom, instance.name, '', 'private', 'exit')
     except AttributeError:
         return
 
