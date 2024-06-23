@@ -114,7 +114,7 @@ class RecommendedUserListAPIView(generics.ListAPIView):
         if len(recommended_pks) < 50:
             exclude_pks = recommended_pks.union(blocked_user_pks).union({user.pk})
             random_user_pks = set(User.objects.exclude(pk__in=exclude_pks).values_list('pk', flat=True)[
-                              :50 - len(recommended_pks)])
+                                  :50 - len(recommended_pks)])
             recommended_pks = recommended_pks | random_user_pks
         return User.objects.filter(pk__in=recommended_pks).order_by('?')[:50]
 

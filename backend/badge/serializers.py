@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from django.core.files.storage import default_storage
 from urllib.parse import urlparse
 
 from .models import *

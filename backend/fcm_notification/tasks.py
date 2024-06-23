@@ -40,7 +40,7 @@ def send_fcm_message_task(token, title, body, data):
 
 @shared_task
 def send_fcm_to_user_task(user_pk, title, body, data):
-    user_devices = Device.objects.filter(user=user_pk)  # Assume this returns device instances related to the user
+    user_devices = Device.objects.filter(user=user_pk)
     results = []
     for device in user_devices:
         device = check_device_token_freshness(device)

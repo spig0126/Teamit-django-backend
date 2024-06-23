@@ -3,5 +3,5 @@ from django.urls import path, include
 from .views import *
 
 urlpatterns = [
-     path("", ActivityListAPIView.as_view())
+    path("", ActivityListAPIView.as_view())
 ]

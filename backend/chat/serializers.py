@@ -226,6 +226,7 @@ class InquiryMessageSerializer(serializers.ModelSerializer):
                 data[key] = ''
         return data
 
+
 #######################################################
 class TeamChatParticipantDetailSerializer(serializers.ModelSerializer):
     user = UserMinimalWithAvatarBackgroundDetailSerializer()

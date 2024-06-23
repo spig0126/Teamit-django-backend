@@ -12,7 +12,7 @@ from .permissions import *
 class UserReviewOptionsDetailAPIView(APIView):
     def get(self, request, *args, **kwargs):
         data = {
-            'activity': dict(ActivityType.choices).values(),
+            'activity': Activity.objects.all().values_list('name', flat=True),
             'positive_keywords': UserReviewKeyword.objects.filter(type=ReviewKeywordType.POSITIVE).values_list(
                 'content', flat=True),
             'negative_keywords': UserReviewKeyword.objects.filter(type=ReviewKeywordType.NEGATIVE).values_list(

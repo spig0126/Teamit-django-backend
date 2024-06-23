@@ -4,9 +4,10 @@ from django.db import transaction
 
 from .models import UserExperience
 
+
 @receiver(pre_delete, sender=UserExperience)
 def delete_experience_S3_image(sender, instance, **kwargs):
-     with transaction.atomic():
-          default_image = instance._meta.get_field('image').get_default()
-          if str(instance.image) != default_image:
-               instance.image.delete(save=False)
+    with transaction.atomic():
+        default_image = instance._meta.get_field('image').get_default()
+        if str(instance.image) != default_image:
+            instance.image.delete(save=False)

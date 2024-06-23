@@ -20,6 +20,7 @@ def handle_user_team_member_delete(sender, instance, **kwargs):
         if instance.user == instance.team.creator:
             update_team_responder_to_creator(instance.team)
 
+
 @receiver(post_save, sender=Team)
 def handle_team_create(sender, instance, created, **kwargs):
     if created:

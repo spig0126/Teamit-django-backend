@@ -51,7 +51,7 @@ class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
         chatroom_name = None
         try:
             chatroom_name = PrivateChatParticipant.objects.filter(user=self.request.user,
-                                                              chatroom=existing_room).first().chatroom_name
+                                                                  chatroom=existing_room).first().chatroom_name
         except AttributeError:
             participant = PrivateChatParticipant.objects.create(chatroom=existing_room, user=self.request.user)
             chatroom_name = participant.other_user_name
@@ -140,6 +140,7 @@ class CheckUserIsInquirerAPIView(generics.RetrieveAPIView):
         if self.chatroom.inquirer == request.user:
             user_is_inquirer = True
         return Response({'user_is_inquirer': user_is_inquirer}, status=status.HTTP_200_OK)
+
 
 #######################################################
 @permission_classes([IsTeamMemberPermission])

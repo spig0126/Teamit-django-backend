@@ -1,8 +1,9 @@
 from pathlib import Path
 import firebase_admin
 from firebase_admin import credentials
-from decouple import AutoConfig, config
+from decouple import AutoConfig
 import os
+import sys
 
 TEAM_MODEL = 'team.Team'
 
@@ -14,7 +15,7 @@ cred = credentials.Certificate(firebase_credentials_path)
 firebase_admin.initialize_app(cred)
 
 # Load variables from .env file
-ENV_FILE_PATH = os.path.join(CONFIG_BASE_DIR, '.config', '.env') 
+ENV_FILE_PATH = os.path.join(CONFIG_BASE_DIR, '.config', '.env')
 config = AutoConfig(search_path=ENV_FILE_PATH)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,8 +36,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "algoliasearch_django",
-    "region", 
-    "position", 
+    "region",
+    "position",
     "interest",
     "activity",
     "user",
@@ -113,6 +114,16 @@ DATABASES = {
     }
 }
 
+if 'pytest' in sys.argv[0] or config("USE_TEST_DB"):
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("TEST_RDS_NAME"),
+        "USER": config("TEST_RDS_USER"),
+        "PASSWORD": config("TEST_RDS_PASSWORD"),
+        "HOST": config("TEST_RDS_HOST"),
+        "PORT": "5432",
+    }
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -143,10 +154,19 @@ AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME")
 
 # Use S3 as the default storage for static and media files
 STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/"
-STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+# STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
 MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/"
-DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+# DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+STORAGES = {
+    'default': {
+        'BACKEND': "storages.backends.s3boto3.S3Boto3Storage"
+    },
+    'staticfiles': {
+        'BACKEND': "storages.backends.s3boto3.S3Boto3Storage"
+    },
+}
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

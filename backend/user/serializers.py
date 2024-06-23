@@ -567,7 +567,7 @@ class UserWithProfileUpdateSerializer(UserRelatedInstancesMixin, serializers.Mod
         return instance
 
     def to_representation(self, instance):
-         return MyProfileDetailSerializer(instance).data
+        return MyProfileDetailSerializer(instance).data
 
 
 class UserLikesListSerializer(serializers.ListSerializer):

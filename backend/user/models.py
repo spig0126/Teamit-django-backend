@@ -13,7 +13,6 @@ from activity.models import Activity
 
 
 # Choices
-
 class Sex(models.TextChoices):
     FEMALE = "F", "여자"
     MALE = "M", "남자"

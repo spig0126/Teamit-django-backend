@@ -1,7 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from django.db import transaction
-from rest_framework.exceptions import PermissionDenied
 
 from .models import *
 from .serializers import *
