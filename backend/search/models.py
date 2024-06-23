@@ -15,15 +15,18 @@ class UserSearchHistory(models.Model):
         ordering = ['-timestamp']
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         super().save(*args, **kwargs)
-        # Check if the user has more than 30 search histories
-        search_history = UserSearchHistory.objects.filter(user=self.user)
-        search_history_cnt = search_history.count()
 
-        if search_history_cnt > 30:
-            histories_do_delete = search_history_cnt - 30
-            oldest_history = search_history.order_by("timestamp")[:histories_do_delete]
-            oldest_history.delete()
+        if is_new:
+            search_history = UserSearchHistory.objects.filter(user=self.user)
+            search_history_cnt = search_history.count()
+
+            if search_history_cnt > 30:
+                histories_to_delete = search_history_cnt - 30
+                oldest_history_pks = search_history.order_by("timestamp").values_list('pk', flat=True)[
+                                     :histories_to_delete]
+                UserSearchHistory.objects.filter(pk__in=oldest_history_pks).delete()
 
 
 class TeamSearchHistory(models.Model):
@@ -37,12 +40,15 @@ class TeamSearchHistory(models.Model):
         ordering = ['-timestamp']
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         super().save(*args, **kwargs)
-        # Check if the user has more than 30 search histories
-        search_history = TeamSearchHistory.objects.filter(user=self.user)
-        search_history_cnt = search_history.count()
 
-        if search_history_cnt > 30:
-            histories_do_delete = search_history_cnt - 30
-            oldest_history = search_history.order_by("timestamp")[:histories_do_delete]
-            oldest_history.delete()
+        if is_new:
+            search_history = TeamSearchHistory.objects.filter(user=self.user)
+            search_history_cnt = search_history.count()
+
+            if search_history_cnt > 30:
+                histories_to_delete = search_history_cnt - 30
+                oldest_history_pks = search_history.order_by("timestamp").values_list('pk', flat=True)[
+                                     :histories_to_delete]
+                TeamSearchHistory.objects.filter(pk__in=oldest_history_pks).delete()
