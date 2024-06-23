@@ -111,6 +111,7 @@ def alert_status_consumer_of_new_inquiry_chatroom(sender, instance, created, **k
         }
     )
 
+
 '''
 CHAT PARTICIPANT CREATE 
 '''

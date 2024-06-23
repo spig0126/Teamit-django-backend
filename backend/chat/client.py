@@ -20,6 +20,4 @@ def get_index(index_name):
 def perform_search(query, chat_type, filter_expression, **kwargs):
     index = get_index(index_name[chat_type])
     results = index.search(query, {'filters': filter_expression, 'attributesToHighlight': []})
-    # if chat_type == 'inquiry':
-    #     return [hit['objectID'] for hit in results['hits']]
     return [{key: value for key, value in hit.items() if key != 'objectID'} for hit in results['hits']]

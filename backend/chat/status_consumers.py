@@ -14,6 +14,16 @@ from . import client
 
 class ChatStatusConsumer(AsyncWebsocketConsumer):
     # DB related functions
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.total_unread_cnt = None
+        self.filter = None
+        self.team_id = None
+        self.chat_type = None
+        self.name = None
+        self.user_id = None
+        self.user = None
+
     @database_sync_to_async
     def fetch_private_chatrooms(self):
         blocked_users = self.user.blocked_users.values('pk')
@@ -141,7 +151,6 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
         self.chat_type = 'all'
         self.team_id = 0
         self.filter = 'all'
-        # self.unread_cnt = await self.get_unread_cnt()
         self.total_unread_cnt = await self.get_total_unread_cnt()
 
         await self.channel_layer.group_add(self.name, self.channel_name)
@@ -218,7 +227,6 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
         if self.chat_type == 'all':
             await self.send_message('update_total_unread_cnt', {'cnt': self.total_unread_cnt})
-            # await self.send_update_message(chat_type, message)
         elif self.chat_type == chat_type and self.team_id == team_id and (self.filter in (filter_type, 'all')):
             await self.send_update_message(chat_type, message)
 
@@ -266,6 +274,13 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
 ######################################################################
 class TeamInquiryStatusConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.loaded_cnt = None
+        self.chatroom_name = None
+        self.team_pk = None
+        self.user = None
+
     async def connect(self):
         self.user = self.scope.get('user')
         self.team_pk = int(self.scope["url_route"]["kwargs"]["team_pk"])

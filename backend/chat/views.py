@@ -1,10 +1,10 @@
 from rest_framework import generics, status
-from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, UpdateModelMixin, ListModelMixin
+from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Case, When, Value, IntegerField
 from rest_framework.decorators import permission_classes
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError
 from rest_framework.views import APIView
 from django.db.models import Q
 
@@ -71,7 +71,6 @@ class PrivateChatRoomNameRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         chatroom_pk = self.kwargs.get('pk', '')
-        # 채팅 참여자 아니면 어차피 404 뜸
         return get_object_or_404(PrivateChatParticipant, user=self.request.user, chatroom__pk=chatroom_pk)
 
 
@@ -142,12 +141,7 @@ class CheckUserIsInquirerAPIView(generics.RetrieveAPIView):
             user_is_inquirer = True
         return Response({'user_is_inquirer': user_is_inquirer}, status=status.HTTP_200_OK)
 
-    #######################################################
-
-
-# team chats
-# 채팅방 참여자인 경우 모두 가능하게
-# 팀원 나갔을 경우 메시지 못 보내기
+#######################################################
 @permission_classes([IsTeamMemberPermission])
 class TeamChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.GenericAPIView):
     def initial(self, request, *args, **kwargs):

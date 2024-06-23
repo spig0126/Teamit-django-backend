@@ -2,7 +2,6 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import F
@@ -127,8 +126,6 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
             self.online_participants.remove(user)
         except Exception:
             pass
-        # print('exit', self.user, user)
-        # print(self.online_participants)
 
     async def msg(self, event):
         await self.send_message(event['type'], event['message'])
@@ -153,7 +150,6 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
                 'chat_type': 'private'
             }
             send_fcm_to_user_task.delay(user_pk, title, body, data)
-
 
     async def send_message(self, type, message):
         await self.send(text_data=json.dumps({
@@ -180,9 +176,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         await self.send_last_30_messages()
 
     async def mark_as_online(self):
-        '''
-          Alerts the frontend of 'online' status and updates participant info.
-          '''
+        # Alerts the frontend of 'online' status and updates participant info.
         data = {
             'user': self.user.pk,
             'last_read_time': self.last_read_time.isoformat()
@@ -192,9 +186,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         await self.send_group_message('online', data)
 
     async def mark_as_offline(self):
-        '''
-          Alerts others of the disconnect and updates participant info as offline.
-          '''
+        # Alerts others of the disconnect and updates participant info as offline.
         if self.chatroom is not None:
             await self.send_group_message('offline', {'user': self.user.pk})
             await self.update_this_participant_offline()
@@ -211,7 +203,6 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         }
 
         for user in self.participants:
-            # print(self.online_participants)
             status_message['update_unread_cnt'] = (user not in self.online_participants)
             await self.channel_layer.group_send(
                 f'status_{user}',
@@ -234,7 +225,8 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
     # ----------------DATABASE RELATED------------------------------------
     @database_sync_to_async
     def alarm_on_offline_participants(self):
-        other_participant = PrivateChatParticipant.objects.filter(chatroom=self.chatroom, is_online=False, alarm_on=True).exclude(
+        other_participant = PrivateChatParticipant.objects.filter(chatroom=self.chatroom, is_online=False,
+                                                                  alarm_on=True).exclude(
             user=self.user).first()
         if other_participant:
             return True, other_participant.chatroom_name, other_participant.user.pk
@@ -254,10 +246,6 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
     def update_alarm_status(self):
         self.this_participant.alarm_on = not self.this_participant.alarm_on
         self.this_participant.save()
-
-    @database_sync_to_async
-    def delete_chatroom(self):
-        PrivateChatRoom.objects.get(pk=self.chatroom_id).delete()
 
     @database_sync_to_async
     def update_participant_info(self):
@@ -321,22 +309,8 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
             pass
 
     @database_sync_to_async
-    def update_other_participant(self):
-        self.other_participant = PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id).exclude(
-            user=self.user).first()
-        return self.other_participant
-
-    @database_sync_to_async
     def this_participant_was_offline(self):
         return not self.this_participant.is_online
-
-    @database_sync_to_async
-    def other_participant_is_offline(self):
-        return self.other_participant.pk not in set(self.online_participants)
-
-    @database_sync_to_async
-    def get_other_participant_info(self):
-        return self.other_participant.chatroom_name, self.other_participant.user.pk
 
     @database_sync_to_async
     def get_chatroom_and_participants_info(self):

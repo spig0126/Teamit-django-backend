@@ -17,6 +17,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
+        self.loaded_cnt = None
+        self.chatroom_name = None
+        self.chatroom_id = None
+        self.user = None
         self.this_participant = None
         self.alarm_on_participants = None
         self.participants_set = None
@@ -120,11 +124,8 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
     # ---------------event related----------------------
     async def online(self, event):
         user = event['message'].get('user', None)
-        # print('online', self.user, user)
-        # print('before', self.online_participants)
         self.online_participants.append(user)
         await self.send_message(event['type'], event['message'])
-        # print('after', self.online_participants)
 
     async def offline(self, event):
         user = event['message'].get('user', None)
@@ -138,14 +139,11 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         await self.send_message(event['type'], event['message'])
 
     async def alarm_change(self, event):
-        # print('is_inquirer', self.is_inquirer, self.user.pk)
-        # print('before', self.alarm_on_participants)
         if event['message']['alarm_on']:
             self.alarm_on_participants.add(event['message']['user'])
         else:
             self.alarm_on_participants.discard(event['message']['user'])
         await self.send_message(event['type'], event['message'])
-        # print('after', self.alarm_on_participants)
 
     # ----------------utility related-------------------
     async def send_status_message(self, message):
@@ -268,20 +266,9 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         self.this_participant.delete()
 
     @database_sync_to_async
-    def delete_chatroom(self):
-        self.chatroom = None
-        InquiryChatRoom.objects.get(pk=self.chatroom_id).delete()
-
-    @database_sync_to_async
     def update_unread_cnt(self):
         InquiryChatParticipant.objects.filter(chatroom=self.chatroom, is_inquirer=not self.is_inquirer).update(
             unread_cnt=F('unread_cnt') + 1)
-
-    @database_sync_to_async
-    def get_alarm_status(self):
-        if self.is_responder:
-            return self.chatroom.responder_alarm_on
-        return self.chatroom.inquirer_alarm_on
 
     @database_sync_to_async
     @transaction.atomic
@@ -305,7 +292,8 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         last_read_time_list = InquiryChatParticipant.objects.filter(chatroom=self.chatroom_id,
                                                                     is_online=False).values_list('last_read_time',
                                                                                                  flat=True)
-        messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[self.loaded_cnt:self.loaded_cnt + 30]
+        messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[
+                   self.loaded_cnt:self.loaded_cnt + 30]
         self.loaded_cnt += 30
         return InquiryMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
 

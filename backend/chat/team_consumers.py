@@ -13,6 +13,22 @@ from fcm_notification.tasks import send_fcm_to_user_task
 
 
 class TeamChatConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.alarm_on_participants = None
+        self.member_pk = None
+        self.participant_cnt = None
+        self.this_participant = None
+        self.online_participants = None
+        self.participants = None
+        self.team_pk = None
+        self.chatroom = None
+        self.loaded_cnt = None
+        self.last_read_time = None
+        self.chatroom_name = None
+        self.chatroom_id = None
+        self.user = None
+
     async def connect(self):
         self.user = self.scope.get('user')
         self.chatroom_id = int(self.scope["url_route"]["kwargs"]["chatroom_id"])
@@ -122,12 +138,9 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
     async def online(self, event):
         user = event['message'].get('user', None)
         self.online_participants.append(user)
-        # print('online', self.user, user)
-        # print(self.online_participants)
         await self.send_message(event['type'], event['message'])
 
     async def offline(self, event):
-        # remove user from online_participants
         user = event['message'].get('user', None)
         try:
             self.online_participants.remove(user)
@@ -170,9 +183,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             send_fcm_to_user_task.delay(participant, title, body, data)
 
     async def mark_as_online(self):
-        '''
-        Alerts the frontend of 'online' status and updates participant info.
-        '''
+        # Alerts the frontend of 'online' status and updates participant info.
 
         data = {
             'user': self.user.pk,
@@ -182,17 +193,13 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         await self.send_group_message('online', data)
 
     async def mark_as_offline(self):
-        '''
-        Alerts others of the disconnect and updates participant info as offline.
-        '''
+        # Alerts others of the disconnect and updates participant info as offline.
         if self.chatroom is not None:
             await self.send_group_message('offline', {'user': self.user.pk})
             await self.update_this_participant_offline()
 
     async def join_chatroom(self):
-        '''
-        Joins the chatroom group, accept connection, and sends the last 30 messages
-        '''
+        # Joins the chatroom group, accept connection, and sends the last 30 messages
         await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
         await self.accept()
         await self.send_is_alone_message()
@@ -255,8 +262,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             'updated_at': '',
             'update_unread_cnt': False
         }
-        status_mesage = {key: updates.get(key, base.get(key)) for key in base}
-        return status_mesage
+        status_message = {key: updates.get(key, base.get(key)) for key in base}
+        return status_message
 
     # ------------------DB related-----------------------\
     @database_sync_to_async
@@ -298,10 +305,6 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
 
         return background, name, participant_list, alarm_on
 
-    # @database_sync_to_async
-    # def add_chat_participant(member_id):
-    #      TeamChatParticipant.objects.create(chatroom=self.chatroom, )
-
     @database_sync_to_async
     def remove_this_participant_from_chatroom(self):
         self.chatroom = None
@@ -310,10 +313,6 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         self.online_participants = None
         self.this_participant = None
         TeamChatParticipant.objects.get(user=self.user, chatroom=self.chatroom_id).delete()
-
-    @database_sync_to_async
-    def delete_chatroom(self):
-        TeamChatRoom.objects.get(pk=self.chatroom_id).delete()
 
     @database_sync_to_async
     @transaction.atomic
