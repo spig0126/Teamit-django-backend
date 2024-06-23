@@ -23,9 +23,6 @@ class PrivateChatRoom(models.Model):
     def participant_names(self):
         return ', '.join([str(user) for user in self.participants.all()])
 
-    class Meta:
-        ordering = ['-updated_at']
-
 
 class PrivateChatParticipant(models.Model):
     chatroom = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE)
@@ -35,6 +32,7 @@ class PrivateChatParticipant(models.Model):
     alarm_on = models.BooleanField(default=True)
     is_online = models.BooleanField(default=False)
     last_read_time = models.DateTimeField(auto_now=True)
+    entered_chatroom_at = models.DateTimeField(auto_now_add=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -104,6 +102,11 @@ class PrivateChatParticipant(models.Model):
     @property
     def name(self):
         return self.user.name
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['chatroom', 'user'], name='unique_private_chat_participant')
+        ]
 
 
 class PrivateMessage(models.Model):
@@ -234,6 +237,7 @@ class InquiryChatParticipant(models.Model):
     alarm_on = models.BooleanField(default=True)
     is_online = models.BooleanField(default=False)
     last_read_time = models.DateTimeField(auto_now=True)
+    entered_chatroom_at = models.DateTimeField(auto_now_add=True)
 
     @property
     def chatroom_pk(self):
@@ -291,6 +295,11 @@ class InquiryChatParticipant(models.Model):
         if self.is_inquirer:
             return self.chatroom.inquirer.pk
         return self.chatroom.responder.pk
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['chatroom', 'is_inquirer'], name='unique_inquiry_chat_participant')
+        ]
 
 
 class InquiryMessage(models.Model):
