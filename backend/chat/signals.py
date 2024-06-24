@@ -89,16 +89,16 @@ def alert_status_consumer_of_new_team_chatroom(sender, instance, created, **kwar
 def alert_status_consumer_of_new_inquiry_chatroom(sender, instance, created, **kwargs):
     if not created:
         return
-    chatroom = instance.chatroom
     status_message = create_status_message({
-        'id': chatroom.pk,
-        'name': chatroom.name,
+        'id': instance.chatroom_pk,
+        'name': instance.chatroom_name,
         'avatar': '',
-        'background': chatroom.background,
-        'updated_at': chatroom.updated_at.astimezone(
+        'background': instance.background,
+        'updated_at': instance.updated_at.astimezone(
             timezone.get_current_timezone()).isoformat()
     })
 
+    chatroom = instance.chatroom
     user_pk = chatroom.inquirer_pk if instance.is_inquirer else chatroom.responder_pk
     chatroom_name = f'status_{user_pk}'
     async_to_sync(get_channel_layer().group_send)(
@@ -106,7 +106,6 @@ def alert_status_consumer_of_new_inquiry_chatroom(sender, instance, created, **k
         {
             "type": "msg",
             "chat_type": "inquiry",
-            "team_id": chatroom.team.pk,
             'message': status_message
         }
     )
