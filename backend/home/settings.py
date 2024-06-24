@@ -114,16 +114,6 @@ DATABASES = {
     }
 }
 
-if 'pytest' in sys.argv[0] or config("USE_TEST_DB"):
-    DATABASES["default"] = {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("TEST_RDS_NAME"),
-        "USER": config("TEST_RDS_USER"),
-        "PASSWORD": config("TEST_RDS_PASSWORD"),
-        "HOST": config("TEST_RDS_HOST"),
-        "PORT": "5432",
-    }
-
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
