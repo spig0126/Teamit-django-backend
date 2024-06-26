@@ -107,7 +107,7 @@ class User(models.Model):
 
     @property
     def star_rating_average(self):
-        if self.reviews.count() > 5:
+        if self.reviews.count() >= 5:
             avg_star_rating = self.reviews.aggregate(avg_star_rating=Avg('star_rating'))['avg_star_rating']
             return round(avg_star_rating, 1)
         return None
