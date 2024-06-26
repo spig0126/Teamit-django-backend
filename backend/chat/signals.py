@@ -94,8 +94,7 @@ def alert_status_consumer_of_new_inquiry_chatroom(sender, instance, created, **k
         'name': instance.chatroom_name,
         'avatar': '',
         'background': instance.background,
-        'updated_at': instance.updated_at.astimezone(
-            timezone.get_current_timezone()).isoformat()
+        'updated_at': instance.updated_at
     })
 
     chatroom = instance.chatroom

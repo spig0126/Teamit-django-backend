@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.files.storage import default_storage
+from django.utils import timezone
 
 from user.models import User
 from team.models import Team, TeamMembers
@@ -286,7 +287,8 @@ class InquiryChatParticipant(models.Model):
 
     @property
     def updated_at(self):
-        return self.chatroom.updated_at.isoformat()
+        return self.chatroom.updated_at.astimezone(
+            timezone.get_current_timezone()).isoformat()
 
     @property
     def is_user(self):
@@ -396,7 +398,8 @@ class TeamChatParticipant(models.Model):
 
     @property
     def chatroom_updated_at(self):
-        return self.chatroom.updated_at.isoformat()
+        return self.chatroom.updated_at.astimezone(
+            timezone.get_current_timezone()).isoformat()
 
     @property
     def chatroom_background(self):
