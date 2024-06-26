@@ -196,6 +196,8 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         status_message = {
             'id': self.chatroom_id,
             'name': '',
+            'avatar': '',
+            'background': '',
             'last_msg': message.get('content'),
             'updated_at': message.get('timestamp')
         }
