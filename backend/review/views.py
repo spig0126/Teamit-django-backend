@@ -4,6 +4,7 @@ from rest_framework.decorators import permission_classes
 from django.db import IntegrityError
 from rest_framework.response import Response
 
+from user.utils import get_user_by_name
 from .models import *
 from .serializers import *
 from .permissions import *
@@ -26,6 +27,19 @@ class UserReviewCreateAPIView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(reviewer=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except IntegrityError:
+            return Response({'detail': 'user can write review only once'}, status=status.HTTP_409_CONFLICT)
+
+
+class IsEligibleForWritingReviewAPIView(generics.GenericAPIView):
+    def get(self, request, *args, **kwargs):
+        reviewee = get_user_by_name(request.data.get('reviewee', ''))
+        can_write = not reviewee.reviews.filter(reviewer=request.user).exists()
+        return Response({'can_write': can_write}, status=status.HTTP_200_OK)
 
 
 class UserReviewListAPIView(generics.ListAPIView):

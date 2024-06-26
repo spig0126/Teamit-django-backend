@@ -48,6 +48,9 @@ class UserReview(models.Model):
 
     class Meta:
         ordering = ["-timestamp"]
+        constraints = [
+            models.UniqueConstraint(fields=['reviewee', 'reviewer'], name='unique_reviewee_reviewer')
+        ]
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
