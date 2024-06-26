@@ -120,6 +120,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
     async def handle_update_alarm_status(self):
         new_alarm_status = await self.update_alarm_status()
         await self.send_group_message('alarm_change', {'user': self.user.pk, 'alarm_on': new_alarm_status})
+        await self.send_status_alarm_message(new_alarm_status)
 
     # ---------------event related----------------------
     async def online(self, event):
@@ -146,6 +147,26 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         await self.send_message(event['type'], event['message'])
 
     # ----------------utility related-------------------
+    async def send_status_alarm_message(self, new_alarm_status):
+        status_message = {
+            'id': self.chatroom_id,
+            'name': '',
+            'avatar': '',
+            'background': '',
+            'last_msg': '',
+            'updated_at': '',
+            'alarm_on': new_alarm_status
+        }
+        message_info = {
+            'type': 'msg',
+            'chat_type': 'inquiry',
+            'message': status_message
+        }
+        channel_name = f'status_{self.user.pk}'
+        await self.channel_layer.group_send(
+            channel_name, message_info
+        )
+
     async def send_status_message(self, message):
         # to user's chat status
         status_message = {
@@ -154,7 +175,8 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
             'avatar': '',
             'background': '',
             'last_msg': message.get('content'),
-            'updated_at': message.get('timestamp')
+            'updated_at': message.get('timestamp'),
+            'alarm_on': None
         }
         message_info = {
             'type': 'msg',

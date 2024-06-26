@@ -79,6 +79,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
     async def handle_update_alarm_status(self):
         new_alarm_status = await self.update_alarm_status()
         await self.send_group_message('alarm_change', {'user': self.user.pk, 'alarm_on': new_alarm_status})
+        status_message = await self.create_status_message({'alarm_on': new_alarm_status})
+        await self.send_user_status_this_message(status_message, [self.user.pk])
 
     async def handle_message(self, message):
         msg_details = {
@@ -123,12 +125,12 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
     async def handle_update_chatroom_background(self, new_background):
         await self.update_chatroom_background(new_background)
         status_message = await self.create_status_message({'background': new_background})
-        await self.send_user_status_this_message(status_message)
+        await self.send_user_status_this_message(status_message, self.participants)
 
     async def handle_update_chatroom_name(self, new_name):
         await self.update_chatroom_name(new_name)
         status_message = await self.create_status_message({'name': new_name})
-        await self.send_user_status_this_message(status_message)
+        await self.send_user_status_this_message(status_message, self.participants)
 
     async def handle_fetch_non_participants(self):
         non_participants = await self.get_non_participants()
@@ -167,6 +169,26 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         await self.send_message(event['type'], event['message'])
 
     # ------------------utility related-----------------------
+    async def send_status_alarm_message(self, new_alarm_status):
+        status_message = {
+            'id': self.chatroom_id,
+            'name': '',
+            'avatar': '',
+            'background': '',
+            'last_msg': '',
+            'updated_at': '',
+            'alarm_on': new_alarm_status
+        }
+        message_info = {
+            'type': 'msg',
+            'chat_type': 'team',
+            'message': status_message
+        }
+        channel_name = f'status_{self.user.pk}'
+        await self.channel_layer.group_send(
+            channel_name, message_info
+        )
+
     async def send_offline_participants_fcm(self, message):
         title = self.chatroom.name
         body = message['content']
@@ -223,8 +245,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
     async def send_is_alone_message(self):
         await self.send_message('is_alone', self.participant_cnt == 1)
 
-    async def send_user_status_this_message(self, status_message):
-        for user in self.participants:
+    async def send_user_status_this_message(self, status_message, to_users):
+        for user in to_users:
             await self.channel_layer.group_send(
                 f'status_{user}',
                 {
@@ -260,7 +282,8 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             'background': '',
             'last_msg': '',
             'updated_at': '',
-            'update_unread_cnt': False
+            'update_unread_cnt': False,
+            'alarm_on': None
         }
         status_message = {key: updates.get(key, base.get(key)) for key in base}
         return status_message

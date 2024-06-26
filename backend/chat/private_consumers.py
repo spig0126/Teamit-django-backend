@@ -57,7 +57,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         elif type == 'exit':
             await self.handle_exit()
         elif type == 'update_alarm_status':
-            await self.update_alarm_status()
+            await self.handle_update_alarm_status()
         elif type == 'settings':
             await self.handle_settings()
         elif type == 'update_chatroom_name':
@@ -82,6 +82,10 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         await self.send_message('exit_successful', True)
         await self.channel_layer.group_discard(self.chatroom_name, self.channel_name)
         await self.close()
+
+    async def handle_update_alarm_status(self):
+        new_alarm_status = await self.update_alarm_status()
+        await self.send_status_alarm_message(new_alarm_status)
 
     async def handle_settings(self):
         participant_list = await self.get_participant_list()
@@ -138,6 +142,20 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         return
 
     # ----------------UTILITY FUNCTIONS---------------------------------
+    async def send_status_alarm_message(self, new_alarm_status):
+        status_message = await self.create_status_message({
+            'alarm_on': new_alarm_status
+        })
+        message_info = {
+            'type': 'msg',
+            'chat_type': 'private',
+            'message': status_message
+        }
+        channel_name = f'status_{self.user.pk}'
+        await self.channel_layer.group_send(
+            channel_name, message_info
+        )
+
     async def send_offline_participants_fcm(self, message):
         should_send, chatroom_name, user_pk = await self.alarm_on_offline_participants()
         if should_send:
@@ -217,7 +235,8 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
             'background': '',
             'last_msg': '',
             'updated_at': '',
-            'update_unread_cnt': None
+            'update_unread_cnt': None,
+            'alarm_on': None
         }
         status_mesage = {key: updates.get(key, base.get(key)) for key in base}
         return status_mesage
@@ -246,6 +265,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
     def update_alarm_status(self):
         self.this_participant.alarm_on = not self.this_participant.alarm_on
         self.this_participant.save()
+        return self.this_participant.alarm_on
 
     @database_sync_to_async
     def update_participant_info(self):
