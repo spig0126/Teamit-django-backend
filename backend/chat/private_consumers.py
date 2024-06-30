@@ -258,7 +258,11 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_participant_list(self):
-        participants = self.chatroom.participants.all()
+        participants = []
+        if self.chatroom.user1 is not None:
+            participants.append(self.chatroom.user1)
+        if self.chatroom.user2 is not None:
+            participants.append(self.chatroom.user2)
         return UserMinimalWithAvatarBackgroundDetailSerializer(participants, many=True).data
 
     @database_sync_to_async

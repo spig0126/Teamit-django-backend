@@ -1,10 +1,12 @@
-from django.db.models.signals import pre_delete, post_save, post_delete
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 from django.db import transaction
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from rest_framework.exceptions import ValidationError
+from django.db.models.signals import m2m_changed
 from django.utils import timezone
+from django.db.models import Q
 
 from .models import *
 from .serializers import TeamMessageCreateSerialzier, TeamMessageSerializer, PrivateMessageCreateSerializer, \
@@ -28,6 +30,21 @@ def delete_chat_participant_when_user_delete(sender, instance, **kwargs):
 @receiver(pre_delete, sender=Team)
 def delete_chat_participant_when_team_delete(sender, instance, **kwargs):
     InquiryChatParticipant.objects.filter(is_inquirer=False, chatroom__team=instance).delete()
+
+
+@receiver(m2m_changed, sender=User.blocked_users.through)
+@transaction.atomic
+def leave_priavte_chatroom_with_blocked_user(sender, instance, action, reverse, pk_set, **kwargs):
+    if action == "post_add":
+        for pk in pk_set:
+            try:
+                blocked_user = User.objects.get(pk=pk)
+                PrivateChatParticipant.objects.filter(
+                    Q(chatroom__participants=blocked_user) &
+                    Q(user=instance)
+                ).delete()
+            except:
+                pass
 
 
 '''

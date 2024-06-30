@@ -23,10 +23,17 @@ class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
         validated_data['user1'] = User.objects.get(name=participants[0])
         validated_data['user2'] = User.objects.get(name=participants[1])
         chatroom = PrivateChatRoom.objects.create(**validated_data)
-        for participant, i in zip(participants, range(1, 3)):
+
+        creating_user = self.context.get('user')
+        other_user = chatroom.user1 if creating_user == chatroom.user2 else chatroom.user2
+        PrivateChatParticipant.objects.create(
+            chatroom=chatroom,
+            user=creating_user
+        )
+        if creating_user not in other_user.blocked_users.all():
             PrivateChatParticipant.objects.create(
                 chatroom=chatroom,
-                user=validated_data[f'user{i}']
+                user=other_user
             )
         return chatroom
 
