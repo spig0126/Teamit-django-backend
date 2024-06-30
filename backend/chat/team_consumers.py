@@ -15,6 +15,7 @@ from fcm_notification.tasks import send_fcm_to_user_task
 class TeamChatConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
+        self.before_last_read_time = None
         self.alarm_on_participants = None
         self.member_pk = None
         self.participant_cnt = None
@@ -225,7 +226,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
         await self.accept()
         await self.send_is_alone_message()
-        await self.send_last_30_messages()
+        await self.send_recent_messages()
 
     async def send_message(self, type, message):
         await self.send(text_data=json.dumps({
@@ -237,6 +238,10 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.chatroom_name, {"type": type, "message": message}
         )
+
+    async def send_recent_messages(self):
+        message = await self.get_recent_messages()
+        await self.send_message('history', message)
 
     async def send_last_30_messages(self):
         message = await self.get_last_30_messages()
@@ -379,6 +384,7 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
             self.this_participant = participants.get(user=self.user)
             self.member_pk = self.this_participant.member.pk
             self.last_read_time = self.this_participant.last_read_time.astimezone(timezone.get_current_timezone())
+            self.before_last_read_time = self.last_read_time
             self.alarm_on_participants = set(participants.filter(alarm_on=True).values_list('user', flat=True))
             return True
         except:
@@ -405,14 +411,27 @@ class TeamChatConsumer(AsyncWebsocketConsumer):
         self.this_participant.save()
 
     @database_sync_to_async
+    def get_recent_messages(self):
+        before_last_read = TeamMessageSerializer(
+            self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                timestamp__lt=self.before_last_read_time)[:30], many=True).data
+        after_last_read = TeamMessageSerializer(
+            self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                timestamp__gte=self.before_last_read_time), many=True).data
+
+        messages = after_last_read + before_last_read
+        self.loaded_cnt += len(messages)
+        if len(before_last_read) and len(after_last_read) > 30:
+            messages = after_last_read + [TeamReadTillHereMessage] + before_last_read
+
+        return messages
+
+    @database_sync_to_async
     def get_last_30_messages(self):
-        last_read_time_list = TeamChatParticipant.objects.filter(chatroom=self.chatroom_id,
-                                                                 is_online=False).values_list('last_read_time',
-                                                                                              flat=True)
         messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[
                    self.loaded_cnt:self.loaded_cnt + 30]
         self.loaded_cnt += 30
-        return TeamMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
+        return TeamMessageSerializer(messages, many=True).data
 
     @database_sync_to_async
     def update_chatroom_last_msg(self, last_msg):

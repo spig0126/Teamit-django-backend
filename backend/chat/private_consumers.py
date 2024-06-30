@@ -15,6 +15,7 @@ from fcm_notification.tasks import send_fcm_to_user_task
 class PrivateChatConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
+        self.before_last_read_time = None
         self.participants_set = None
         self.alarm_on_particiapnts = None
         self.this_participant = None
@@ -178,6 +179,10 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
     async def send_is_alone_message(self):
         await self.send_message('is_alone', len(self.participants) == 1)
 
+    async def send_recent_messages(self):
+        message = await self.get_recent_messages()
+        await self.send_message('history', message)
+
     async def send_last_30_messages(self):
         message = await self.get_last_30_messages()
         await self.send_message('history', message)
@@ -191,7 +196,7 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.chatroom_name, self.channel_name)
         await self.accept()
         await self.send_is_alone_message()
-        await self.send_last_30_messages()
+        await self.send_recent_messages()
 
     async def mark_as_online(self):
         # Alerts the frontend of 'online' status and updates participant info.
@@ -344,10 +349,9 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
             self.participants = list(participants.values_list('user', flat=True))
             self.participants_set = {self.chatroom.user1.pk, self.chatroom.user2.pk}
             self.this_participant = participants.get(user=self.user)
-            self.this_participant.is_online = True
-            self.this_participant.save()
-            self.other_participant = participants.exclude(user=self.user).first()
             self.last_read_time = self.this_participant.last_read_time.astimezone(timezone.get_current_timezone())
+            self.before_last_read_time = self.last_read_time
+            self.other_participant = participants.exclude(user=self.user).first()
             self.online_participants = list(participants.filter(is_online=True).values_list('user', flat=True))
             self.alarm_on_particiapnts = set(participants.filter(alarm_on=True).values_list('user', flat=True))
             return True
@@ -355,11 +359,24 @@ class PrivateChatConsumer(AsyncWebsocketConsumer):
             return False
 
     @database_sync_to_async
+    def get_recent_messages(self):
+        before_last_read = PrivateMessageSerializer(
+            self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                timestamp__lt=self.before_last_read_time)[:30], many=True).data
+        after_last_read = PrivateMessageSerializer(
+            self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                timestamp__gte=self.before_last_read_time), many=True).data
+
+        messages = after_last_read + before_last_read
+        self.loaded_cnt += len(messages)
+        if len(before_last_read) and len(after_last_read) > 30:
+            messages = after_last_read + [PrivateReadTillHereMessage] + before_last_read
+
+        return messages
+
+    @database_sync_to_async
     def get_last_30_messages(self):
-        last_read_time_list = PrivateChatParticipant.objects.filter(chatroom=self.chatroom_id,
-                                                                    is_online=False).values_list('last_read_time',
-                                                                                                 flat=True)
         messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[
                    self.loaded_cnt:self.loaded_cnt + 30]
         self.loaded_cnt += 30
-        return PrivateMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
+        return PrivateMessageSerializer(messages, many=True).data

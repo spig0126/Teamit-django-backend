@@ -17,6 +17,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
+        self.before_last_read_time = None
         self.loaded_cnt = None
         self.chatroom_name = None
         self.chatroom_id = None
@@ -222,6 +223,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
             is_alone = False
         await self.send_message('is_alone', is_alone)
 
+    async def send_recent_messages(self):
+        message = await self.get_recent_messages()
+        await self.send_message('history', message)
+
     async def send_last_30_messages(self):
         message = await self.get_last_30_messages()
         await self.send_message('history', message)
@@ -231,7 +236,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
         await self.send_is_alone_message()
         await self.send_user_roles()
-        await self.send_last_30_messages()
+        await self.send_recent_messages()
 
     async def mark_as_offline(self):
         if self.chatroom is not None:
@@ -312,18 +317,28 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
             self.send_message('error', e.detail)
 
     @database_sync_to_async
+    def get_recent_messages(self):
+        if self.this_participant:
+            before_last_read = InquiryMessageSerializer(
+                self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                    timestamp__lt=self.before_last_read_time)[:30], many=True).data
+            after_last_read = InquiryMessageSerializer(
+                self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                    timestamp__gte=self.before_last_read_time), many=True).data
+
+            messages = after_last_read + before_last_read
+            self.loaded_cnt += len(messages)
+            if len(before_last_read) and len(after_last_read) > 30:
+                messages = after_last_read + [InquiryReadTillHereMessage] + before_last_read
+            return messages
+        else:
+            return self.get_last_30_messages
+
+    @database_sync_to_async
     def get_last_30_messages(self):
-        last_read_time_list = InquiryChatParticipant.objects.filter(chatroom=self.chatroom_id,
-                                                                    is_online=False).values_list('last_read_time',
-                                                                                                 flat=True)
-        messages = None
-        try:
-            messages = self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).all()[
-                       self.loaded_cnt:self.loaded_cnt + 30]
-        except AttributeError:
-            messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt + 30]
+        messages = self.chatroom.messages.all()[self.loaded_cnt:self.loaded_cnt + 30]
         self.loaded_cnt += 30
-        return InquiryMessageSerializer(messages, many=True, context={"last_read_time_list": last_read_time_list}).data
+        return InquiryMessageSerializer(messages, many=True).data
 
     @database_sync_to_async
     def update_participant_online(self):
@@ -356,6 +371,10 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
                 self.is_inquirer = True
                 self.this_participant = self.participants.get(is_inquirer=True)
             self.is_member = self.chatroom.team.members.filter(pk=self.user.pk).exists()
+
+            if self.this_participant is not None:
+                self.before_last_read_time = self.this_participant.last_read_time.astimezone(
+                    timezone.get_current_timezone())
 
             self.online_participants = []
             for participant in self.participants.filter(is_online=True):

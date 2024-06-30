@@ -10,6 +10,39 @@ from django.core.files.storage import default_storage
 from user.serializers import UserMinimalDetailSerializer
 
 
+PrivateReadTillHereMessage = {
+    'id': -1,
+    'content': '',
+    'timestamp': '',
+    'name': '',
+    'avatar': '',
+    'background': '',
+    'is_msg': False,
+}
+
+TeamReadTillHereMessage = {
+    'id': -1,
+    'content': '',
+    'timestamp': '',
+    'name': '',
+    'avatar': '',
+    'position': '',
+    'background': '',
+    'is_msg': False,
+    'user': None
+}
+
+InquiryReadTillHereMessage = {
+    'id': -1,
+    'sender': None,
+    'content': '',
+    'timestamp': '',
+    'name': '',
+    'avatar': '',
+    'background': '',
+    'is_msg': False,
+}
+
 class PrivateChatRoomCreateSerializer(serializers.ModelSerializer):
     participants = serializers.SlugRelatedField(slug_field='name', many=True, queryset=User.objects.all())
 
@@ -201,8 +234,6 @@ class InquiryMessageCreateSerializer(serializers.ModelSerializer):
 
 
 class InquiryMessageSerializer(serializers.ModelSerializer):
-    unread_cnt = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = InquiryMessage
         fields = [
@@ -213,18 +244,8 @@ class InquiryMessageSerializer(serializers.ModelSerializer):
             'name',
             'avatar',
             'background',
-            'unread_cnt',
             'is_msg',
         ]
-
-    def get_unread_cnt(self, instance):
-        try:
-            return self.context['unread_cnt']
-        except KeyError:
-            if instance.is_msg:
-                return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
-            else:
-                return 0
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -338,7 +359,6 @@ class TeamMessageCreateSerialzier(serializers.ModelSerializer):
 
 
 class TeamMessageSerializer(serializers.ModelSerializer):
-    unread_cnt = serializers.SerializerMethodField(read_only=True)
     user = UserMinimalDetailSerializer()
 
     class Meta:
@@ -351,19 +371,9 @@ class TeamMessageSerializer(serializers.ModelSerializer):
             'avatar',
             'position',
             'background',
-            'unread_cnt',
             'is_msg',
             'user'
         ]
-
-    def get_unread_cnt(self, instance):
-        try:
-            return self.context['unread_cnt']
-        except KeyError:
-            if instance.is_msg:
-                return sum(1 for lut in self.context['last_read_time_list'] if lut < instance.timestamp)
-            else:
-                return 0
 
 
 class TeamChatParticipantCreateSerializer(serializers.ModelSerializer):
