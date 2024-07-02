@@ -11,9 +11,9 @@ def get_index(index_name='user_index'):
     return index
 
 
-def perform_search(query, **kwargs):
+def perform_search(query, page, **kwargs):
     index = get_index()
-    results = index.search(query)
+    results = index.search(query, {'page': page})
     return results['hits']
 
 

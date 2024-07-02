@@ -336,10 +336,11 @@ class UserSearchAPIView(generics.ListAPIView):
     def get_queryset(self):
         # Retrieve the search query from the request
         query = self.request.query_params.get('q', '')
+        page = self.request.query_params.get('page', 0)
         blocked_user_pks = set(self.request.user.blocked_users.all().values_list('pk', flat=True))
 
         if query:
-            results = client.perform_search(query)
+            results = client.perform_search(query, page)
             pks = {int(result['objectID']) for result in results}
 
             # exclude blocked users
@@ -358,13 +359,14 @@ class FriendSearchAPIView(generics.ListAPIView):
     def get_queryset(self):
         # Retrieve the search query from the request
         query = self.request.query_params.get('q', '')
+        page = self.request.query_params.get('page', 0)
 
         user = self.request.user
         friends = user.friends.all()
         blocked_user_pks = set(user.blocked_users.all().values_list('pk', flat=True))
 
         if query:
-            results = client.perform_search(query)
+            results = client.perform_search(query, page)
             pks = set([int(result['objectID']) for result in results['hits']])
 
             # filter friends
