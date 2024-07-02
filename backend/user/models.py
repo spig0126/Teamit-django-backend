@@ -211,7 +211,7 @@ class FriendRequest(models.Model):
 
         if is_new:
             from notification.models import Notification
-            from fcm_notification.utils import send_fcm_to_user
+            from fcm_notification.tasks import send_fcm_to_user_task
 
             # if receiver didn't block sender
             if self.from_user not in self.to_user.blocked_users.all():
@@ -228,7 +228,7 @@ class FriendRequest(models.Model):
                 data = {
                     "page": "user_notification"
                 }
-                send_fcm_to_user(self.to_user, title, body, data)
+                send_fcm_to_user_task.delay(self.to_user, title, body, data)
 
 
 class UserLikes(models.Model):

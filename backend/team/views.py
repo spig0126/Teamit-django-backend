@@ -19,7 +19,7 @@ from .exceptions import *
 from .utils import *
 from notification.models import *
 from position.models import Position
-from fcm_notification.utils import send_fcm_to_user, send_fcm_to_team
+from fcm_notification.tasks import send_fcm_to_user_task, send_fcm_to_team_task
 from home.utilities import delete_s3_folder
 from region.serializers import ProvinceWithCitiesSerializer
 
@@ -270,7 +270,7 @@ class TeamMemberListCreateAPIView(generics.ListCreateAPIView):
             "team_name": team.name
 
         }
-        send_fcm_to_team(team, title, body, data)
+        send_fcm_to_team_task.delay(team, title, body, data)
 
         # add user to team member
         TeamMembers.objects.create(
@@ -314,7 +314,7 @@ class TeamMemberDeclineAPIView(APIView):
             "team_name": team.name
 
         }
-        send_fcm_to_team(team, title, body, data)
+        send_fcm_to_team_task.delay(team, title, body, data)
 
         return Response({"message": "team invitation successfully declined"}, status=status.HTTP_200_OK)
 
@@ -458,7 +458,7 @@ class TeamApplicationListCreateAPIView(generics.ListCreateAPIView):
             "team_pk": str(team.pk),
             "team_name": team.name
         }
-        send_fcm_to_team(team, title, body, data)
+        send_fcm_to_team_task.delay(team, title, body, data)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -500,7 +500,7 @@ class TeamApplicationAcceptAPIView(APIView):
                 data = {
                     "page": "user_notification"
                 }
-                send_fcm_to_user(applicant, title, body, data)
+                send_fcm_to_user_task.delay(applicant, title, body, data)
 
                 serializer = TeamApplicationDetailSerializer(team_application)
             except:
@@ -550,7 +550,7 @@ class TeamApplicationDeclineAPIView(APIView):
             data = {
                 "page": "user_notification"
             }
-            send_fcm_to_user(applicant, title, body, data)
+            send_fcm_to_user_task.delay(applicant, title, body, data)
 
             serializer = TeamApplicationDetailSerializer(team_application)
             return Response(serializer.data, status=status.HTTP_200_OK)

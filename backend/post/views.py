@@ -10,7 +10,7 @@ from .serializers import *
 from .permissions import *
 from .exceptions import *
 from team.utils import get_team_by_pk
-from fcm_notification.utils import send_fcm_to_user
+from fcm_notification.tasks import send_fcm_to_user_task
 
 
 @permission_classes([IsTeamMemberPermission])
@@ -111,7 +111,7 @@ class TeamPostCommenCreateAPIView(generics.CreateAPIView):
                 "team_name": self.team.name,
                 "post_pk": str(self.team_post.pk)
             }
-            send_fcm_to_user(self.team_post.writer.user, title, body, data)
+            send_fcm_to_user_task.delay(self.team_post.writer.user, title, body, data)
 
         return self.create(request, *args, **kwargs)
 

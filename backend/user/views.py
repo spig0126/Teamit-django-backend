@@ -5,7 +5,7 @@ from rest_framework.mixins import RetrieveModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from fcm_notification.utils import send_fcm_to_user
+from fcm_notification.tasks import send_fcm_to_user_task
 from notification.models import Notification
 from . import client
 from .permissions import *
@@ -232,7 +232,7 @@ class AcceptFriendRequestAPIView(APIView):
                     data = {
                         "page": "user_notification"
                     }
-                    send_fcm_to_user(from_user, title, body, data)
+                    send_fcm_to_user_task.delay(from_user, title, body, data)
 
                 return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)

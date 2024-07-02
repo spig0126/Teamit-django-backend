@@ -47,3 +47,8 @@ def send_fcm_to_user_task(user_pk, title, body, data):
         if device:
             result = send_fcm_message_task.delay(device.token, title, body, data)
             results.append(result)
+
+@shared_task
+def send_fcm_to_team_task(team, title, body, data):
+    for user in team.members.all():
+        send_fcm_to_user_task.delay(user, title, body, data)
