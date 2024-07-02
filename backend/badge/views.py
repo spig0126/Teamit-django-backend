@@ -40,7 +40,7 @@ class UpdateUserLastLoginTimeAPIView(APIView):
             return Response(status=status.HTTP_200_OK)
 
         if (now - last_login_date).days > 1:
-            badge.attendance_cnt = 0
+            badge.attendance_cnt = 1
             badge.save()
         elif (now - last_login_date).days == 1:
             before_level = badge.attendance_level
