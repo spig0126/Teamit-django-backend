@@ -228,7 +228,7 @@ class FriendRequest(models.Model):
                 data = {
                     "page": "user_notification"
                 }
-                send_fcm_to_user_task.delay(self.to_user, title, body, data)
+                send_fcm_to_user_task.delay(self.to_user.pk, title, body, data)
 
 
 class UserLikes(models.Model):

@@ -2,6 +2,7 @@ from celery import shared_task
 from firebase_admin import messaging
 from datetime import datetime, timedelta, timezone
 
+from team.models import Team
 from .models import *
 
 
@@ -49,6 +50,7 @@ def send_fcm_to_user_task(user_pk, title, body, data):
             results.append(result)
 
 @shared_task
-def send_fcm_to_team_task(team, title, body, data):
+def send_fcm_to_team_task(team_pk, title, body, data):
+    team = Team.objects.get(pk=team_pk)
     for user in team.members.all():
-        send_fcm_to_user_task.delay(user, title, body, data)
+        send_fcm_to_user_task.delay(user.pk, title, body, data)

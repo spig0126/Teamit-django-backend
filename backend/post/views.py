@@ -111,7 +111,7 @@ class TeamPostCommenCreateAPIView(generics.CreateAPIView):
                 "team_name": self.team.name,
                 "post_pk": str(self.team_post.pk)
             }
-            send_fcm_to_user_task.delay(self.team_post.writer.user, title, body, data)
+            send_fcm_to_user_task.delay(self.team_post.writer.user.pk, title, body, data)
 
         return self.create(request, *args, **kwargs)
 

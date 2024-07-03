@@ -232,7 +232,7 @@ class AcceptFriendRequestAPIView(APIView):
                     data = {
                         "page": "user_notification"
                     }
-                    send_fcm_to_user_task.delay(from_user, title, body, data)
+                    send_fcm_to_user_task.delay(from_user.pk, title, body, data)
 
                 return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"error": "this friend request is already accepted"}, status=status.HTTP_409_CONFLICT)
