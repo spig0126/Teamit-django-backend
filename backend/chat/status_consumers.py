@@ -206,8 +206,9 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
     async def handle_search(self, data):
         self.chat_type = 'all'
         query = data.get('query', '')
+        page = data.get('page', 0)
         results = {
-            'private': await self.private_chatroom_search(query),
+            'private': await self.private_chatroom_search(quer, page),
             'team': await self.team_chatroom_search(query),
             'inquiry': await self.inquiry_chatroom_search(query)
         }
@@ -251,24 +252,24 @@ class ChatStatusConsumer(AsyncWebsocketConsumer):
 
     # ------------------- DB related-------------------------------
     @database_sync_to_async
-    def private_chatroom_search(self, query):
+    def private_chatroom_search(self, query, page):
         blocked_users = self.user.blocked_users.values('pk')
         filter_expression = f'user_pk={self.user.pk}'
         exclude_expression = ' OR '.join([f'NOT other_user_pk:{blocked_user}' for blocked_user in blocked_users])
         filter_expression += f' AND {exclude_expression}' if exclude_expression else ''
-        results = client.perform_search(query, 'private', filter_expression)
+        results = client.perform_search(query, 'private', filter_expression, page)
         return results
 
     @database_sync_to_async
-    def team_chatroom_search(self, query):
+    def team_chatroom_search(self, query, page):
         filter_expression = f'user_pk={self.user.pk}'
-        results = client.perform_search(query, 'team', filter_expression)
+        results = client.perform_search(query, 'team', filter_expression, page)
         return results
 
     @database_sync_to_async
-    def inquiry_chatroom_search(self, query):
+    def inquiry_chatroom_search(self, query, page):
         filter_expression = f'is_user={self.user.pk}'
-        results = client.perform_search(query, 'inquiry', filter_expression)
+        results = client.perform_search(query, 'inquiry', filter_expression, page)
         return results
 
 
