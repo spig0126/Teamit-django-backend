@@ -644,10 +644,11 @@ class TeamSearchAPIView(generics.ListAPIView):
     def get_queryset(self):
         # Retrieve the search query from the request
         query = self.request.query_params.get('q')
+        page = self.request.query_params.get('page', 0)
         blocked_team_pks = set(self.request.user.blocked_teams.all().values_list('pk', flat=True))
 
         if query:
-            results = client.perform_search(query)
+            results = client.perform_search(query, page)
             pks = set([int(result['objectID']) for result in results['hits']])
 
             user = self.request.user
