@@ -24,14 +24,14 @@ class OldChatMessageDestroyAPIView(APIView):
         request.skip_authentication = True
         super().initial(request, *args, **kwargs)
 
-    def destroy(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs):
         sixty_days_ago = timezone.now() - timedelta(days=60)
 
         models_to_clean = [PrivateMessage, InquiryMessage, TeamMessage]
         for model in models_to_clean:
             model.objects.filter(timestamp__lt=sixty_days_ago).delete()
 
-        return Response({"detail": "Old messages deleted."}, status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.GenericAPIView):
