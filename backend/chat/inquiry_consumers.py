@@ -227,7 +227,7 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         message = []
         try:
             message = await self.get_recent_messages()
-        except: 
+        except:
             message = await self.get_last_30_messages()
         await self.send_message('history', message)
 
@@ -334,7 +334,6 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         if len(before_last_read) and len(after_last_read) > 30:
             messages = after_last_read + [InquiryReadTillHereMessage] + before_last_read
         return messages
-            
 
     @database_sync_to_async
     def get_last_30_messages(self):
