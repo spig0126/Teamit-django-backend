@@ -40,27 +40,6 @@ class TeamListCreateAPIView(generics.ListCreateAPIView):  # list my teams
                      .exclude(members=self.user)
                      .order_by('?')
                      )
-
-            # values_list = [
-            #      'id',
-            #      'name',
-            #      'image',
-            #      # 'activity',
-            #      # 'interest',
-            #      'keywords',
-            #      # 'positions'
-            # ]
-            # teams = teams.values(
-            #      'id',
-            #      'name',
-            #      'image',
-            #      # 'activity',
-            #      # 'interest',
-            #      'keywords',
-            #      # 'positions')
-            # ).prefetch_related(
-
-            # )
         else:  # list my teams
             teams = Team.objects.filter(members=self.user)
         return teams
@@ -642,21 +621,17 @@ class TeamSearchAPIView(generics.ListAPIView):
     serializer_class = SearchedTeamDetailSerializer
 
     def get_queryset(self):
+        user = self.request.user
+
         # Retrieve the search query from the request
         query = self.request.query_params.get('q')
         page = self.request.query_params.get('page', 0)
+
+        results = client.perform_search(query, page)
         blocked_team_pks = set(self.request.user.blocked_teams.all().values_list('pk', flat=True))
 
-        if query:
-            results = client.perform_search(query, page)
-            pks = set([int(result['objectID']) for result in results['hits']])
+        pks = set([int(result['objectID']) for result in results['hits']])
+        pks = pks - blocked_team_pks
 
-            user = self.request.user
-
-            # exclude user itself and blocked users
-            pks = pks - blocked_team_pks
-
-            teams = Team.objects.filter(pk__in=pks)
-        else:
-            teams = Team.objects.exclude(pk__in=blocked_team_pks)
+        teams = Team.objects.filter(pk__in=pks)
         return teams
