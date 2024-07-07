@@ -64,11 +64,11 @@ class Badge(models.Model):
 
     @property
     def team_participance_level(self):
-        if self.team_participance_cnt >= 5:
+        if self.team_participance_cnt >= 10:
             return BadgeLevels.LEVEL_THREE
-        elif self.team_participance_cnt >= 3:
+        elif self.team_participance_cnt >= 5:
             return BadgeLevels.LEVEL_TWO
-        elif self.team_participance_cnt >= 1:
+        elif self.team_participance_cnt >= 3:
             return BadgeLevels.LEVEL_ONE
         else:
             return BadgeLevels.LEVEL_DEFAULT
