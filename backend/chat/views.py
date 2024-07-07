@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from rest_framework import generics, status
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin
 from rest_framework.response import Response
@@ -15,6 +17,17 @@ from team.models import TeamPermission
 from team.utils import get_team_by_pk
 from team.permissions import IsTeamMemberPermission
 from team.serializers import MyTeamMemberDetailSerializer
+
+
+class OldChatMessageDestroyAPIView(APIView):
+    def destroy(self, request, *args, **kwargs):
+        sixty_days_ago = timezone.now() - timedelta(days=60)
+
+        models_to_clean = [PrivateMessage, InquiryMessage, TeamMessage]
+        for model in models_to_clean:
+            model.objects.filter(timestamp__lt=sixty_days_ago).delete()
+
+        return Response({"detail": "Old messages deleted."}, status=204)
 
 
 class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.GenericAPIView):
@@ -60,10 +73,6 @@ class PrivateChatRoomDetailAPIView(CreateModelMixin, ListModelMixin, generics.Ge
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
-
-
-class PrivateChatRoomRetrieveAPIView(APIView):
-    pass
 
 
 class PrivateChatRoomNameRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
