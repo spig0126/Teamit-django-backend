@@ -20,6 +20,10 @@ from team.serializers import MyTeamMemberDetailSerializer
 
 
 class OldChatMessageDestroyAPIView(APIView):
+    def initial(self, request, *args, **kwargs):
+        request.skip_authentication = True
+        super().initial(request, *args, **kwargs)
+
     def destroy(self, request, *args, **kwargs):
         sixty_days_ago = timezone.now() - timedelta(days=60)
 
