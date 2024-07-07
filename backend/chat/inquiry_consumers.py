@@ -224,7 +224,11 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
         await self.send_message('is_alone', is_alone)
 
     async def send_recent_messages(self):
-        message = await self.get_recent_messages()
+        message = []
+        try:
+            message = await self.get_recent_messages()
+        except: 
+            message = await self.get_last_30_messages()
         await self.send_message('history', message)
 
     async def send_last_30_messages(self):
@@ -318,21 +322,19 @@ class InquiryChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_recent_messages(self):
-        if self.this_participant:
-            before_last_read = InquiryMessageSerializer(
-                self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
-                    timestamp__lt=self.before_last_read_time)[:30], many=True).data
-            after_last_read = InquiryMessageSerializer(
-                self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
-                    timestamp__gte=self.before_last_read_time), many=True).data
+        before_last_read = InquiryMessageSerializer(
+            self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                timestamp__lt=self.before_last_read_time)[:30], many=True).data
+        after_last_read = InquiryMessageSerializer(
+            self.chatroom.messages.filter(timestamp__gte=self.this_participant.entered_chatroom_at).filter(
+                timestamp__gte=self.before_last_read_time), many=True).data
 
-            messages = after_last_read + before_last_read
-            self.loaded_cnt += len(messages)
-            if len(before_last_read) and len(after_last_read) > 30:
-                messages = after_last_read + [InquiryReadTillHereMessage] + before_last_read
-            return messages
-        else:
-            return self.get_last_30_messages
+        messages = after_last_read + before_last_read
+        self.loaded_cnt += len(messages)
+        if len(before_last_read) and len(after_last_read) > 30:
+            messages = after_last_read + [InquiryReadTillHereMessage] + before_last_read
+        return messages
+            
 
     @database_sync_to_async
     def get_last_30_messages(self):
