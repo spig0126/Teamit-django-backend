@@ -17,7 +17,7 @@ def get_index(index_name):
     return index
 
 
-def perform_search(query, chat_type, filter_expression, page, **kwargs):
+def perform_search(query, chat_type, filter_expression, **kwargs):
     index = get_index(index_name[chat_type])
-    results = index.search(query, {'page': page, 'filters': filter_expression, 'attributesToHighlight': []})
+    results = index.search(query, {'filters': filter_expression, 'attributesToHighlight': []})
     return [{key: value for key, value in hit.items() if key != 'objectID'} for hit in results['hits']]
