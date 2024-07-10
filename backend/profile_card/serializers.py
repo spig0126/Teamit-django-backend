@@ -36,13 +36,14 @@ class ProfileCardUpdateInfoSerializer(serializers.Serializer):
     def get_tab_info(self, instance):
         card = instance
         user = card.user
-
+        current_badges = set([card.badge_one.url, card.badge_two.url])
+        
         data = {}
         data['interests'] = list(str(interest) for interest in user.interests.all())
         data['positions'] = list(str(position) for position in user.positions.all())
         files = default_storage.listdir('avatars/')[1]
         data['avatars'] = {i: default_storage.url(f'avatars/{i}.png') for i in range(1, len(files))}
-        data['badges'] = user.badge.latest_badge_images
+        data['badges'] = sorted(list(set(user.badge.latest_badge_images).union(current_badges))) 
 
         return data
 
